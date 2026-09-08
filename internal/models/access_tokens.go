@@ -23,45 +23,66 @@ import (
 
 // AccessToken is an object representing the database table.
 type AccessToken struct {
-	Token      string    `boil:"token" json:"token" toml:"token" yaml:"token"`
 	ValidUntil time.Time `boil:"valid_until" json:"valid_until" toml:"valid_until" yaml:"valid_until"`
 	UserID     string    `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
 	CreatedAt  time.Time `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt  time.Time `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	TokenHash  []byte    `boil:"token_hash" json:"token_hash" toml:"token_hash" yaml:"token_hash"`
 
 	R *accessTokenR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L accessTokenL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var AccessTokenColumns = struct {
-	Token      string
 	ValidUntil string
 	UserID     string
 	CreatedAt  string
 	UpdatedAt  string
+	TokenHash  string
 }{
-	Token:      "token",
 	ValidUntil: "valid_until",
 	UserID:     "user_id",
 	CreatedAt:  "created_at",
 	UpdatedAt:  "updated_at",
+	TokenHash:  "token_hash",
 }
 
 var AccessTokenTableColumns = struct {
-	Token      string
 	ValidUntil string
 	UserID     string
 	CreatedAt  string
 	UpdatedAt  string
+	TokenHash  string
 }{
-	Token:      "access_tokens.token",
 	ValidUntil: "access_tokens.valid_until",
 	UserID:     "access_tokens.user_id",
 	CreatedAt:  "access_tokens.created_at",
 	UpdatedAt:  "access_tokens.updated_at",
+	TokenHash:  "access_tokens.token_hash",
 }
 
 // Generated where
+
+type whereHelpertime_Time struct{ field string }
+
+func (w whereHelpertime_Time) EQ(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.EQ, x)
+}
+func (w whereHelpertime_Time) NEQ(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.NEQ, x)
+}
+func (w whereHelpertime_Time) LT(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpertime_Time) LTE(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpertime_Time) GT(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpertime_Time) GTE(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
 
 type whereHelperstring struct{ field string }
 
@@ -94,39 +115,27 @@ func (w whereHelperstring) NIN(slice []string) qm.QueryMod {
 	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
 }
 
-type whereHelpertime_Time struct{ field string }
+type whereHelper__byte struct{ field string }
 
-func (w whereHelpertime_Time) EQ(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.EQ, x)
-}
-func (w whereHelpertime_Time) NEQ(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.NEQ, x)
-}
-func (w whereHelpertime_Time) LT(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpertime_Time) LTE(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpertime_Time) GT(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpertime_Time) GTE(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
+func (w whereHelper__byte) EQ(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelper__byte) NEQ(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelper__byte) LT(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelper__byte) LTE(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelper__byte) GT(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelper__byte) GTE(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
 
 var AccessTokenWhere = struct {
-	Token      whereHelperstring
 	ValidUntil whereHelpertime_Time
 	UserID     whereHelperstring
 	CreatedAt  whereHelpertime_Time
 	UpdatedAt  whereHelpertime_Time
+	TokenHash  whereHelper__byte
 }{
-	Token:      whereHelperstring{field: "\"access_tokens\".\"token\""},
 	ValidUntil: whereHelpertime_Time{field: "\"access_tokens\".\"valid_until\""},
 	UserID:     whereHelperstring{field: "\"access_tokens\".\"user_id\""},
 	CreatedAt:  whereHelpertime_Time{field: "\"access_tokens\".\"created_at\""},
 	UpdatedAt:  whereHelpertime_Time{field: "\"access_tokens\".\"updated_at\""},
+	TokenHash:  whereHelper__byte{field: "\"access_tokens\".\"token_hash\""},
 }
 
 // AccessTokenRels is where relationship names are stored.
@@ -166,10 +175,10 @@ func (r *accessTokenR) GetUser() *User {
 type accessTokenL struct{}
 
 var (
-	accessTokenAllColumns            = []string{"token", "valid_until", "user_id", "created_at", "updated_at"}
-	accessTokenColumnsWithoutDefault = []string{"valid_until", "user_id", "created_at", "updated_at"}
-	accessTokenColumnsWithDefault    = []string{"token"}
-	accessTokenPrimaryKeyColumns     = []string{"token"}
+	accessTokenAllColumns            = []string{"valid_until", "user_id", "created_at", "updated_at", "token_hash"}
+	accessTokenColumnsWithoutDefault = []string{"valid_until", "user_id", "created_at", "updated_at", "token_hash"}
+	accessTokenColumnsWithDefault    = []string{}
+	accessTokenPrimaryKeyColumns     = []string{"token_hash"}
 	accessTokenGeneratedColumns      = []string{}
 )
 
@@ -403,7 +412,7 @@ func (o *AccessToken) SetUser(ctx context.Context, exec boil.ContextExecutor, in
 		strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
 		strmangle.WhereClause("\"", "\"", 2, accessTokenPrimaryKeyColumns),
 	)
-	values := []interface{}{related.ID, o.Token}
+	values := []interface{}{related.ID, o.TokenHash}
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -447,7 +456,7 @@ func AccessTokens(mods ...qm.QueryMod) accessTokenQuery {
 
 // FindAccessToken retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindAccessToken(ctx context.Context, exec boil.ContextExecutor, token string, selectCols ...string) (*AccessToken, error) {
+func FindAccessToken(ctx context.Context, exec boil.ContextExecutor, tokenHash []byte, selectCols ...string) (*AccessToken, error) {
 	accessTokenObj := &AccessToken{}
 
 	sel := "*"
@@ -455,10 +464,10 @@ func FindAccessToken(ctx context.Context, exec boil.ContextExecutor, token strin
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"access_tokens\" where \"token\"=$1", sel,
+		"select %s from \"access_tokens\" where \"token_hash\"=$1", sel,
 	)
 
-	q := queries.Raw(query, token)
+	q := queries.Raw(query, tokenHash)
 
 	err := q.Bind(ctx, exec, accessTokenObj)
 	if err != nil {
@@ -821,7 +830,7 @@ func (o *AccessToken) Delete(ctx context.Context, exec boil.ContextExecutor) (in
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), accessTokenPrimaryKeyMapping)
-	sql := "DELETE FROM \"access_tokens\" WHERE \"token\"=$1"
+	sql := "DELETE FROM \"access_tokens\" WHERE \"token_hash\"=$1"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -898,7 +907,7 @@ func (o AccessTokenSlice) DeleteAll(ctx context.Context, exec boil.ContextExecut
 // Reload refetches the object from the database
 // using the primary keys with an executor.
 func (o *AccessToken) Reload(ctx context.Context, exec boil.ContextExecutor) error {
-	ret, err := FindAccessToken(ctx, exec, o.Token)
+	ret, err := FindAccessToken(ctx, exec, o.TokenHash)
 	if err != nil {
 		return err
 	}
@@ -937,16 +946,16 @@ func (o *AccessTokenSlice) ReloadAll(ctx context.Context, exec boil.ContextExecu
 }
 
 // AccessTokenExists checks if the AccessToken row exists.
-func AccessTokenExists(ctx context.Context, exec boil.ContextExecutor, token string) (bool, error) {
+func AccessTokenExists(ctx context.Context, exec boil.ContextExecutor, tokenHash []byte) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"access_tokens\" where \"token\"=$1 limit 1)"
+	sql := "select exists(select 1 from \"access_tokens\" where \"token_hash\"=$1 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
 		fmt.Fprintln(writer, sql)
-		fmt.Fprintln(writer, token)
+		fmt.Fprintln(writer, tokenHash)
 	}
-	row := exec.QueryRowContext(ctx, sql, token)
+	row := exec.QueryRowContext(ctx, sql, tokenHash)
 
 	err := row.Scan(&exists)
 	if err != nil {
@@ -958,5 +967,5 @@ func AccessTokenExists(ctx context.Context, exec boil.ContextExecutor, token str
 
 // Exists checks if the AccessToken row exists.
 func (o *AccessToken) Exists(ctx context.Context, exec boil.ContextExecutor) (bool, error) {
-	return AccessTokenExists(ctx, exec, o.Token)
+	return AccessTokenExists(ctx, exec, o.TokenHash)
 }

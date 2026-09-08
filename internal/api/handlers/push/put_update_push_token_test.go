@@ -29,7 +29,7 @@ func TestPutUpdatePushTokenSuccess(t *testing.T) {
 			"provider": testProvider,
 		}
 
-		res := test.PerformRequest(t, s, "PUT", "/api/v1/push/token", payload, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+		res := test.PerformRequest(t, s, "PUT", "/api/v1/push/token", payload, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 		assert.Equal(t, http.StatusOK, res.Result().StatusCode)
 
 		newToken, err := models.PushTokens(models.PushTokenWhere.Token.EQ(testToken)).One(ctx, s.DB)
@@ -67,7 +67,7 @@ func TestPutUpdatePushTokenSuccessWithOldToken(t *testing.T) {
 			"oldToken": oldToken,
 		}
 
-		res := test.PerformRequest(t, s, "PUT", "/api/v1/push/token", payload, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+		res := test.PerformRequest(t, s, "PUT", "/api/v1/push/token", payload, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 		assert.Equal(t, http.StatusOK, res.Result().StatusCode)
 
 		newToken, err := models.PushTokens(models.PushTokenWhere.Token.EQ(testToken)).One(ctx, s.DB)
@@ -108,7 +108,7 @@ func TestPutUpdatePushTokenWithDuplicateToken(t *testing.T) {
 		oldCnt, err := fix.User1.PushTokens().Count(ctx, s.DB)
 		require.NoError(t, err)
 
-		res := test.PerformRequest(t, s, "PUT", "/api/v1/push/token", payload, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+		res := test.PerformRequest(t, s, "PUT", "/api/v1/push/token", payload, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 		test.RequireHTTPError(t, res, httperrors.ErrConflictPushToken)
 
 		err = oldPushToken.Reload(ctx, s.DB)
@@ -149,7 +149,7 @@ func TestPutUpdatePushTokenWithOldTokenNotfound(t *testing.T) {
 			"oldToken": "3199aa21-eb41-47dd-9287-338e9e88a5ae",
 		}
 
-		res := test.PerformRequest(t, s, "PUT", "/api/v1/push/token", payload, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+		res := test.PerformRequest(t, s, "PUT", "/api/v1/push/token", payload, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 		test.RequireHTTPError(t, res, httperrors.ErrNotFoundOldPushToken)
 
 		newToken, err := models.PushTokens(models.PushTokenWhere.Token.EQ(testToken)).One(ctx, s.DB)

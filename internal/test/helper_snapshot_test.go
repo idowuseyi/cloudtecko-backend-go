@@ -291,9 +291,7 @@ func TestSaveResponseAndValidate(t *testing.T) {
 	}
 
 	test.WithTestServer(t, func(s *api.Server) {
-		fix := fixtures.Fixtures()
-
-		res := test.PerformRequest(t, s, "GET", "/api/v1/auth/userinfo", nil, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+		res := test.PerformRequest(t, s, "GET", "/api/v1/auth/userinfo", nil, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 		require.Equal(t, http.StatusOK, res.Result().StatusCode)
 
 		var response apitypes.GetUserInfoResponse

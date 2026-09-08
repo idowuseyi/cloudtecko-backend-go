@@ -64,9 +64,9 @@ S-016 — unpinned CI actions and a piped remote installer — Medium — .githu
 
 S-017 — govulncheck was installed but never executed — Medium — Dockerfile:149, Makefile — the tool was present in the image and had a make target, but no pipeline invoked it and it was not part of `make all`, so vulnerable dependencies could land unnoticed — wired into `make all` and all three CI pipelines — fixed
 
-S-018 — access tokens are stored in plaintext and are long-lived — Medium — migrations/20200428072541-create-access-tokens.sql:3 — the token column is the primary key with a `uuid_generate_v4()` default, so the value handed to the client is stored verbatim; verified directly against a live database, the token returned by `/login` appears unchanged in `access_tokens.token`. Any read of that table — a SQL injection, a leaked backup, an over-privileged analytics user — is immediate session takeover for every active user, and the default validity is 24 hours — store a hash of the token and compare on lookup; requires a schema change and a migration of existing rows — deferred(schema change, tracked as a follow-up project; flip condition: before the first production deployment holding real user data)
+S-018 — access and refresh tokens were stored in plaintext — Medium — migrations/20200428072541-create-access-tokens.sql:3 — the token column was the primary key with a `uuid_generate_v4()` default, so the value handed to the client was stored verbatim; any read of that table (SQL injection, a leaked backup, an over-privileged analytics user) was immediate session takeover for every active user, with a 24 hour default validity — migration 20260908090000 replaces `token` with `token_hash` (SHA-256) on both tables; tokens are generated in Go by `hashing.NewToken()` and only the hash is persisted. SHA-256 rather than Argon2 is deliberate: these are 122-bit CSPRNG values with nothing to brute force, and the hash is computed on every authenticated request, where Argon2 would be a denial-of-service surface. Verified live: the plaintext appears in 0 rows, the stored hash equals sha256(client token), and authentication still succeeds — fixed
 
-S-019 — refresh tokens never expire and have no reuse detection — Medium — migrations/20200428072639-create-refresh-tokens.sql:2 — verified against the live schema, the table has only `token`, `user_id`, `created_at`, `updated_at`; there is no `valid_until` column at all, so a stolen refresh token is valid forever. `Refresh()` (internal/auth/service.go:309) rotates the pair but does not detect replay of a consumed token, so theft cannot be noticed or contained — add an expiry column and token-family reuse detection — deferred(schema change, same follow-up project; flip condition: before the first production deployment holding real user data)
+S-019 — refresh tokens never expired and had no reuse detection — Medium — migrations/20200428072639-create-refresh-tokens.sql:2 — the table held only `token`, `user_id`, `created_at`, `updated_at`: no expiry column at all, so a stolen refresh token was valid forever, and rotation deleted the old row, making a replayed token indistinguishable from one that never existed — added `valid_until` (30 days, `SERVER_AUTH_REFRESH_TOKEN_VALIDITY`), `family_id` and `consumed_at`. Rotation marks the old token consumed instead of deleting it, and presenting a consumed token revokes the whole family plus every access token of that user. Verified live: rotation left both rows in one family with one consumed; replaying the consumed token returned 401 and also invalidated the legitimately rotated token and all access tokens — fixed
 
 S-020 — registration discloses whether an account exists — Low — internal/auth/service.go:374 — `/register` returns `ErrConflictUserAlreadyExists` for a taken username, so the endpoint can be used to test addresses; note this is inconsistent with `/forgot-password`, which the template deliberately made non-disclosing — return a generic success and send a "you already have an account" email instead — deferred(product decision — it changes the signup UX and needs a call from the product owner)
 
@@ -131,9 +131,14 @@ S-023 — stale direct dependencies — Low — go.mod:41,32 — `github.com/tim
   Unset, a random secret is generated per process, so it differs between
   instances and changes on every restart. Both deployment configs mark it as a
   required, non-synced secret.
-- S-018 and S-019 (token storage and refresh-token lifetime) should be scheduled
-  as a single follow-up before any production data exists. They are the only
-  findings that cannot be fixed without a schema migration.
+- S-018 and S-019 are fixed by migration 20260908090000. It rehashes existing
+  rows in place, but **every live refresh token receives a validity measured from
+  its creation date**, so any token older than 30 days stops working the moment
+  the migration is deployed and those users must log in again.
+- Password-reset and confirmation tokens are still stored in plaintext. They sat
+  outside S-018's scope and are short-lived (15 minutes and 24 hours) and
+  single-use, but the same reasoning applies and they should get the same
+  treatment. Tracked as a follow-up in its own right, not as a deferral of S-018.
 
 ## Sources
 

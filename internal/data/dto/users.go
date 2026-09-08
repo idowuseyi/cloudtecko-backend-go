@@ -147,6 +147,10 @@ type LogoutRequest struct {
 type AuthenticateUserRequest struct {
 	User                     User
 	InvalidateExistingTokens bool
+	// RefreshTokenFamilyID carries the rotation chain forward when this
+	// authentication is a refresh rather than a fresh login. Empty means "start a
+	// new family", which the column default handles.
+	RefreshTokenFamilyID string
 }
 
 type RefreshRequest struct {

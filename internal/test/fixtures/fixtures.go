@@ -10,11 +10,26 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/auth"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/hashing"
 )
 
 const (
 	PlainTestUserPassword  = "password"
 	HashedTestUserPassword = "$argon2id$v=19$m=65536,t=1,p=4$RFO8ulg2c2zloG0029pAUQ$2Po6NUIhVCMm9vivVDuzo7k5KVWfZzJJfeXzC+n+row" //nolint:gosec
+)
+
+// Access and refresh tokens are stored as a hash, so the plaintext lives here
+// and only hashing.HashToken(...) of it reaches the database. Tests authenticate
+// with these values; the database never contains them.
+//
+//nolint:gosec // static test fixtures for the throwaway test database
+const (
+	User1AccessToken1Plain            = "1cfc27d7-a178-4051-802b-f3ff3967c95c"
+	User1RefreshToken1Plain           = "66412eaf-2b89-404d-bbb5-46c3b8bf1a53"
+	User2AccessToken1Plain            = "115d28c5-f585-4fb5-9656-fb321739fee5"
+	User2RefreshToken1Plain           = "ea909c75-63d1-4348-a63c-4bcf8ab334a2"
+	UserDeactivatedAccessToken1Plain  = "24d0b38d-387c-400c-80fc-a71d85031d4c"
+	UserDeactivatedRefreshToken1Plain = "b6e13a88-7b18-4f17-b819-71b196be2444"
 )
 
 // Insertable represents a common interface for all model instances so they may be inserted via the Inserts() func
@@ -64,14 +79,15 @@ func Fixtures() FixtureMap {
 	}
 
 	f.User1AccessToken1 = &models.AccessToken{
-		Token:      "1cfc27d7-a178-4051-802b-f3ff3967c95c",
+		TokenHash:  hashing.HashToken(User1AccessToken1Plain),
 		ValidUntil: now.Add(10 * 365 * 24 * time.Hour),
 		UserID:     f.User1.ID,
 	}
 
 	f.User1RefreshToken1 = &models.RefreshToken{
-		Token:  "66412eaf-2b89-404d-bbb5-46c3b8bf1a53",
-		UserID: f.User1.ID,
+		TokenHash:  hashing.HashToken(User1RefreshToken1Plain),
+		ValidUntil: now.Add(10 * 365 * 24 * time.Hour),
+		UserID:     f.User1.ID,
 	}
 
 	f.User2 = &models.User{
@@ -88,14 +104,15 @@ func Fixtures() FixtureMap {
 	}
 
 	f.User2AccessToken1 = &models.AccessToken{
-		Token:      "115d28c5-f585-4fb5-9656-fb321739fee5",
+		TokenHash:  hashing.HashToken(User2AccessToken1Plain),
 		ValidUntil: now.Add(10 * 365 * 24 * time.Hour),
 		UserID:     f.User2.ID,
 	}
 
 	f.User2RefreshToken1 = &models.RefreshToken{
-		Token:  "ea909c75-63d1-4348-a63c-4bcf8ab334a2",
-		UserID: f.User2.ID,
+		TokenHash:  hashing.HashToken(User2RefreshToken1Plain),
+		ValidUntil: now.Add(10 * 365 * 24 * time.Hour),
+		UserID:     f.User2.ID,
 	}
 
 	f.UserRequiresConfirmation = &models.User{
@@ -132,14 +149,15 @@ func Fixtures() FixtureMap {
 	}
 
 	f.UserDeactivatedAccessToken1 = &models.AccessToken{
-		Token:      "24d0b38d-387c-400c-80fc-a71d85031d4c",
+		TokenHash:  hashing.HashToken(UserDeactivatedAccessToken1Plain),
 		ValidUntil: now.Add(10 * 365 * 24 * time.Hour),
 		UserID:     f.UserDeactivated.ID,
 	}
 
 	f.UserDeactivatedRefreshToken1 = &models.RefreshToken{
-		Token:  "b6e13a88-7b18-4f17-b819-71b196be2444",
-		UserID: f.UserDeactivated.ID,
+		TokenHash:  hashing.HashToken(UserDeactivatedRefreshToken1Plain),
+		ValidUntil: now.Add(10 * 365 * 24 * time.Hour),
+		UserID:     f.UserDeactivated.ID,
 	}
 
 	f.User1PushToken = &models.PushToken{

@@ -1211,7 +1211,7 @@ func (o *User) AddAccessTokens(ctx context.Context, exec boil.ContextExecutor, i
 				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
 				strmangle.WhereClause("\"", "\"", 2, accessTokenPrimaryKeyColumns),
 			)
-			values := []interface{}{o.ID, rel.Token}
+			values := []interface{}{o.ID, rel.TokenHash}
 
 			if boil.IsDebug(ctx) {
 				writer := boil.DebugWriterFrom(ctx)
@@ -1423,7 +1423,7 @@ func (o *User) AddRefreshTokens(ctx context.Context, exec boil.ContextExecutor, 
 				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
 				strmangle.WhereClause("\"", "\"", 2, refreshTokenPrimaryKeyColumns),
 			)
-			values := []interface{}{o.ID, rel.Token}
+			values := []interface{}{o.ID, rel.TokenHash}
 
 			if boil.IsDebug(ctx) {
 				writer := boil.DebugWriterFrom(ctx)

@@ -7,7 +7,6 @@ import (
 
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
-	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/httperrors"
@@ -18,6 +17,7 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test/fixtures"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/db"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/hashing"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/url"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -64,9 +64,12 @@ func TestPostRegisterSuccess(t *testing.T) {
 		assert.False(t, user.R.AppUserProfile.LegalAcceptedAt.Valid)
 
 		assert.Len(t, user.R.AccessTokens, 1)
-		assert.Equal(t, strfmt.UUID4(user.R.AccessTokens[0].Token), *response.AccessToken)
+		// The row stores only the hash, so the check is that the token handed to
+		// the client hashes to what was persisted -- never that they are equal.
+		assert.Equal(t, user.R.AccessTokens[0].TokenHash, hashing.HashToken(response.AccessToken.String()))
+		assert.NotEqual(t, response.AccessToken.String(), string(user.R.AccessTokens[0].TokenHash), "the plaintext token must not be stored")
 		assert.Len(t, user.R.RefreshTokens, 1)
-		assert.Equal(t, strfmt.UUID4(user.R.RefreshTokens[0].Token), *response.RefreshToken)
+		assert.Equal(t, user.R.RefreshTokens[0].TokenHash, hashing.HashToken(response.RefreshToken.String()))
 
 		res2 := test.PerformRequest(t, s, "POST", "/api/v1/auth/login", payload, nil)
 		assert.Equal(t, http.StatusOK, res2.Result().StatusCode)
@@ -229,9 +232,12 @@ func TestPostRegisterSuccessLowercaseTrimWhitespaces(t *testing.T) {
 		assert.False(t, user.R.AppUserProfile.LegalAcceptedAt.Valid)
 
 		assert.Len(t, user.R.AccessTokens, 1)
-		assert.Equal(t, strfmt.UUID4(user.R.AccessTokens[0].Token), *response.AccessToken)
+		// The row stores only the hash, so the check is that the token handed to
+		// the client hashes to what was persisted -- never that they are equal.
+		assert.Equal(t, user.R.AccessTokens[0].TokenHash, hashing.HashToken(response.AccessToken.String()))
+		assert.NotEqual(t, response.AccessToken.String(), string(user.R.AccessTokens[0].TokenHash), "the plaintext token must not be stored")
 		assert.Len(t, user.R.RefreshTokens, 1)
-		assert.Equal(t, strfmt.UUID4(user.R.RefreshTokens[0].Token), *response.RefreshToken)
+		assert.Equal(t, user.R.RefreshTokens[0].TokenHash, hashing.HashToken(response.RefreshToken.String()))
 
 		res2 := test.PerformRequest(t, s, "POST", "/api/v1/auth/login", payload, nil)
 		assert.Equal(t, http.StatusOK, res2.Result().StatusCode)

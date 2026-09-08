@@ -83,6 +83,7 @@ type EchoServerSecureMiddleware struct {
 
 type AuthServer struct {
 	AccessTokenValidity                time.Duration
+	RefreshTokenValidity               time.Duration
 	PasswordResetTokenValidity         time.Duration
 	PasswordResetTokenDebounceDuration time.Duration
 	PasswordResetTokenReuseDuration    time.Duration
@@ -248,7 +249,10 @@ func DefaultServiceConfigFromEnv() Server {
 			AndroidAssetlinksFile:       util.GetEnv("SERVER_PATHS_ANDROID_ASSETLINKS_FILE", ""),
 		},
 		Auth: AuthServer{
-			AccessTokenValidity:                time.Second * time.Duration(util.GetEnvAsInt("SERVER_AUTH_ACCESS_TOKEN_VALIDITY", 86400)),
+			AccessTokenValidity: time.Second * time.Duration(util.GetEnvAsInt("SERVER_AUTH_ACCESS_TOKEN_VALIDITY", 86400)),
+			// Refresh tokens previously had no expiry column at all, so a stolen
+			// one was valid forever. 30 days.
+			RefreshTokenValidity:               time.Second * time.Duration(util.GetEnvAsInt("SERVER_AUTH_REFRESH_TOKEN_VALIDITY", 2592000)),
 			PasswordResetTokenValidity:         time.Second * time.Duration(util.GetEnvAsInt("SERVER_AUTH_PASSWORD_RESET_TOKEN_VALIDITY", 900)),
 			PasswordResetTokenDebounceDuration: time.Second * time.Duration(util.GetEnvAsInt("SERVER_AUTH_PASSWORD_RESET_TOKEN_DEBOUNCE_DURATION_SECONDS", 60)),
 			PasswordResetTokenReuseDuration:    time.Second * time.Duration(util.GetEnvAsInt("SERVER_AUTH_PASSWORD_RESET_TOKEN_REUSE_DURATION_SECONDS", 0)),

@@ -33,16 +33,16 @@ func TestPostChangePasswordSuccess(t *testing.T) {
 			"newPassword":     newPassword,
 		}
 
-		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/change-password", payload, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/change-password", payload, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 		assert.Equal(t, http.StatusOK, res.Result().StatusCode)
 
 		var response types.PostLoginResponse
 		test.ParseResponseAndValidate(t, res, &response)
 
 		assert.NotEmpty(t, response.AccessToken)
-		assert.NotEqual(t, fix.User1AccessToken1.Token, *response.AccessToken)
+		assert.NotEqual(t, fixtures.User1AccessToken1Plain, *response.AccessToken)
 		assert.NotEmpty(t, response.RefreshToken)
-		assert.NotEqual(t, fix.User1RefreshToken1.Token, *response.RefreshToken)
+		assert.NotEqual(t, fixtures.User1RefreshToken1Plain, *response.RefreshToken)
 		assert.Equal(t, int64(s.Config.Auth.AccessTokenValidity.Seconds()), *response.ExpiresIn)
 		assert.Equal(t, auth.TokenTypeBearer, *response.TokenType)
 
@@ -75,7 +75,7 @@ func TestPostChangePasswordInvalidPassword(t *testing.T) {
 			"newPassword":     newPassword,
 		}
 
-		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/change-password", payload, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/change-password", payload, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 		test.RequireHTTPError(t, res, httperrors.NewFromEcho(echo.ErrUnauthorized))
 
 		err := fix.User1AccessToken1.Reload(ctx, s.DB)
@@ -95,7 +95,7 @@ func TestPostChangePasswordDeactivatedUser(t *testing.T) {
 			"newPassword":     newPassword,
 		}
 
-		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/change-password", payload, test.HeadersWithAuth(t, fix.UserDeactivatedAccessToken1.Token))
+		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/change-password", payload, test.HeadersWithAuth(t, fixtures.UserDeactivatedAccessToken1Plain))
 		test.RequireHTTPError(t, res, httperrors.ErrForbiddenUserDeactivated)
 
 		err := fix.User1AccessToken1.Reload(ctx, s.DB)
@@ -120,7 +120,7 @@ func TestPostChangePasswordUserWithoutPassword(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, int64(1), rowsAff)
 
-		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/change-password", payload, test.HeadersWithAuth(t, fix.User2AccessToken1.Token))
+		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/change-password", payload, test.HeadersWithAuth(t, fixtures.User2AccessToken1Plain))
 		test.RequireHTTPError(t, res, httperrors.ErrForbiddenNotLocalUser)
 
 		err = fix.User1AccessToken1.Reload(ctx, s.DB)
@@ -169,7 +169,7 @@ func TestPostChangePasswordBadRequest(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				res := test.PerformRequest(t, s, "POST", "/api/v1/auth/change-password", tt.payload, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+				res := test.PerformRequest(t, s, "POST", "/api/v1/auth/change-password", tt.payload, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 				assert.Equal(t, http.StatusBadRequest, res.Result().StatusCode)
 
 				var response httperrors.HTTPValidationError

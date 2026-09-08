@@ -34,9 +34,9 @@ func TestPostLoginSuccess(t *testing.T) {
 		test.ParseResponseAndValidate(t, res, &response)
 
 		assert.NotEmpty(t, response.AccessToken)
-		assert.NotEqual(t, fix.User1AccessToken1.Token, response.AccessToken)
+		assert.NotEqual(t, fixtures.User1AccessToken1Plain, response.AccessToken)
 		assert.NotEmpty(t, response.RefreshToken)
-		assert.NotEqual(t, fix.User1RefreshToken1.Token, response.RefreshToken)
+		assert.NotEqual(t, fixtures.User1RefreshToken1Plain, response.RefreshToken)
 		assert.Equal(t, int64(s.Config.Auth.AccessTokenValidity.Seconds()), *response.ExpiresIn)
 		assert.Equal(t, auth.TokenTypeBearer, *response.TokenType)
 	})
@@ -57,9 +57,9 @@ func TestPostLoginSuccessLowercaseTrimWhitespaces(t *testing.T) {
 		test.ParseResponseAndValidate(t, res, &response)
 
 		assert.NotEmpty(t, response.AccessToken)
-		assert.NotEqual(t, fix.User1AccessToken1.Token, response.AccessToken)
+		assert.NotEqual(t, fixtures.User1AccessToken1Plain, response.AccessToken)
 		assert.NotEmpty(t, response.RefreshToken)
-		assert.NotEqual(t, fix.User1RefreshToken1.Token, response.RefreshToken)
+		assert.NotEqual(t, fixtures.User1RefreshToken1Plain, response.RefreshToken)
 		assert.Equal(t, int64(s.Config.Auth.AccessTokenValidity.Seconds()), *response.ExpiresIn)
 		assert.Equal(t, auth.TokenTypeBearer, *response.TokenType)
 	})

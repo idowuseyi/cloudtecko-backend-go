@@ -62,7 +62,7 @@ func TestDeleteUserAccount(t *testing.T) {
 			"currentPassword": fixtures.PlainTestUserPassword,
 		}
 
-		res := test.PerformRequest(t, s, "DELETE", "/api/v1/auth/account", payload, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+		res := test.PerformRequest(t, s, "DELETE", "/api/v1/auth/account", payload, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 		require.Equal(t, http.StatusNoContent, res.Result().StatusCode)
 
 		// expect the user and all related data to be deleted
@@ -72,22 +72,18 @@ func TestDeleteUserAccount(t *testing.T) {
 
 func TestDeleteUserAccountCurrentPasswordWrong(t *testing.T) {
 	test.WithTestServer(t, func(s *api.Server) {
-		fix := fixtures.Fixtures()
-
 		payload := test.GenericPayload{
 			"currentPassword": "wrongpassword",
 		}
 
-		res := test.PerformRequest(t, s, "DELETE", "/api/v1/auth/account", payload, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+		res := test.PerformRequest(t, s, "DELETE", "/api/v1/auth/account", payload, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 		test.RequireHTTPError(t, res, httperrors.NewFromEcho(echo.ErrUnauthorized))
 	})
 }
 
 func TestDeleteUserAccountMissingCurrentPassword(t *testing.T) {
 	test.WithTestServer(t, func(s *api.Server) {
-		fix := fixtures.Fixtures()
-
-		res := test.PerformRequest(t, s, "DELETE", "/api/v1/auth/account", nil, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+		res := test.PerformRequest(t, s, "DELETE", "/api/v1/auth/account", nil, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 		require.Equal(t, http.StatusBadRequest, res.Result().StatusCode)
 	})
 }
@@ -112,7 +108,7 @@ func TestDeleteUserAccountUserNotActive(t *testing.T) {
 			"currentPassword": "somepassword",
 		}
 
-		res := test.PerformRequest(t, s, "DELETE", "/api/v1/auth/account", payload, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+		res := test.PerformRequest(t, s, "DELETE", "/api/v1/auth/account", payload, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 		test.RequireHTTPError(t, res, httperrors.ErrForbiddenUserDeactivated)
 	})
 }
@@ -130,7 +126,7 @@ func TestDeleteUserAccountUserNotLocal(t *testing.T) {
 			"currentPassword": "wrongpassword",
 		}
 
-		res := test.PerformRequest(t, s, "DELETE", "/api/v1/auth/account", payload, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+		res := test.PerformRequest(t, s, "DELETE", "/api/v1/auth/account", payload, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 		test.RequireHTTPError(t, res, httperrors.ErrForbiddenNotLocalUser)
 	})
 }

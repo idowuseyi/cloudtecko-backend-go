@@ -17,6 +17,7 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/hashing"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog/log"
@@ -160,8 +161,10 @@ func DefaultAuthTokenFormatValidator(token string) bool {
 type AuthTokenValidator func(c echo.Context, config AuthConfig, token string) (auth.Result, error)
 
 func DefaultAuthTokenValidator(c echo.Context, config AuthConfig, token string) (auth.Result, error) {
+	// Look up by hash: the database stores only the hash, never the value the
+	// client presented.
 	accessToken, err := models.AccessTokens(
-		models.AccessTokenWhere.Token.EQ(token),
+		models.AccessTokenWhere.TokenHash.EQ(hashing.HashToken(token)),
 		qm.Load(qm.Rels(models.AccessTokenRels.User, models.UserRels.AppUserProfile)),
 	).One(c.Request().Context(), config.S.DB)
 	if err != nil {
@@ -175,7 +178,9 @@ func DefaultAuthTokenValidator(c echo.Context, config AuthConfig, token string) 
 	}
 
 	return auth.Result{
-		Token:      accessToken.Token,
+		// The plaintext the caller presented, not the stored hash: downstream
+		// consumers (e.g. logout) need the value the client actually holds.
+		Token:      token,
 		User:       mapper.LocalUserToDTO(accessToken.R.User).Ptr(),
 		ValidUntil: accessToken.ValidUntil,
 	}, nil

@@ -225,7 +225,7 @@ func (s *Service) Logout(ctx context.Context, request dto.LogoutRequest) error {
 	log := util.LogFromContext(ctx)
 
 	if err := db.WithTransaction(ctx, s.db, func(exec boil.ContextExecutor) error {
-		if _, err := models.AccessTokens(models.AccessTokenWhere.Token.EQ(request.AccessToken)).DeleteAll(ctx, exec); err != nil {
+		if _, err := models.AccessTokens(models.AccessTokenWhere.TokenHash.EQ(hashing.HashToken(request.AccessToken))).DeleteAll(ctx, exec); err != nil {
 			log.Err(err).Msg("Failed to delete access token")
 			return err
 		}
@@ -234,7 +234,7 @@ func (s *Service) Logout(ctx context.Context, request dto.LogoutRequest) error {
 			return nil
 		}
 
-		if _, err := models.RefreshTokens(models.RefreshTokenWhere.Token.EQ(request.RefreshToken.String)).DeleteAll(ctx, exec); err != nil {
+		if _, err := models.RefreshTokens(models.RefreshTokenWhere.TokenHash.EQ(hashing.HashToken(request.RefreshToken.String))).DeleteAll(ctx, exec); err != nil {
 			log.Err(err).Msg("Failed to delete refresh token")
 			return err
 		}
@@ -319,17 +319,41 @@ func (s *Service) Refresh(ctx context.Context, request dto.RefreshRequest) (dto.
 	log := util.LogFromContext(ctx)
 
 	oldRefreshToken, err := models.RefreshTokens(
-		models.RefreshTokenWhere.Token.EQ(request.RefreshToken),
+		models.RefreshTokenWhere.TokenHash.EQ(hashing.HashToken(request.RefreshToken)),
 		qm.Load(models.RefreshTokenRels.User),
 	).One(ctx, s.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			log.Debug().Err(err).Msg("Refresh token not found")
+			log.Debug().Msg("Refresh token not found")
 			return dto.LoginResult{}, echo.ErrUnauthorized
 		}
 
 		log.Err(err).Msg("Failed to load refresh token")
 		return dto.LoginResult{}, err
+	}
+
+	// Replay of an already-rotated token means the chain leaked: either the
+	// attacker is using a stolen token or the legitimate client is racing one.
+	// Either way we cannot tell them apart, so revoke the whole family and force
+	// a real login. Consumed tokens are retained until they expire precisely so
+	// this is detectable at all.
+	if oldRefreshToken.ConsumedAt.Valid {
+		log.Warn().
+			Str("familyID", oldRefreshToken.FamilyID).
+			Str("userID", oldRefreshToken.UserID).
+			Msg("Refresh token reuse detected, revoking the entire token family")
+
+		if err := s.revokeRefreshTokenFamily(ctx, oldRefreshToken); err != nil {
+			log.Err(err).Msg("Failed to revoke reused refresh token family")
+			return dto.LoginResult{}, err
+		}
+
+		return dto.LoginResult{}, echo.ErrUnauthorized
+	}
+
+	if s.clock.Now().After(oldRefreshToken.ValidUntil) {
+		log.Debug().Msg("Refresh token has expired")
+		return dto.LoginResult{}, echo.ErrUnauthorized
 	}
 
 	user := oldRefreshToken.R.User
@@ -341,15 +365,22 @@ func (s *Service) Refresh(ctx context.Context, request dto.RefreshRequest) (dto.
 
 	var result dto.LoginResult
 	err = db.WithTransaction(ctx, s.db, func(exec boil.ContextExecutor) error {
-		_, err = oldRefreshToken.Delete(ctx, exec)
-		if err != nil {
-			log.Err(err).Msg("Failed to delete old refresh token")
+		// Mark consumed rather than delete: a deleted row is indistinguishable
+		// from a token that never existed, which is what made replay invisible.
+		oldRefreshToken.ConsumedAt = null.TimeFrom(s.clock.Now())
+
+		if _, err := oldRefreshToken.Update(ctx, exec, boil.Whitelist(
+			models.RefreshTokenColumns.ConsumedAt,
+			models.RefreshTokenColumns.UpdatedAt,
+		)); err != nil {
+			log.Err(err).Msg("Failed to mark old refresh token as consumed")
 			return err
 		}
 
 		result, err = s.authenticateUser(ctx, exec, dto.AuthenticateUserRequest{
 			User:                     mapper.LocalUserToDTO(user),
 			InvalidateExistingTokens: false,
+			RefreshTokenFamilyID:     oldRefreshToken.FamilyID,
 		})
 		if err != nil {
 			log.Err(err).Msg("Failed to authenticate user")
@@ -595,7 +626,23 @@ func (s *Service) authenticateUser(ctx context.Context, exec boil.ContextExecuto
 		}
 	}
 
+	// Tokens are generated here rather than by a uuid_generate_v4() column
+	// default, because only the hash is persisted -- the database never sees the
+	// value the client is given.
+	accessTokenPlain, accessTokenHash, err := hashing.NewToken()
+	if err != nil {
+		log.Err(err).Msg("Failed to generate access token")
+		return dto.LoginResult{}, err
+	}
+
+	refreshTokenPlain, refreshTokenHash, err := hashing.NewToken()
+	if err != nil {
+		log.Err(err).Msg("Failed to generate refresh token")
+		return dto.LoginResult{}, err
+	}
+
 	accessToken := models.AccessToken{
+		TokenHash:  accessTokenHash,
 		ValidUntil: s.clock.Now().Add(s.config.Auth.AccessTokenValidity),
 		UserID:     request.User.ID,
 	}
@@ -606,7 +653,16 @@ func (s *Service) authenticateUser(ctx context.Context, exec boil.ContextExecuto
 	}
 
 	refreshToken := models.RefreshToken{
-		UserID: request.User.ID,
+		TokenHash:  refreshTokenHash,
+		ValidUntil: s.clock.Now().Add(s.config.Auth.RefreshTokenValidity),
+		UserID:     request.User.ID,
+	}
+
+	// A rotated token stays in the family it came from, so that replay of any
+	// link in the chain can revoke the whole chain. A fresh login starts a new
+	// family, which the column default provides.
+	if request.RefreshTokenFamilyID != "" {
+		refreshToken.FamilyID = request.RefreshTokenFamilyID
 	}
 
 	if err := refreshToken.Insert(ctx, exec, boil.Infer()); err != nil {
@@ -622,8 +678,29 @@ func (s *Service) authenticateUser(ctx context.Context, exec boil.ContextExecuto
 		return dto.LoginResult{}, err
 	}
 
-	result.AccessToken = accessToken.Token
-	result.RefreshToken = refreshToken.Token
+	result.AccessToken = accessTokenPlain
+	result.RefreshToken = refreshTokenPlain
 
 	return result, nil
+}
+
+// revokeRefreshTokenFamily deletes every refresh token in a leaked chain and all
+// of that user's access tokens, so a detected replay ends every session derived
+// from it rather than only the token that was presented.
+func (s *Service) revokeRefreshTokenFamily(ctx context.Context, token *models.RefreshToken) error {
+	return db.WithTransaction(ctx, s.db, func(exec boil.ContextExecutor) error {
+		if _, err := models.RefreshTokens(
+			models.RefreshTokenWhere.FamilyID.EQ(token.FamilyID),
+		).DeleteAll(ctx, exec); err != nil {
+			return err
+		}
+
+		if _, err := models.AccessTokens(
+			models.AccessTokenWhere.UserID.EQ(token.UserID),
+		).DeleteAll(ctx, exec); err != nil {
+			return err
+		}
+
+		return nil
+	})
 }

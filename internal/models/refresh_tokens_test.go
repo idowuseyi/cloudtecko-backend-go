@@ -149,7 +149,7 @@ func testRefreshTokensExists(t *testing.T) {
 		t.Error(err)
 	}
 
-	e, err := RefreshTokenExists(ctx, tx, o.Token)
+	e, err := RefreshTokenExists(ctx, tx, o.TokenHash)
 	if err != nil {
 		t.Errorf("Unable to check if RefreshToken exists: %s", err)
 	}
@@ -175,7 +175,7 @@ func testRefreshTokensFind(t *testing.T) {
 		t.Error(err)
 	}
 
-	refreshTokenFound, err := FindRefreshToken(ctx, tx, o.Token)
+	refreshTokenFound, err := FindRefreshToken(ctx, tx, o.TokenHash)
 	if err != nil {
 		t.Error(err)
 	}
@@ -537,7 +537,7 @@ func testRefreshTokensSelect(t *testing.T) {
 }
 
 var (
-	refreshTokenDBTypes = map[string]string{`Token`: `uuid`, `UserID`: `uuid`, `CreatedAt`: `timestamp with time zone`, `UpdatedAt`: `timestamp with time zone`}
+	refreshTokenDBTypes = map[string]string{`UserID`: `uuid`, `CreatedAt`: `timestamp with time zone`, `UpdatedAt`: `timestamp with time zone`, `TokenHash`: `bytea`, `ValidUntil`: `timestamp with time zone`, `FamilyID`: `uuid`, `ConsumedAt`: `timestamp with time zone`}
 	_                   = bytes.MinRead
 )
 

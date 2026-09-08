@@ -43,9 +43,9 @@ func TestPostForgotPasswordCompleteSuccess(t *testing.T) {
 		test.ParseResponseAndValidate(t, res, &response)
 
 		assert.NotEmpty(t, response.AccessToken)
-		assert.NotEqual(t, fix.User1AccessToken1.Token, response.AccessToken)
+		assert.NotEqual(t, fixtures.User1AccessToken1Plain, response.AccessToken)
 		assert.NotEmpty(t, response.RefreshToken)
-		assert.NotEqual(t, fix.User1RefreshToken1.Token, *response.RefreshToken)
+		assert.NotEqual(t, fixtures.User1RefreshToken1Plain, *response.RefreshToken)
 		test.Snapshoter.Skip([]string{"AccessToken", "RefreshToken"}).Save(t, response)
 
 		err = fix.User1AccessToken1.Reload(ctx, s.DB)

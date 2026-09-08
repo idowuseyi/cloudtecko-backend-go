@@ -20,7 +20,7 @@ func TestPostLogoutSuccess(t *testing.T) {
 		ctx := t.Context()
 		fix := fixtures.Fixtures()
 
-		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/logout", nil, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/logout", nil, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 		assert.Equal(t, http.StatusNoContent, res.Result().StatusCode)
 
 		err := fix.User1AccessToken1.Reload(ctx, s.DB)
@@ -37,10 +37,10 @@ func TestPostLogoutSuccessWithRefreshToken(t *testing.T) {
 		fix := fixtures.Fixtures()
 
 		payload := test.GenericPayload{
-			"refresh_token": fix.User1RefreshToken1.Token,
+			"refresh_token": fixtures.User1RefreshToken1Plain,
 		}
 
-		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/logout", payload, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/logout", payload, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 		assert.Equal(t, http.StatusNoContent, res.Result().StatusCode)
 
 		err := fix.User1AccessToken1.Reload(ctx, s.DB)
@@ -60,7 +60,7 @@ func TestPostLogoutSuccessWithUnknownRefreshToken(t *testing.T) {
 			"refresh_token": "93d8ccd0-be30-4661-a428-cbe74e1a3ffe",
 		}
 
-		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/logout", payload, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/logout", payload, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 		assert.Equal(t, http.StatusNoContent, res.Result().StatusCode)
 
 		err := fix.User1AccessToken1.Reload(ctx, s.DB)
@@ -79,7 +79,7 @@ func TestPostLogoutInvalidRefreshToken(t *testing.T) {
 			"refresh_token": "not my refresh token",
 		}
 
-		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/logout", payload, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/logout", payload, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 		assert.Equal(t, http.StatusBadRequest, res.Result().StatusCode)
 
 		var response httperrors.HTTPValidationError

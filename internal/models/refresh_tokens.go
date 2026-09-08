@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
@@ -23,51 +24,72 @@ import (
 
 // RefreshToken is an object representing the database table.
 type RefreshToken struct {
-	Token     string    `boil:"token" json:"token" toml:"token" yaml:"token"`
-	UserID    string    `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
-	CreatedAt time.Time `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
-	UpdatedAt time.Time `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	UserID     string    `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
+	CreatedAt  time.Time `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	UpdatedAt  time.Time `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	TokenHash  []byte    `boil:"token_hash" json:"token_hash" toml:"token_hash" yaml:"token_hash"`
+	ValidUntil time.Time `boil:"valid_until" json:"valid_until" toml:"valid_until" yaml:"valid_until"`
+	FamilyID   string    `boil:"family_id" json:"family_id" toml:"family_id" yaml:"family_id"`
+	ConsumedAt null.Time `boil:"consumed_at" json:"consumed_at,omitempty" toml:"consumed_at" yaml:"consumed_at,omitempty"`
 
 	R *refreshTokenR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L refreshTokenL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var RefreshTokenColumns = struct {
-	Token     string
-	UserID    string
-	CreatedAt string
-	UpdatedAt string
+	UserID     string
+	CreatedAt  string
+	UpdatedAt  string
+	TokenHash  string
+	ValidUntil string
+	FamilyID   string
+	ConsumedAt string
 }{
-	Token:     "token",
-	UserID:    "user_id",
-	CreatedAt: "created_at",
-	UpdatedAt: "updated_at",
+	UserID:     "user_id",
+	CreatedAt:  "created_at",
+	UpdatedAt:  "updated_at",
+	TokenHash:  "token_hash",
+	ValidUntil: "valid_until",
+	FamilyID:   "family_id",
+	ConsumedAt: "consumed_at",
 }
 
 var RefreshTokenTableColumns = struct {
-	Token     string
-	UserID    string
-	CreatedAt string
-	UpdatedAt string
+	UserID     string
+	CreatedAt  string
+	UpdatedAt  string
+	TokenHash  string
+	ValidUntil string
+	FamilyID   string
+	ConsumedAt string
 }{
-	Token:     "refresh_tokens.token",
-	UserID:    "refresh_tokens.user_id",
-	CreatedAt: "refresh_tokens.created_at",
-	UpdatedAt: "refresh_tokens.updated_at",
+	UserID:     "refresh_tokens.user_id",
+	CreatedAt:  "refresh_tokens.created_at",
+	UpdatedAt:  "refresh_tokens.updated_at",
+	TokenHash:  "refresh_tokens.token_hash",
+	ValidUntil: "refresh_tokens.valid_until",
+	FamilyID:   "refresh_tokens.family_id",
+	ConsumedAt: "refresh_tokens.consumed_at",
 }
 
 // Generated where
 
 var RefreshTokenWhere = struct {
-	Token     whereHelperstring
-	UserID    whereHelperstring
-	CreatedAt whereHelpertime_Time
-	UpdatedAt whereHelpertime_Time
+	UserID     whereHelperstring
+	CreatedAt  whereHelpertime_Time
+	UpdatedAt  whereHelpertime_Time
+	TokenHash  whereHelper__byte
+	ValidUntil whereHelpertime_Time
+	FamilyID   whereHelperstring
+	ConsumedAt whereHelpernull_Time
 }{
-	Token:     whereHelperstring{field: "\"refresh_tokens\".\"token\""},
-	UserID:    whereHelperstring{field: "\"refresh_tokens\".\"user_id\""},
-	CreatedAt: whereHelpertime_Time{field: "\"refresh_tokens\".\"created_at\""},
-	UpdatedAt: whereHelpertime_Time{field: "\"refresh_tokens\".\"updated_at\""},
+	UserID:     whereHelperstring{field: "\"refresh_tokens\".\"user_id\""},
+	CreatedAt:  whereHelpertime_Time{field: "\"refresh_tokens\".\"created_at\""},
+	UpdatedAt:  whereHelpertime_Time{field: "\"refresh_tokens\".\"updated_at\""},
+	TokenHash:  whereHelper__byte{field: "\"refresh_tokens\".\"token_hash\""},
+	ValidUntil: whereHelpertime_Time{field: "\"refresh_tokens\".\"valid_until\""},
+	FamilyID:   whereHelperstring{field: "\"refresh_tokens\".\"family_id\""},
+	ConsumedAt: whereHelpernull_Time{field: "\"refresh_tokens\".\"consumed_at\""},
 }
 
 // RefreshTokenRels is where relationship names are stored.
@@ -107,10 +129,10 @@ func (r *refreshTokenR) GetUser() *User {
 type refreshTokenL struct{}
 
 var (
-	refreshTokenAllColumns            = []string{"token", "user_id", "created_at", "updated_at"}
-	refreshTokenColumnsWithoutDefault = []string{"user_id", "created_at", "updated_at"}
-	refreshTokenColumnsWithDefault    = []string{"token"}
-	refreshTokenPrimaryKeyColumns     = []string{"token"}
+	refreshTokenAllColumns            = []string{"user_id", "created_at", "updated_at", "token_hash", "valid_until", "family_id", "consumed_at"}
+	refreshTokenColumnsWithoutDefault = []string{"user_id", "created_at", "updated_at", "token_hash", "valid_until"}
+	refreshTokenColumnsWithDefault    = []string{"family_id", "consumed_at"}
+	refreshTokenPrimaryKeyColumns     = []string{"token_hash"}
 	refreshTokenGeneratedColumns      = []string{}
 )
 
@@ -344,7 +366,7 @@ func (o *RefreshToken) SetUser(ctx context.Context, exec boil.ContextExecutor, i
 		strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
 		strmangle.WhereClause("\"", "\"", 2, refreshTokenPrimaryKeyColumns),
 	)
-	values := []interface{}{related.ID, o.Token}
+	values := []interface{}{related.ID, o.TokenHash}
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -388,7 +410,7 @@ func RefreshTokens(mods ...qm.QueryMod) refreshTokenQuery {
 
 // FindRefreshToken retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindRefreshToken(ctx context.Context, exec boil.ContextExecutor, token string, selectCols ...string) (*RefreshToken, error) {
+func FindRefreshToken(ctx context.Context, exec boil.ContextExecutor, tokenHash []byte, selectCols ...string) (*RefreshToken, error) {
 	refreshTokenObj := &RefreshToken{}
 
 	sel := "*"
@@ -396,10 +418,10 @@ func FindRefreshToken(ctx context.Context, exec boil.ContextExecutor, token stri
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"refresh_tokens\" where \"token\"=$1", sel,
+		"select %s from \"refresh_tokens\" where \"token_hash\"=$1", sel,
 	)
 
-	q := queries.Raw(query, token)
+	q := queries.Raw(query, tokenHash)
 
 	err := q.Bind(ctx, exec, refreshTokenObj)
 	if err != nil {
@@ -762,7 +784,7 @@ func (o *RefreshToken) Delete(ctx context.Context, exec boil.ContextExecutor) (i
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), refreshTokenPrimaryKeyMapping)
-	sql := "DELETE FROM \"refresh_tokens\" WHERE \"token\"=$1"
+	sql := "DELETE FROM \"refresh_tokens\" WHERE \"token_hash\"=$1"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -839,7 +861,7 @@ func (o RefreshTokenSlice) DeleteAll(ctx context.Context, exec boil.ContextExecu
 // Reload refetches the object from the database
 // using the primary keys with an executor.
 func (o *RefreshToken) Reload(ctx context.Context, exec boil.ContextExecutor) error {
-	ret, err := FindRefreshToken(ctx, exec, o.Token)
+	ret, err := FindRefreshToken(ctx, exec, o.TokenHash)
 	if err != nil {
 		return err
 	}
@@ -878,16 +900,16 @@ func (o *RefreshTokenSlice) ReloadAll(ctx context.Context, exec boil.ContextExec
 }
 
 // RefreshTokenExists checks if the RefreshToken row exists.
-func RefreshTokenExists(ctx context.Context, exec boil.ContextExecutor, token string) (bool, error) {
+func RefreshTokenExists(ctx context.Context, exec boil.ContextExecutor, tokenHash []byte) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"refresh_tokens\" where \"token\"=$1 limit 1)"
+	sql := "select exists(select 1 from \"refresh_tokens\" where \"token_hash\"=$1 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
 		fmt.Fprintln(writer, sql)
-		fmt.Fprintln(writer, token)
+		fmt.Fprintln(writer, tokenHash)
 	}
-	row := exec.QueryRowContext(ctx, sql, token)
+	row := exec.QueryRowContext(ctx, sql, tokenHash)
 
 	err := row.Scan(&exists)
 	if err != nil {
@@ -899,5 +921,5 @@ func RefreshTokenExists(ctx context.Context, exec boil.ContextExecutor, token st
 
 // Exists checks if the RefreshToken row exists.
 func (o *RefreshToken) Exists(ctx context.Context, exec boil.ContextExecutor) (bool, error) {
-	return RefreshTokenExists(ctx, exec, o.Token)
+	return RefreshTokenExists(ctx, exec, o.TokenHash)
 }

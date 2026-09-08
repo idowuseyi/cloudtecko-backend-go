@@ -149,7 +149,7 @@ func testAccessTokensExists(t *testing.T) {
 		t.Error(err)
 	}
 
-	e, err := AccessTokenExists(ctx, tx, o.Token)
+	e, err := AccessTokenExists(ctx, tx, o.TokenHash)
 	if err != nil {
 		t.Errorf("Unable to check if AccessToken exists: %s", err)
 	}
@@ -175,7 +175,7 @@ func testAccessTokensFind(t *testing.T) {
 		t.Error(err)
 	}
 
-	accessTokenFound, err := FindAccessToken(ctx, tx, o.Token)
+	accessTokenFound, err := FindAccessToken(ctx, tx, o.TokenHash)
 	if err != nil {
 		t.Error(err)
 	}
@@ -537,7 +537,7 @@ func testAccessTokensSelect(t *testing.T) {
 }
 
 var (
-	accessTokenDBTypes = map[string]string{`Token`: `uuid`, `ValidUntil`: `timestamp with time zone`, `UserID`: `uuid`, `CreatedAt`: `timestamp with time zone`, `UpdatedAt`: `timestamp with time zone`}
+	accessTokenDBTypes = map[string]string{`ValidUntil`: `timestamp with time zone`, `UserID`: `uuid`, `CreatedAt`: `timestamp with time zone`, `UpdatedAt`: `timestamp with time zone`, `TokenHash`: `bytea`}
 	_                  = bytes.MinRead
 )
 

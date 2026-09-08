@@ -19,7 +19,7 @@ func TestGetUserInfo(t *testing.T) {
 		ctx := t.Context()
 		fix := fixtures.Fixtures()
 
-		res := test.PerformRequest(t, s, "GET", "/api/v1/auth/userinfo", nil, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+		res := test.PerformRequest(t, s, "GET", "/api/v1/auth/userinfo", nil, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 		require.Equal(t, http.StatusOK, res.Result().StatusCode)
 
 		var response types.GetUserInfoResponse
@@ -48,7 +48,7 @@ func TestGetUserInfoMinimal(t *testing.T) {
 		_, err := models.AppUserProfiles(models.AppUserProfileWhere.UserID.EQ(fix.User1.ID)).DeleteAll(ctx, s.DB)
 		require.NoError(t, err)
 
-		res := test.PerformRequest(t, s, "GET", "/api/v1/auth/userinfo", nil, test.HeadersWithAuth(t, fix.User1AccessToken1.Token))
+		res := test.PerformRequest(t, s, "GET", "/api/v1/auth/userinfo", nil, test.HeadersWithAuth(t, fixtures.User1AccessToken1Plain))
 		require.Equal(t, http.StatusOK, res.Result().StatusCode)
 
 		var response types.GetUserInfoResponse
