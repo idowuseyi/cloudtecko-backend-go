@@ -5,12 +5,12 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/httperrors"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/data/dto"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/db"
-	"github.com/aarondl/sqlboiler/v4/boil"
 )
 
 func (s *Service) UpdatePushToken(ctx context.Context, request dto.UpdatePushTokenRequest) error {

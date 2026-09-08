@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/dlmiddlecote/sqlstats"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/metrics/users"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
-	"github.com/dlmiddlecote/sqlstats"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

@@ -3,8 +3,8 @@ package test_test
 import (
 	"testing"
 
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/test"
 	"github.com/go-openapi/swag/conv"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/test"
 	"github.com/stretchr/testify/assert"
 )
 

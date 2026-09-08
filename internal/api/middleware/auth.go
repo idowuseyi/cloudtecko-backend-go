@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/aarondl/sqlboiler/v4/queries/qm"
+	"github.com/go-openapi/strfmt"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/httperrors"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/auth"
@@ -15,8 +17,6 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
-	"github.com/aarondl/sqlboiler/v4/queries/qm"
-	"github.com/go-openapi/strfmt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog/log"

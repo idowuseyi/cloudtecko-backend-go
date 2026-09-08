@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 )
 
 type TxFn func(boil.ContextExecutor) error

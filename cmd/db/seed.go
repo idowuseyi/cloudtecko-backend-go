@@ -5,13 +5,13 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
 	data "github.com/idowuseyi/cloudtecko-backend-go/internal/data/fixtures"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/command"
 	dbutil "github.com/idowuseyi/cloudtecko-backend-go/internal/util/db"
-	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )

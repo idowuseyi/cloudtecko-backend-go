@@ -4,9 +4,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/gabriel-vasile/mimetype"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/mime"
-	"github.com/gabriel-vasile/mimetype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

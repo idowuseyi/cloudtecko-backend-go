@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/go-openapi/swag/conv"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/httperrors"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
-	"github.com/go-openapi/swag/conv"
 	"github.com/stretchr/testify/require"
 )
 

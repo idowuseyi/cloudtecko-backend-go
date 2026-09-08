@@ -3,12 +3,12 @@ package auth
 import (
 	"net/http"
 
+	"github.com/aarondl/null/v8"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/auth"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/data/dto"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
-	"github.com/aarondl/null/v8"
 	"github.com/labstack/echo/v4"
 )
 

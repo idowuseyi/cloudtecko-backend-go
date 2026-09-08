@@ -12,13 +12,13 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/aarondl/sqlboiler/v4/boil"
+	"github.com/allaboutapps/integresql-client-go"
+	"github.com/allaboutapps/integresql-client-go/pkg/util"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test/fixtures"
 	pUtil "github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	dbutil "github.com/idowuseyi/cloudtecko-backend-go/internal/util/db"
-	"github.com/aarondl/sqlboiler/v4/boil"
-	"github.com/allaboutapps/integresql-client-go"
-	"github.com/allaboutapps/integresql-client-go/pkg/util"
 	"github.com/pkg/errors"
 	migrate "github.com/rubenv/sql-migrate"
 )

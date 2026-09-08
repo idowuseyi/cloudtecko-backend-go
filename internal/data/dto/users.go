@@ -3,12 +3,12 @@ package dto
 import (
 	"time"
 
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/aarondl/null/v8"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 )
 
 type User struct {

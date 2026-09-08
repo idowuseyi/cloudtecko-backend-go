@@ -4,13 +4,13 @@ import (
 	"database/sql"
 	"testing"
 
+	"github.com/aarondl/null/v8"
+	"github.com/aarondl/sqlboiler/v4/queries"
+	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test/fixtures"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/db"
-	"github.com/aarondl/null/v8"
-	"github.com/aarondl/sqlboiler/v4/queries"
-	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

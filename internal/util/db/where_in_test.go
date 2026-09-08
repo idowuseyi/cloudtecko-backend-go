@@ -3,11 +3,11 @@ package db_test
 import (
 	"testing"
 
+	"github.com/aarondl/sqlboiler/v4/queries"
+	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/db"
-	"github.com/aarondl/sqlboiler/v4/queries"
-	"github.com/aarondl/sqlboiler/v4/queries/qm"
 )
 
 func TestWhereIn(t *testing.T) {

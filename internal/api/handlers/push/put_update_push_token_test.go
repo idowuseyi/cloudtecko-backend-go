@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/httperrors"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test/fixtures"
-	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

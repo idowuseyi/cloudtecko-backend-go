@@ -151,8 +151,8 @@ const (
 	propertyTypeDateTime = "date-time"
 
 	// goFileExtension is the file extension used for all scaffolded handler files.
-	goFileExtension = ".go"
-	propertyTypeUUID4    = "uuid4"
+	goFileExtension   = ".go"
+	propertyTypeUUID4 = "uuid4"
 )
 
 func fieldToProperty(field Field) Property {

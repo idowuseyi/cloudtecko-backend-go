@@ -14,9 +14,9 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test/mocks"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 
-	apitypes "github.com/idowuseyi/cloudtecko-backend-go/internal/types"
 	"github.com/aarondl/sqlboiler/v4/types"
 	"github.com/go-openapi/swag/conv"
+	apitypes "github.com/idowuseyi/cloudtecko-backend-go/internal/types"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )

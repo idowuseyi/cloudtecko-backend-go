@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/test"
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/test"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/stretchr/testify/require"
 )
 

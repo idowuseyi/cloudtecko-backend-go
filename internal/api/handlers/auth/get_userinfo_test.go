@@ -4,12 +4,12 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test/fixtures"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
-	"github.com/go-openapi/strfmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

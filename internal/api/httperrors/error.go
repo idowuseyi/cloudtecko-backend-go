@@ -6,8 +6,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
 	"github.com/go-openapi/swag/conv"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
 	"github.com/labstack/echo/v4"
 )
 

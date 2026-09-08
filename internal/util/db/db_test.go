@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/test"
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/db"
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/types"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/test"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/db"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

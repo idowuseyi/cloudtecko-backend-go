@@ -5,6 +5,10 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/aarondl/null/v8"
+	"github.com/aarondl/sqlboiler/v4/boil"
+	"github.com/aarondl/sqlboiler/v4/queries/qm"
+	"github.com/dropbox/godropbox/time2"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/httperrors"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/data/dto"
@@ -13,10 +17,6 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/db"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/hashing"
-	"github.com/aarondl/null/v8"
-	"github.com/aarondl/sqlboiler/v4/boil"
-	"github.com/aarondl/sqlboiler/v4/queries/qm"
-	"github.com/dropbox/godropbox/time2"
 	"github.com/labstack/echo/v4"
 )
 

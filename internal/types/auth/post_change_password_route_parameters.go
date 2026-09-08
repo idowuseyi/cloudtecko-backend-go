@@ -5,12 +5,12 @@ package auth
 import (
 	"net/http"
 
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/validate"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
 )
 
 // NewPostChangePasswordRouteParams creates a new PostChangePasswordRouteParams object

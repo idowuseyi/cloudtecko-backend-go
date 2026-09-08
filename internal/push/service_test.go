@@ -4,13 +4,13 @@ import (
 	"database/sql"
 	"testing"
 
+	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/data/mapper"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/push"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/push/provider"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test/fixtures"
-	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

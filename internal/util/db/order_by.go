@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
 )
 
 func OrderBy(orderDir types.OrderDir, path ...string) qm.QueryMod {

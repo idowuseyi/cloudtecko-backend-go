@@ -6,11 +6,11 @@ import (
 	"database/sql"
 	"testing"
 
+	"github.com/google/wire"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/auth"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/data/local"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/metrics"
-	"github.com/google/wire"
 )
 
 // INJECTORS - https://github.com/google/wire/blob/main/docs/guide.md#injectors

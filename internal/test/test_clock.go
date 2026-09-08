@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
 	"github.com/dropbox/godropbox/time2"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
 )
 
 func GetMockClock(t *testing.T, clock time2.Clock) *time2.MockClock {

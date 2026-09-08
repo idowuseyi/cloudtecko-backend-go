@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/go-openapi/swag/conv"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/httperrors"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
-	"github.com/go-openapi/swag/conv"
 	"github.com/labstack/echo/v4"
 	"github.com/timewasted/go-accept-headers"
 )

@@ -3,8 +3,8 @@ package local
 import (
 	"database/sql"
 
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
 	"github.com/dropbox/godropbox/time2"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
 )
 
 type Service struct {

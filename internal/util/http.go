@@ -12,13 +12,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/httperrors"
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
 	"github.com/gabriel-vasile/mimetype"
 	oerrors "github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/httperrors"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
 	"github.com/labstack/echo/v4"
 )
 

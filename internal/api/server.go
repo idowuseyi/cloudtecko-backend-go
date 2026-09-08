@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/dropbox/godropbox/time2"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/data/dto"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/data/local"
@@ -15,7 +16,6 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/metrics"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/push"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
-	"github.com/dropbox/godropbox/time2"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
 

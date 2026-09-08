@@ -7,12 +7,12 @@
 package api
 
 import (
+	"database/sql"
+	"github.com/google/wire"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/auth"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/data/local"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/metrics"
-	"database/sql"
-	"github.com/google/wire"
 	"testing"
 )
 

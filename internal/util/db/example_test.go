@@ -3,10 +3,10 @@ package db_test
 import (
 	"fmt"
 
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/db"
 	"github.com/aarondl/sqlboiler/v4/queries"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/db"
 )
 
 type PublicName struct {

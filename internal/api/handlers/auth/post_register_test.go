@@ -5,6 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aarondl/null/v8"
+	"github.com/aarondl/sqlboiler/v4/queries/qm"
+	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/swag/conv"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/httperrors"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/auth"
@@ -15,10 +19,6 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/db"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/url"
-	"github.com/aarondl/null/v8"
-	"github.com/aarondl/sqlboiler/v4/queries/qm"
-	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag/conv"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
