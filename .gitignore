@@ -43,3 +43,29 @@ __debug_bin
 
 # the postAttachCommand should clean this up, ensure it's not commited anyway
 .gitconfig.global
+# --- cloudtecko additions ---
+
+# dotenv files: only .env.local.sample is committed, never a real one.
+# The upstream template ignored the single literal name ".env.local"; any
+# other dotenv file (.env, .env.production, ...) was tracked by accident.
+.env
+.env.*
+!.env.local.sample
+
+# credentials / keys — never commit these
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+service-account*.json
+
+# IDEs
+.idea/
+
+# node (web tooling, if any is added later)
+node_modules/
+
+# coverage output
+coverage.out
+coverage.html

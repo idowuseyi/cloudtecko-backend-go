@@ -69,7 +69,6 @@ services:
       SERVER_MANAGEMENT_SECRET: "mgmtpass"
 
       # path to the changie config
-      CHANGIE_CONFIG_PATH: "/app/.changie-go-starter.yaml"
 
     # Uncomment the next four lines if you will use a ptrace-based debugger like C++, Go, and Rust.
     cap_add:

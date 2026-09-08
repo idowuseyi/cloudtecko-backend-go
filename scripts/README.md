@@ -27,13 +27,13 @@ Any `*.go` file in all subdirectories of `/scripts/**` should specify `//go:buil
 ```bash
 # Works
 go run -tags scripts scripts/main.go
-# go-starter development scripts
-# Utility commands while developing go-starter based projects.
+# cloudtecko development scripts
+# Utility commands for developing the cloudtecko backend.
 
 # Works (same as above)
 gsdev
-# go-starter development scripts
-# Utility commands while developing go-starter based projects.
+# cloudtecko development scripts
+# Utility commands for developing the cloudtecko backend.
 
 # Misses build tag "scripts"
 go run scripts/main.go

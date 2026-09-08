@@ -20,8 +20,8 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "gsdev",
 	Short: "gsdev",
-	Long: `go-starter development scripts
-Utility commands while developing go-starter based projects.`,
+	Long: `cloudtecko development scripts
+Utility commands for developing the cloudtecko backend.`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

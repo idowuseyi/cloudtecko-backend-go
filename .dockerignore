@@ -1,7 +1,35 @@
+# Files excluded from the Docker build context.
+#
+# Note: .git is deliberately NOT excluded. The Makefile stamps the binary via
+# ARG_COMMIT = `git rev-list -1 HEAD`, which silently degrades to "unknown"
+# without it, and the builder stage is never published (only the `app` stage
+# is, and it copies just bin/app, api/swagger.yml, assets/, migrations/, web/).
+#
+# Everything excluded below is either a secret or already gitignored, so the
+# build context stays comparable to a clean git checkout.
+
 .devcontainer
 .vscode
 .pkg
 .tools-versions
 Dockerfile
+Dockerfile.vercel
 docker-compose.*
 docker-helper.sh
+
+# secrets: never let a developer's local dotenv into a build layer.
+# Dockerfile:245 does `COPY . /app/`, so without this a local .env.local
+# would be baked into the builder image.
+.env
+.env.*
+!.env.local.sample
+
+# host build artefacts — all gitignored, and all rebuilt inside the image
+bin
+tmp
+dumps
+
+# runtime read-write volume: keep the directory (the readiness probe checks it
+# is writeable) but never copy a developer's local contents into the image
+assets/mnt/*
+!assets/mnt/.gitkeep

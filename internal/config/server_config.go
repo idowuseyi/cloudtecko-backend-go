@@ -212,7 +212,7 @@ func DefaultServiceConfigFromEnv() Server {
 			EnableMetrics:           util.GetEnvAsBool("SERVER_MANAGEMENT_ENABLE_METRICS", false),
 		},
 		Mailer: Mailer{
-			DefaultSender:               util.GetEnv("SERVER_MAILER_DEFAULT_SENDER", "go-starter@example.com"),
+			DefaultSender:               util.GetEnv("SERVER_MAILER_DEFAULT_SENDER", "noreply@cloudtecko.com"),
 			Send:                        util.GetEnvAsBool("SERVER_MAILER_SEND", true),
 			WebTemplatesEmailBaseDirAbs: util.GetEnv("SERVER_MAILER_WEB_TEMPLATES_EMAIL_BASE_DIR_ABS", filepath.Join(util.GetProjectRootDir(), "/web/templates/email")), // /app/web/templates/email
 			Transporter:                 util.GetEnvEnum("SERVER_MAILER_TRANSPORTER", MailerTransporterMock.String(), []string{MailerTransporterSMTP.String(), MailerTransporterMock.String()}),

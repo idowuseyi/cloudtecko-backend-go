@@ -8,7 +8,7 @@ To locally (re-)generate a schemacrawler diagramm, execute any of the following 
 # Typically it's "<dir_name>_default".
 docker network ls
 # [...]
-# go-starter_default
+# cloudtecko-backend-go_default
 
 # Ensure you are within the /docs/schemacrawler directory
 cd docs/schemacrawler
@@ -16,10 +16,10 @@ pwd
 # [...]/docs/schemacrawler
 
 # Generate a png (exchange --network="..." with your docker network before executing this command)
-docker run --network=go-starter_default -v $(pwd):/home/schcrwlr/share -v $(pwd)/schemacrawler.config.properties:/opt/schemacrawler/config/schemacrawler.config.properties --entrypoint=/opt/schemacrawler/bin/schemacrawler.sh schemacrawler/schemacrawler --server=postgresql --host=postgres --port=5432 --database=spec --schemas=public --user=dbuser --password=dbpass --info-level=standard --command=schema --portable-names --title "github.com/idowuseyi/cloudtecko-backend-go" --output-format=png --output-file=/home/schcrwlr/share/schema.png
+docker run --network=cloudtecko-backend-go_default -v $(pwd):/home/schcrwlr/share -v $(pwd)/schemacrawler.config.properties:/opt/schemacrawler/config/schemacrawler.config.properties --entrypoint=/opt/schemacrawler/bin/schemacrawler.sh schemacrawler/schemacrawler --server=postgresql --host=postgres --port=5432 --database=spec --schemas=public --user=dbuser --password=dbpass --info-level=standard --command=schema --portable-names --title "github.com/idowuseyi/cloudtecko-backend-go" --output-format=png --output-file=/home/schcrwlr/share/schema.png
 
 # Generate a pdf (exchange --network="..." with your docker network before executing this command)
-docker run --network=go-starter_default -v $(pwd):/home/schcrwlr/share -v $(pwd)/schemacrawler.config.properties:/opt/schemacrawler/config/schemacrawler.config.properties --entrypoint=/opt/schemacrawler/bin/schemacrawler.sh schemacrawler/schemacrawler --server=postgresql --host=postgres --port=5432 --database=spec --schemas=public --user=dbuser --password=dbpass --info-level=standard --command=schema --portable-names --title "github.com/idowuseyi/cloudtecko-backend-go" --output-format=pdf --output-file=/home/schcrwlr/share/schema.pdf
+docker run --network=cloudtecko-backend-go_default -v $(pwd):/home/schcrwlr/share -v $(pwd)/schemacrawler.config.properties:/opt/schemacrawler/config/schemacrawler.config.properties --entrypoint=/opt/schemacrawler/bin/schemacrawler.sh schemacrawler/schemacrawler --server=postgresql --host=postgres --port=5432 --database=spec --schemas=public --user=dbuser --password=dbpass --info-level=standard --command=schema --portable-names --title "github.com/idowuseyi/cloudtecko-backend-go" --output-format=pdf --output-file=/home/schcrwlr/share/schema.pdf
 
 # Feel free to override schemacrawler configuration settings in "./schemacrawler.config.properties".
 ```
