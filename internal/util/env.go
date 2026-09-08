@@ -196,7 +196,12 @@ func GetMgmtSecret(envKey string) string {
 			log.Panic().Err(err).Msg("Failed to generate random management secret")
 		}
 
-		log.Warn().Str("envKey", envKey).Str("mgmtSecret", mgmtSecret).Msg("Could not retrieve management secret from env key, using randomly generated one")
+		// Deliberately NOT logging the secret itself. It grants access to every
+		// management endpoint, and logs are routinely shipped to third parties.
+		log.Warn().
+			Str("envKey", envKey).
+			Int("length", len(mgmtSecret)).
+			Msg("Management secret not set in env, generated a random one for this process (it changes on every restart)")
 	})
 
 	return mgmtSecret

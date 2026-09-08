@@ -79,7 +79,7 @@ func (s *Service) UpdatePassword(ctx context.Context, request dto.UpdatePassword
 		}
 	}
 
-	hash, err := hashing.HashPassword(request.NewPassword, hashing.DefaultArgon2Params)
+	hash, err := hashing.HashPassword(request.NewPassword, hashing.DefaultArgon2ParamsFromEnv())
 	if err != nil {
 		log.Err(err).Msg("Failed to hash new password")
 		return dto.LoginResult{}, httperrors.ErrBadRequestInvalidPassword
@@ -256,9 +256,18 @@ func (s *Service) Login(ctx context.Context, request dto.LoginRequest) (dto.Logi
 	).One(ctx, s.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			log.Debug().Err(err).Msg("User not found")
+			log.Debug().Msg("User not found")
+
+			// Spend the same Argon2 work we would have spent on a real user before
+			// answering. Returning immediately here makes an unknown username
+			// resolve in microseconds while a known one costs a full ~64MB Argon2
+			// hash, which is a reliable remote oracle for "does this account exist".
+			hashing.CompareDummyPasswordAndHash(request.Password)
+
+			return dto.LoginResult{}, echo.ErrUnauthorized
 		}
 
+		// Only a genuine database failure is error-worthy; a wrong username is not.
 		log.Err(err).Msg("Failed to load user")
 
 		return dto.LoginResult{}, echo.ErrUnauthorized
@@ -405,7 +414,7 @@ func (s *Service) Register(ctx context.Context, request dto.RegisterRequest) (dt
 		}, nil
 	}
 
-	hash, err := hashing.HashPassword(request.Password, hashing.DefaultArgon2Params)
+	hash, err := hashing.HashPassword(request.Password, hashing.DefaultArgon2ParamsFromEnv())
 	if err != nil {
 		log.Err(err).Msg("Failed to hash user password")
 		return dto.RegisterResult{}, httperrors.ErrBadRequestInvalidPassword

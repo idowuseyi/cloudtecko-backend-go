@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,6 +10,7 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/mailer/transport"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/push/provider"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
+	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
 	"golang.org/x/text/language"
 )
@@ -27,6 +29,35 @@ type EchoServer struct {
 	EnableCacheControlMiddleware   bool
 	SecureMiddleware               EchoServerSecureMiddleware
 	WebTemplatesViewsBaseDirAbs    string
+
+	// CORS. Upstream used echo's zero-config CORS(), which is AllowOrigins ["*"],
+	// enabled by default and with no way to narrow it from the environment.
+	CORSAllowOrigins     []string
+	CORSAllowMethods     []string
+	CORSAllowHeaders     []string
+	CORSAllowCredentials bool
+	CORSMaxAgeSeconds    int
+
+	// Request body cap. Echo's default is unlimited.
+	EnableBodyLimitMiddleware bool
+	BodyLimit                 string
+
+	// Per-IP rate limiting, applied to the unauthenticated auth endpoints.
+	EnableRateLimitMiddleware bool
+	RateLimitRate             float64
+	RateLimitBurst            int
+	RateLimitExpiresIn        time.Duration
+
+	// http.Server timeouts. Without these the server is Slowloris-exposed.
+	ReadTimeout       time.Duration
+	ReadHeaderTimeout time.Duration
+	WriteTimeout      time.Duration
+	IdleTimeout       time.Duration
+	MaxHeaderBytes    int
+
+	// Serve /swagger.yml publicly. The full API spec was previously always
+	// readable by anyone, with no way to turn it off.
+	EnablePublicSwagger bool
 }
 
 type PprofServer struct {
@@ -169,14 +200,38 @@ func DefaultServiceConfigFromEnv() Server {
 				XSSProtection:         util.GetEnv("SERVER_ECHO_SECURE_MIDDLEWARE_XSS_PROTECTION", "1; mode=block"),
 				ContentTypeNosniff:    util.GetEnv("SERVER_ECHO_SECURE_MIDDLEWARE_CONTENT_TYPE_NOSNIFF", "nosniff"),
 				XFrameOptions:         util.GetEnv("SERVER_ECHO_SECURE_MIDDLEWARE_X_FRAME_OPTIONS", "SAMEORIGIN"),
-				HSTSMaxAge:            util.GetEnvAsInt("SERVER_ECHO_SECURE_MIDDLEWARE_HSTS_MAX_AGE", 0),
+				HSTSMaxAge:            util.GetEnvAsInt("SERVER_ECHO_SECURE_MIDDLEWARE_HSTS_MAX_AGE", 31536000),
 				HSTSExcludeSubdomains: util.GetEnvAsBool("SERVER_ECHO_SECURE_MIDDLEWARE_HSTS_EXCLUDE_SUBDOMAINS", false),
 				ContentSecurityPolicy: util.GetEnv("SERVER_ECHO_SECURE_MIDDLEWARE_CONTENT_SECURITY_POLICY", ""),
 				CSPReportOnly:         util.GetEnvAsBool("SERVER_ECHO_SECURE_MIDDLEWARE_CSP_REPORT_ONLY", false),
 				HSTSPreloadEnabled:    util.GetEnvAsBool("SERVER_ECHO_SECURE_MIDDLEWARE_HSTS_PRELOAD_ENABLED", false),
-				ReferrerPolicy:        util.GetEnv("SERVER_ECHO_SECURE_MIDDLEWARE_REFERRER_POLICY", ""),
+				ReferrerPolicy:        util.GetEnv("SERVER_ECHO_SECURE_MIDDLEWARE_REFERRER_POLICY", "strict-origin-when-cross-origin"),
 			},
 			WebTemplatesViewsBaseDirAbs: util.GetEnv("SERVER_ECHO_WEB_TEMPLATES_VIEWS_BASE_DIR_ABS", filepath.Join(util.GetProjectRootDir(), "/web/templates/views")),
+
+			// Empty by default: an API that does not know its callers should not
+			// advertise itself to every origin. Set explicitly in deployment.
+			CORSAllowOrigins:     util.GetEnvAsStringArrTrimmed("SERVER_ECHO_CORS_ALLOW_ORIGINS", []string{}),
+			CORSAllowMethods:     util.GetEnvAsStringArrTrimmed("SERVER_ECHO_CORS_ALLOW_METHODS", []string{http.MethodGet, http.MethodHead, http.MethodPut, http.MethodPatch, http.MethodPost, http.MethodDelete}),
+			CORSAllowHeaders:     util.GetEnvAsStringArrTrimmed("SERVER_ECHO_CORS_ALLOW_HEADERS", []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization}),
+			CORSAllowCredentials: util.GetEnvAsBool("SERVER_ECHO_CORS_ALLOW_CREDENTIALS", false),
+			CORSMaxAgeSeconds:    util.GetEnvAsInt("SERVER_ECHO_CORS_MAX_AGE_SECONDS", 0),
+
+			EnableBodyLimitMiddleware: util.GetEnvAsBool("SERVER_ECHO_ENABLE_BODY_LIMIT_MIDDLEWARE", true),
+			BodyLimit:                 util.GetEnv("SERVER_ECHO_BODY_LIMIT", "1M"),
+
+			EnableRateLimitMiddleware: util.GetEnvAsBool("SERVER_ECHO_ENABLE_RATE_LIMIT_MIDDLEWARE", true),
+			RateLimitRate:             float64(util.GetEnvAsInt("SERVER_ECHO_RATE_LIMIT_REQUESTS_PER_SECOND", 10)),
+			RateLimitBurst:            util.GetEnvAsInt("SERVER_ECHO_RATE_LIMIT_BURST", 20),
+			RateLimitExpiresIn:        time.Second * time.Duration(util.GetEnvAsInt("SERVER_ECHO_RATE_LIMIT_EXPIRES_IN_SECONDS", 180)),
+
+			ReadTimeout:       time.Second * time.Duration(util.GetEnvAsInt("SERVER_ECHO_READ_TIMEOUT_SECONDS", 30)),
+			ReadHeaderTimeout: time.Second * time.Duration(util.GetEnvAsInt("SERVER_ECHO_READ_HEADER_TIMEOUT_SECONDS", 10)),
+			WriteTimeout:      time.Second * time.Duration(util.GetEnvAsInt("SERVER_ECHO_WRITE_TIMEOUT_SECONDS", 60)),
+			IdleTimeout:       time.Second * time.Duration(util.GetEnvAsInt("SERVER_ECHO_IDLE_TIMEOUT_SECONDS", 120)),
+			MaxHeaderBytes:    util.GetEnvAsInt("SERVER_ECHO_MAX_HEADER_BYTES", 1<<20),
+
+			EnablePublicSwagger: util.GetEnvAsBool("SERVER_ECHO_ENABLE_PUBLIC_SWAGGER", true),
 		},
 		Pprof: PprofServer{
 			// https://golang.org/pkg/net/http/pprof/

@@ -120,6 +120,15 @@ func (s *Server) Start() error {
 		return errors.New("server is not ready")
 	}
 
+	// Echo ships an *http.Server with every timeout at zero, i.e. unlimited. A
+	// client that opens a connection and dribbles out a request header holds a
+	// goroutine and a file descriptor indefinitely (Slowloris).
+	s.Echo.Server.ReadTimeout = s.Config.Echo.ReadTimeout
+	s.Echo.Server.ReadHeaderTimeout = s.Config.Echo.ReadHeaderTimeout
+	s.Echo.Server.WriteTimeout = s.Config.Echo.WriteTimeout
+	s.Echo.Server.IdleTimeout = s.Config.Echo.IdleTimeout
+	s.Echo.Server.MaxHeaderBytes = s.Config.Echo.MaxHeaderBytes
+
 	if err := s.Echo.Start(s.Config.Echo.ListenAddress); err != nil {
 		return fmt.Errorf("failed to start echo server: %w", err)
 	}
