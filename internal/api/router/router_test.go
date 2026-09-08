@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/router"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/metrics/users"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
@@ -36,14 +37,30 @@ func TestPprofEnabled(t *testing.T) {
 	})
 }
 
-func TestPprofEnabledNoAuth(t *testing.T) {
-	config := config.DefaultServiceConfigFromEnv()
+// Serving pprof without auth publishes heap and goroutine dumps, which routinely
+// contain tokens and connection strings. Outside debug the server must refuse to
+// start rather than come up quietly in that state.
+func TestPprofEnabledNoAuthRefusesToStart(t *testing.T) {
+	cfg := config.DefaultServiceConfigFromEnv()
+	cfg.Pprof.Enable = true
+	cfg.Pprof.EnableManagementKeyAuth = false
+	cfg.Echo.Debug = false
 
-	// these are typically our default values, however we force set them here to ensure those are set while test execution.
-	config.Pprof.Enable = true
-	config.Pprof.EnableManagementKeyAuth = false
+	err := router.Init(api.NewServer(cfg))
 
-	test.WithTestServerConfigurable(t, config, func(s *api.Server) {
+	require.Error(t, err, "router.Init must refuse unauthenticated pprof outside debug")
+	assert.Contains(t, err.Error(), "refusing to start")
+}
+
+// ... but it stays available for local profiling, which is the whole point of
+// the escape hatch.
+func TestPprofEnabledNoAuthAllowedInDebug(t *testing.T) {
+	cfg := config.DefaultServiceConfigFromEnv()
+	cfg.Pprof.Enable = true
+	cfg.Pprof.EnableManagementKeyAuth = false
+	cfg.Echo.Debug = true
+
+	test.WithTestServerConfigurable(t, cfg, func(s *api.Server) {
 		res := test.PerformRequest(t, s, "GET", "/debug/pprof/heap?", nil, nil)
 		require.Equal(t, 200, res.Result().StatusCode)
 	})
@@ -80,8 +97,18 @@ func TestMetricsEnabled(t *testing.T) {
 	config.Management.EnableMetrics = true
 
 	test.WithTestServerConfigurable(t, config, func(s *api.Server) {
-		res := test.PerformRequest(t, s, "GET", "/metrics", nil, nil)
+		// Metrics live under the management group now. Registering them on the
+		// root echo published per-route traffic volumes to anyone.
+		res := test.PerformRequest(t, s, "GET", "/-/metrics?mgmt-secret="+s.Config.Management.Secret, nil, nil)
 		require.Equal(t, http.StatusOK, res.Result().StatusCode)
+
+		// The old, unauthenticated location must be gone...
+		res404 := test.PerformRequest(t, s, "GET", "/metrics", nil, nil)
+		require.Equal(t, http.StatusNotFound, res404.Result().StatusCode, "/metrics must not be served outside the management group")
+
+		// ...and the new one must actually be gated.
+		resNoSecret := test.PerformRequest(t, s, "GET", "/-/metrics", nil, nil)
+		require.NotEqual(t, http.StatusOK, resNoSecret.Result().StatusCode, "/-/metrics must require the management secret")
 
 		result := res.Body.String()
 
