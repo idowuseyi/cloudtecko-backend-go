@@ -3,6 +3,7 @@ package auth_test
 import (
 	"net/http"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -348,5 +349,24 @@ func TestPostRegisterBadRequest(t *testing.T) {
 				test.Snapshoter.Save(t, response)
 			})
 		}
+	})
+}
+
+// Registration enforces the password minimum. 15 is NIST SP 800-63B Rev 4's
+// requirement when a password is the only authentication factor, which it is
+// here -- there is no MFA in this service.
+func TestPostRegisterPasswordMinimumLength(t *testing.T) {
+	test.WithTestServer(t, func(s *api.Server) {
+		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/register", test.GenericPayload{
+			"username": "tooshort@example.com",
+			"password": strings.Repeat("a", 14),
+		}, nil)
+		require.Equal(t, http.StatusBadRequest, res.Result().StatusCode, "14 characters must be rejected")
+
+		res = test.PerformRequest(t, s, "POST", "/api/v1/auth/register", test.GenericPayload{
+			"username": "longenough@example.com",
+			"password": strings.Repeat("a", 15),
+		}, nil)
+		require.Equal(t, http.StatusOK, res.Result().StatusCode, "15 characters must be accepted")
 	})
 }

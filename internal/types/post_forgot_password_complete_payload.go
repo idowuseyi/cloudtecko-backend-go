@@ -20,7 +20,7 @@ type PostForgotPasswordCompletePayload struct {
 	// Example: correct horse battery staple
 	// Required: true
 	// Max Length: 500
-	// Min Length: 1
+	// Min Length: 15
 	Password *string `json:"password"`
 
 	// Password reset token sent via email
@@ -54,7 +54,7 @@ func (m *PostForgotPasswordCompletePayload) validatePassword(formats strfmt.Regi
 		return err
 	}
 
-	if err := validate.MinLength("password", "body", *m.Password, 1); err != nil {
+	if err := validate.MinLength("password", "body", *m.Password, 15); err != nil {
 		return err
 	}
 

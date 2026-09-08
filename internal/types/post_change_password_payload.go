@@ -27,7 +27,7 @@ type PostChangePasswordPayload struct {
 	// Example: correct horse battery staple
 	// Required: true
 	// Max Length: 500
-	// Min Length: 1
+	// Min Length: 15
 	NewPassword *string `json:"newPassword"`
 }
 
@@ -72,7 +72,7 @@ func (m *PostChangePasswordPayload) validateNewPassword(formats strfmt.Registry)
 		return err
 	}
 
-	if err := validate.MinLength("newPassword", "body", *m.NewPassword, 1); err != nil {
+	if err := validate.MinLength("newPassword", "body", *m.NewPassword, 15); err != nil {
 		return err
 	}
 

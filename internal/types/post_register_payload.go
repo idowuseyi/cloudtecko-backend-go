@@ -20,7 +20,7 @@ type PostRegisterPayload struct {
 	// Example: correct horse battery staple
 	// Required: true
 	// Max Length: 500
-	// Min Length: 1
+	// Min Length: 15
 	Password *string `json:"password"`
 
 	// Username to register with
@@ -56,7 +56,7 @@ func (m *PostRegisterPayload) validatePassword(formats strfmt.Registry) error {
 		return err
 	}
 
-	if err := validate.MinLength("password", "body", *m.Password, 1); err != nil {
+	if err := validate.MinLength("password", "body", *m.Password, 15); err != nil {
 		return err
 	}
 

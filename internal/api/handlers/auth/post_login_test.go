@@ -177,3 +177,22 @@ func TestPostLoginBadRequest(t *testing.T) {
 		}
 	})
 }
+
+// The password minimum applies only where a password is SET, never where one is
+// verified. If login enforced it, any user whose password predates the policy
+// would be rejected at validation before the credential check -- locked out
+// rather than told to reset. A short password must therefore fail
+// authentication (401), not validation (400).
+func TestPostLoginDoesNotApplyPasswordMinimumLength(t *testing.T) {
+	test.WithTestServer(t, func(s *api.Server) {
+		fix := fixtures.Fixtures()
+
+		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/login", test.GenericPayload{
+			"username": fix.User1.Username,
+			"password": "x",
+		}, nil)
+
+		require.Equal(t, http.StatusUnauthorized, res.Result().StatusCode,
+			"a short password must be rejected as wrong, not as invalid input")
+	})
+}

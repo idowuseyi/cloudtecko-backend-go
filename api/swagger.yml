@@ -491,7 +491,7 @@ definitions:
                 description: New password to set for user
                 type: string
                 maxLength: 500
-                minLength: 1
+                minLength: 15
                 example: correct horse battery staple
     postForgotPasswordCompletePayload:
         type: object
@@ -503,7 +503,7 @@ definitions:
                 description: New password to set for user
                 type: string
                 maxLength: 500
-                minLength: 1
+                minLength: 15
                 example: correct horse battery staple
             token:
                 description: Password reset token sent via email
@@ -596,7 +596,7 @@ definitions:
                 description: Password to register with
                 type: string
                 maxLength: 500
-                minLength: 1
+                minLength: 15
                 example: correct horse battery staple
             username:
                 description: Username to register with

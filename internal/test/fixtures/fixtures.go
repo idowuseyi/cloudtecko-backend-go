@@ -14,8 +14,12 @@ import (
 )
 
 const (
-	PlainTestUserPassword  = "password"
-	HashedTestUserPassword = "$argon2id$v=19$m=65536,t=1,p=4$RFO8ulg2c2zloG0029pAUQ$2Po6NUIhVCMm9vivVDuzo7k5KVWfZzJJfeXzC+n+row" //nolint:gosec
+	// 18 characters: registration now requires at least 15 (NIST SP 800-63B Rev 4,
+	// which mandates 15 when a password is the only authentication factor).
+	// HashedTestUserPassword is the argon2id hash OF PlainTestUserPassword -- change
+	// one and you must regenerate the other, or every fixture login breaks.
+	PlainTestUserPassword  = "test-user-password"
+	HashedTestUserPassword = "$argon2id$v=19$m=65536,t=1,p=4$R2X4C7x4Eg6k9TVuPoUYiA$Dqhstn1WyYrqWyHUJePTablDOJkKY512yhscqx92Rtw" //nolint:gosec
 )
 
 // Every credential-bearing token (access, refresh, password-reset, confirmation)

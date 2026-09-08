@@ -70,7 +70,19 @@ S-019 — refresh tokens never expired and had no reuse detection — Medium —
 
 S-020 — registration discloses whether an account exists — Low — internal/auth/service.go:374 — `/register` returns `ErrConflictUserAlreadyExists` for a taken username, so the endpoint can be used to test addresses; note this is inconsistent with `/forgot-password`, which the template deliberately made non-disclosing — return a generic success and send a "you already have an account" email instead — deferred(product decision — it changes the signup UX and needs a call from the product owner)
 
-S-021 — no password policy — Low — api/definitions/auth.yml:57,63,75,104 — every password field is `minLength: 1`, so a single-character password is accepted at register, login, change-password and reset — raise minLength and add a strength check — deferred(requires regenerating internal/types via go-swagger, which is not installed on the host; do it in the dev container)
+S-021 — no password policy — Low — api/definitions/auth.yml:57,63,75,104 — every password field was `minLength: 1`, so a single-character password was accepted at registration, change-password and reset — raised to `minLength: 15` on the three fields that SET a password (register `password`, change-password `newPassword`, forgot-password-complete `password`) and regenerated `internal/types` with go-swagger in the dev container. 15 is NIST SP 800-63B Rev 4's requirement for a password used as the only authentication factor, which is the case here (there is no MFA); OWASP ASVS 5.0 sets its floor at 8 but likewise recommends 15.
+
+  The three VERIFY fields (login `password`, and `currentPassword` on
+  change-password and delete-account) deliberately keep `minLength: 1`. Enforcing
+  a length policy where a password is checked rather than chosen would reject an
+  existing user's shorter password at input validation, before the credential
+  check ever runs — locking them out instead of letting them authenticate and
+  then choose a longer one. Tests assert both halves: a 14-character
+  registration is rejected while 15 succeeds, and a one-character login returns
+  401 (wrong credentials) rather than 400 (invalid input).
+
+  A dictionary/breach strength check is a separate, larger piece of work and is
+  not included — length alone does not stop "aaaaaaaaaaaaaaa" — deferred(strength check only; the length policy is fixed. Flip condition: before onboarding real users, add a breached-password check such as HaveIBeenPwned's k-anonymity range API)
 
 S-022 — unused database drivers are compiled into the binary — Low — go.mod — `sql-migrate` and `sqlboiler` transitively pull in the mssql, oci8, sqlite3 and mysql drivers, and `go version -m` confirms they ship in the binary, enlarging the attack surface for code that can never be reached; `go.not` only *asserts* absence, so listing them there would fail `make check-embedded-modules-go-not` rather than remove them — no clean fix without replacing sql-migrate — deferred(accepted risk; flip condition: if a CVE is published against any of these drivers)
 
@@ -161,5 +173,7 @@ ignored, and a retry past it leaves exactly one row carrying a different hash.
 - Trivy DS-0002 (run containers as a non-root user) — https://avd.aquasec.com/misconfig/ds-0002 — 2026-09-08
 - Login timing figures — measured locally, 12 requests per case, against a binary built from commit `b5b8e85` (pre-fix) and the working tree (post-fix) — 2026-09-08
 - Plaintext token storage and the absence of a refresh-token expiry column — observed directly via `psql` against the migrated database — 2026-09-08
+- NIST SP 800-63B Rev 4 (finalized July 2025): 15-character minimum when a password is the only authentication factor, 8 when combined with MFA; verifiers should accept at least 64 — web search of NIST guidance summaries — 2026-09-08
+- OWASP ASVS 5.0 lowered its L1 floor to 8 to align with NIST Rev 4 while strongly recommending 15 (ASVS 4.0.3 had required 12) — web search — 2026-09-08
 - Vercel Functions limits (1,024 shared file descriptors, 4.5 MB request body) — https://vercel.com/docs/functions/limitations — 2026-09-08
 - Vercel container services and the required catch-all rewrite — https://vercel.com/kb/guide/deploy-go-using-docker-vercel — 2026-09-08
