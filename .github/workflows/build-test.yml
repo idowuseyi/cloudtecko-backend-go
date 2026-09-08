@@ -38,7 +38,7 @@ jobs:
       mailhog:
         image: mailhog/mailhog
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - name: docker build (target builder)
         run: DOCKER_BUILDKIT=1 docker build --target builder --file Dockerfile --tag allaboutapps.dev/aw/go-starter:builder-${GITHUB_SHA} .
       - name: docker build (target app)
@@ -96,7 +96,7 @@ jobs:
   swagger-codegen-cli:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - name: run the main swagger.yml validation
         run: |
           docker run --rm -v ${{ github.workspace }}:/local swaggerapi/swagger-codegen-cli validate -i /local/api/swagger.yml
