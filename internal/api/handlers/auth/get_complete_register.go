@@ -3,12 +3,12 @@ package auth
 import (
 	"net/http"
 
-	"allaboutapps.dev/aw/go-starter/internal/api"
-	"allaboutapps.dev/aw/go-starter/internal/api/router/templates"
-	"allaboutapps.dev/aw/go-starter/internal/types/auth"
-	"allaboutapps.dev/aw/go-starter/internal/util/url"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/router/templates"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/types/auth"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/url"
 
-	"allaboutapps.dev/aw/go-starter/internal/util"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/labstack/echo/v4"
 )
 

@@ -5,7 +5,7 @@ import (
 	"html/template"
 	"io"
 
-	"allaboutapps.dev/aw/go-starter/internal/api/router/templates"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/router/templates"
 	"github.com/labstack/echo/v4"
 )
 

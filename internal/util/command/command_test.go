@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"allaboutapps.dev/aw/go-starter/internal/api"
-	"allaboutapps.dev/aw/go-starter/internal/test"
-	"allaboutapps.dev/aw/go-starter/internal/util/command"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/test"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/command"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"allaboutapps.dev/aw/go-starter/internal/api"
-	"allaboutapps.dev/aw/go-starter/internal/api/httperrors"
-	"allaboutapps.dev/aw/go-starter/internal/config"
-	"allaboutapps.dev/aw/go-starter/internal/test"
-	"allaboutapps.dev/aw/go-starter/internal/util"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/httperrors"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/test"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/require"
 )

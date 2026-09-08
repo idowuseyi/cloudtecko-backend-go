@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"allaboutapps.dev/aw/go-starter/internal/config"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
 )
 
 func TestPrintServiceEnv(t *testing.T) {

@@ -3,7 +3,7 @@ package local
 import (
 	"database/sql"
 
-	"allaboutapps.dev/aw/go-starter/internal/config"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
 	"github.com/dropbox/godropbox/time2"
 )
 

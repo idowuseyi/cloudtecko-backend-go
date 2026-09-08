@@ -3,8 +3,8 @@ package fixtures_test
 import (
 	"testing"
 
-	data "allaboutapps.dev/aw/go-starter/internal/data/fixtures"
-	"allaboutapps.dev/aw/go-starter/internal/models"
+	data "github.com/idowuseyi/cloudtecko-backend-go/internal/data/fixtures"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
 	"github.com/stretchr/testify/assert"
 )
 

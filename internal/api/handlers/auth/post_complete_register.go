@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"allaboutapps.dev/aw/go-starter/internal/api"
-	"allaboutapps.dev/aw/go-starter/internal/api/handlers/constants"
-	"allaboutapps.dev/aw/go-starter/internal/data/dto"
-	"allaboutapps.dev/aw/go-starter/internal/types/auth"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/constants"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/data/dto"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/types/auth"
 
-	"allaboutapps.dev/aw/go-starter/internal/util"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/labstack/echo/v4"
 )
 

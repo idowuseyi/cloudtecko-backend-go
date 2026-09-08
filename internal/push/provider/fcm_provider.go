@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"allaboutapps.dev/aw/go-starter/internal/push"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/push"
 	"google.golang.org/api/fcm/v1"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"

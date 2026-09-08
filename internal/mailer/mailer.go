@@ -9,10 +9,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"allaboutapps.dev/aw/go-starter/internal/config"
-	"allaboutapps.dev/aw/go-starter/internal/data/dto"
-	"allaboutapps.dev/aw/go-starter/internal/mailer/transport"
-	"allaboutapps.dev/aw/go-starter/internal/util"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/data/dto"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/mailer/transport"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/jordan-wright/email"
 	"github.com/rs/zerolog/log"
 )

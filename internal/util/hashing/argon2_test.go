@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"testing"
 
-	"allaboutapps.dev/aw/go-starter/internal/util/hashing"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/hashing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

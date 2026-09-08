@@ -1,8 +1,8 @@
 package mapper
 
 import (
-	"allaboutapps.dev/aw/go-starter/internal/data/dto"
-	"allaboutapps.dev/aw/go-starter/internal/models"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/data/dto"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
 )
 
 func LocalAppUserProfileToDTO(appUserProfile *models.AppUserProfile) dto.AppUserProfile {

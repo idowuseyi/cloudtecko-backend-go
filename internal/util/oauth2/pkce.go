@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"allaboutapps.dev/aw/go-starter/internal/util"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 )
 
 const (

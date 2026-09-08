@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"path"
 
-	"allaboutapps.dev/aw/go-starter/internal/config"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
 )
 
 const (

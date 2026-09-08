@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"testing"
 
-	"allaboutapps.dev/aw/go-starter/internal/models"
-	"allaboutapps.dev/aw/go-starter/internal/test"
-	"allaboutapps.dev/aw/go-starter/internal/test/fixtures"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/test"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/test/fixtures"
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	_ "github.com/lib/pq"

@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"allaboutapps.dev/aw/go-starter/internal/config"
-	"allaboutapps.dev/aw/go-starter/internal/util"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 )
 
 // DotEnvLoadLocalOrSkipTest tries to load the `.env.local` file in the projectroot

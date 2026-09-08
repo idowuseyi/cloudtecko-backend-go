@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"allaboutapps.dev/aw/go-starter/internal/types"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
 	"github.com/go-openapi/swag/conv"
 	"github.com/labstack/echo/v4"
 )

@@ -7,10 +7,10 @@
 package api
 
 import (
-	"allaboutapps.dev/aw/go-starter/internal/auth"
-	"allaboutapps.dev/aw/go-starter/internal/config"
-	"allaboutapps.dev/aw/go-starter/internal/data/local"
-	"allaboutapps.dev/aw/go-starter/internal/metrics"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/auth"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/data/local"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/metrics"
 	"database/sql"
 	"github.com/google/wire"
 	"testing"

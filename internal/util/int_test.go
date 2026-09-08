@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"allaboutapps.dev/aw/go-starter/internal/util"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/stretchr/testify/assert"
 )
 

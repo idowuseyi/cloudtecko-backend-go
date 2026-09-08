@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"allaboutapps.dev/aw/go-starter/internal/api"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
 	"github.com/dropbox/godropbox/time2"
 )
 

@@ -3,9 +3,9 @@ package dto
 import (
 	"time"
 
-	"allaboutapps.dev/aw/go-starter/internal/models"
-	"allaboutapps.dev/aw/go-starter/internal/types"
-	"allaboutapps.dev/aw/go-starter/internal/util"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/aarondl/null/v8"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"

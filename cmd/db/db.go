@@ -1,7 +1,7 @@
 package db
 
 import (
-	"allaboutapps.dev/aw/go-starter/internal/util/command"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/command"
 	"github.com/spf13/cobra"
 )
 

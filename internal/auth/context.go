@@ -3,8 +3,8 @@ package auth
 import (
 	"context"
 
-	"allaboutapps.dev/aw/go-starter/internal/data/dto"
-	"allaboutapps.dev/aw/go-starter/internal/util"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/data/dto"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/go-openapi/swag/conv"
 	"github.com/labstack/echo/v4"
 )

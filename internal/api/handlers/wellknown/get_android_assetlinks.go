@@ -1,7 +1,7 @@
 package wellknown
 
 import (
-	"allaboutapps.dev/aw/go-starter/internal/api"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
 	"github.com/labstack/echo/v4"
 )
 

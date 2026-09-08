@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 
-	"allaboutapps.dev/aw/go-starter/internal/api"
-	"allaboutapps.dev/aw/go-starter/internal/auth"
-	"allaboutapps.dev/aw/go-starter/internal/util"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/auth"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/labstack/echo/v4"
 )
 

@@ -5,7 +5,7 @@ package push
 import (
 	"net/http"
 
-	"allaboutapps.dev/aw/go-starter/internal/types"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"

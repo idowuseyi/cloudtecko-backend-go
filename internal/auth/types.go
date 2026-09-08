@@ -3,7 +3,7 @@ package auth
 import (
 	"time"
 
-	"allaboutapps.dev/aw/go-starter/internal/data/dto"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/data/dto"
 )
 
 type Result struct {

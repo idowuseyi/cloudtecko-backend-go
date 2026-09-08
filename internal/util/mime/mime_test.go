@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"allaboutapps.dev/aw/go-starter/internal/util"
-	"allaboutapps.dev/aw/go-starter/internal/util/mime"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/mime"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

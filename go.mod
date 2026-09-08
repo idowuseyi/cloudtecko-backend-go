@@ -1,4 +1,4 @@
-module allaboutapps.dev/aw/go-starter
+module github.com/idowuseyi/cloudtecko-backend-go
 
 go 1.27.0
 

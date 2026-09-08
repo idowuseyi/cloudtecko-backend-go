@@ -3,7 +3,7 @@ package db_test
 import (
 	"testing"
 
-	"allaboutapps.dev/aw/go-starter/internal/util/db"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/db"
 	"github.com/go-openapi/swag/conv"
 	"github.com/stretchr/testify/assert"
 )
