@@ -34,6 +34,8 @@ type User struct {
 	CreatedAt            time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt            time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 	RequiresConfirmation bool              `boil:"requires_confirmation" json:"requires_confirmation" toml:"requires_confirmation" yaml:"requires_confirmation"`
+	FailedLoginAttempts  int               `boil:"failed_login_attempts" json:"failed_login_attempts" toml:"failed_login_attempts" yaml:"failed_login_attempts"`
+	LastFailedLoginAt    null.Time         `boil:"last_failed_login_at" json:"last_failed_login_at,omitempty" toml:"last_failed_login_at" yaml:"last_failed_login_at,omitempty"`
 
 	R *userR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L userL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -49,6 +51,8 @@ var UserColumns = struct {
 	CreatedAt            string
 	UpdatedAt            string
 	RequiresConfirmation string
+	FailedLoginAttempts  string
+	LastFailedLoginAt    string
 }{
 	ID:                   "id",
 	Username:             "username",
@@ -59,6 +63,8 @@ var UserColumns = struct {
 	CreatedAt:            "created_at",
 	UpdatedAt:            "updated_at",
 	RequiresConfirmation: "requires_confirmation",
+	FailedLoginAttempts:  "failed_login_attempts",
+	LastFailedLoginAt:    "last_failed_login_at",
 }
 
 var UserTableColumns = struct {
@@ -71,6 +77,8 @@ var UserTableColumns = struct {
 	CreatedAt            string
 	UpdatedAt            string
 	RequiresConfirmation string
+	FailedLoginAttempts  string
+	LastFailedLoginAt    string
 }{
 	ID:                   "users.id",
 	Username:             "users.username",
@@ -81,6 +89,8 @@ var UserTableColumns = struct {
 	CreatedAt:            "users.created_at",
 	UpdatedAt:            "users.updated_at",
 	RequiresConfirmation: "users.requires_confirmation",
+	FailedLoginAttempts:  "users.failed_login_attempts",
+	LastFailedLoginAt:    "users.last_failed_login_at",
 }
 
 // Generated where
@@ -171,6 +181,29 @@ func (w whereHelpertypes_StringArray) GTE(x types.StringArray) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
+type whereHelperint struct{ field string }
+
+func (w whereHelperint) EQ(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperint) NEQ(x int) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperint) LT(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperint) LTE(x int) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperint) GT(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperint) GTE(x int) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+func (w whereHelperint) IN(slice []int) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelperint) NIN(slice []int) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
 var UserWhere = struct {
 	ID                   whereHelperstring
 	Username             whereHelpernull_String
@@ -181,6 +214,8 @@ var UserWhere = struct {
 	CreatedAt            whereHelpertime_Time
 	UpdatedAt            whereHelpertime_Time
 	RequiresConfirmation whereHelperbool
+	FailedLoginAttempts  whereHelperint
+	LastFailedLoginAt    whereHelpernull_Time
 }{
 	ID:                   whereHelperstring{field: "\"users\".\"id\""},
 	Username:             whereHelpernull_String{field: "\"users\".\"username\""},
@@ -191,6 +226,8 @@ var UserWhere = struct {
 	CreatedAt:            whereHelpertime_Time{field: "\"users\".\"created_at\""},
 	UpdatedAt:            whereHelpertime_Time{field: "\"users\".\"updated_at\""},
 	RequiresConfirmation: whereHelperbool{field: "\"users\".\"requires_confirmation\""},
+	FailedLoginAttempts:  whereHelperint{field: "\"users\".\"failed_login_attempts\""},
+	LastFailedLoginAt:    whereHelpernull_Time{field: "\"users\".\"last_failed_login_at\""},
 }
 
 // UserRels is where relationship names are stored.
@@ -325,9 +362,9 @@ func (r *userR) GetRefreshTokens() RefreshTokenSlice {
 type userL struct{}
 
 var (
-	userAllColumns            = []string{"id", "username", "password", "is_active", "scopes", "last_authenticated_at", "created_at", "updated_at", "requires_confirmation"}
+	userAllColumns            = []string{"id", "username", "password", "is_active", "scopes", "last_authenticated_at", "created_at", "updated_at", "requires_confirmation", "failed_login_attempts", "last_failed_login_at"}
 	userColumnsWithoutDefault = []string{"is_active", "scopes", "created_at", "updated_at"}
-	userColumnsWithDefault    = []string{"id", "username", "password", "last_authenticated_at", "requires_confirmation"}
+	userColumnsWithDefault    = []string{"id", "username", "password", "last_authenticated_at", "requires_confirmation", "failed_login_attempts", "last_failed_login_at"}
 	userPrimaryKeyColumns     = []string{"id"}
 	userGeneratedColumns      = []string{}
 )

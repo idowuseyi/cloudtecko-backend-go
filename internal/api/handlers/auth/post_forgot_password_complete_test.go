@@ -295,3 +295,71 @@ func TestPostForgotPasswordCompleteBadRequest(t *testing.T) {
 		}
 	})
 }
+
+// A reset link must work exactly once. Before this the token was validated and
+// then left in place for the rest of its 15-minute validity, so anyone who later
+// obtained it -- a shared mailbox, browser history, a forwarded mail -- could
+// reset the password again.
+func TestPostForgotPasswordCompleteTokenIsSingleUse(t *testing.T) {
+	test.WithTestServer(t, func(s *api.Server) {
+		ctx := t.Context()
+		fix := fixtures.Fixtures()
+
+		resetTokenPlain, resetTokenHash, err := hashing.NewToken()
+		require.NoError(t, err)
+
+		passwordResetToken := models.PasswordResetToken{
+			TokenHash:  resetTokenHash,
+			UserID:     fix.User1.ID,
+			ValidUntil: s.Clock.Now().Add(s.Config.Auth.PasswordResetTokenValidity),
+		}
+		require.NoError(t, passwordResetToken.Insert(ctx, s.DB, boil.Infer()))
+
+		payload := test.GenericPayload{"token": resetTokenPlain, "password": "chair lamp rocket vinegar"}
+
+		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/forgot-password/complete", payload, nil)
+		require.Equal(t, http.StatusOK, res.Result().StatusCode)
+
+		// The row is gone...
+		count, err := models.PasswordResetTokens(
+			models.PasswordResetTokenWhere.TokenHash.EQ(resetTokenHash),
+		).Count(ctx, s.DB)
+		require.NoError(t, err)
+		assert.Zero(t, count, "a used reset token must be deleted")
+
+		// ...and replaying the link fails.
+		resReplay := test.PerformRequest(t, s, "POST", "/api/v1/auth/forgot-password/complete",
+			test.GenericPayload{"token": resetTokenPlain, "password": "harbour ladder mango quilt"}, nil)
+		assert.Equal(t, http.StatusNotFound, resReplay.Result().StatusCode, "a reset link must not be replayable")
+	})
+}
+
+// The blocklist is what stops a password that satisfies the length rule but is
+// still trivially guessable.
+func TestPostForgotPasswordCompleteRejectsWeakPasswords(t *testing.T) {
+	test.WithTestServer(t, func(s *api.Server) {
+		ctx := t.Context()
+		fix := fixtures.Fixtures()
+
+		for _, weak := range []string{
+			"aaaaaaaaaaaaaaaa",  // long enough, no entropy
+			"123456789012345",   // sequential
+			"passwordpassword",  // common
+			"user1-my-password", // contains the username
+		} {
+			resetTokenPlain, resetTokenHash, err := hashing.NewToken()
+			require.NoError(t, err)
+
+			token := models.PasswordResetToken{
+				TokenHash:  resetTokenHash,
+				UserID:     fix.User1.ID,
+				ValidUntil: s.Clock.Now().Add(s.Config.Auth.PasswordResetTokenValidity),
+			}
+			require.NoError(t, token.Insert(ctx, s.DB, boil.Infer()))
+
+			res := test.PerformRequest(t, s, "POST", "/api/v1/auth/forgot-password/complete",
+				test.GenericPayload{"token": resetTokenPlain, "password": weak}, nil)
+			assert.Equal(t, http.StatusBadRequest, res.Result().StatusCode, "%q must be rejected", weak)
+		}
+	})
+}

@@ -8,6 +8,7 @@ import (
 	"math"
 	"strings"
 
+	pwnorm "github.com/idowuseyi/cloudtecko-backend-go/internal/util/password"
 	"golang.org/x/crypto/argon2"
 )
 
@@ -25,7 +26,15 @@ var (
 	ErrIncompatibleArgon2Version = errors.New("incompatible argon2 version")
 )
 
-func HashPassword(password string, params *Argon2Params) (string, error) {
+// HashPassword derives the stored representation of a password.
+//
+// The input is Unicode-normalized first, and ComparePasswordAndHash normalizes
+// identically. Doing it here rather than at each call site is deliberate: if the
+// two ever disagreed, a user who set a password on one keyboard would be unable
+// to log in from another, and the bug would look like a wrong password.
+func HashPassword(plaintext string, params *Argon2Params) (string, error) {
+	password := pwnorm.Normalize(plaintext)
+
 	salt, err := generateSalt(params.SaltLength)
 	if err != nil {
 		return "", err
@@ -39,7 +48,12 @@ func HashPassword(password string, params *Argon2Params) (string, error) {
 	return fmt.Sprintf("$%s$v=%d$m=%d,t=%d,p=%d$%s$%s", Argon2HashID, argon2.Version, params.Memory, params.Time, params.Threads, b64Salt, b64Key), nil
 }
 
-func ComparePasswordAndHash(password string, hash string) (bool, error) {
+// ComparePasswordAndHash reports whether a password matches a stored hash.
+//
+// The candidate is normalized exactly as HashPassword normalizes it.
+func ComparePasswordAndHash(plaintext string, hash string) (bool, error) {
+	password := pwnorm.Normalize(plaintext)
+
 	params, salt, key, err := decodeArgon2Hash(hash)
 	if err != nil {
 		return false, err

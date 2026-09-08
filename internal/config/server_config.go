@@ -91,6 +91,24 @@ type AuthServer struct {
 	RegistrationRequiresConfirmation   bool
 	ConfirmationTokenValidity          time.Duration
 	ConfirmationTokenDebounceDuration  time.Duration
+
+	// PasswordMinLength must stay in sync with the minLength in
+	// api/definitions/auth.yml. The spec gives API consumers a machine-readable
+	// contract; this drives the server-side blocklist checks, which the spec
+	// cannot express.
+	PasswordMinLength int
+	PasswordMaxLength int
+	// PasswordBlockedTerms are context-specific values a password must not
+	// contain, on top of the user's own username. NIST calls out the service name
+	// explicitly.
+	PasswordBlockedTerms []string
+
+	// LoginMaxFailedAttempts is the number of CONSECUTIVE failures an account
+	// tolerates before it is throttled; 0 disables throttling.
+	LoginMaxFailedAttempts int
+	// LoginFailureWindow is both how long the throttle lasts and how long a
+	// failure counts toward the total.
+	LoginFailureWindow time.Duration
 }
 
 type PathsServer struct {
@@ -259,6 +277,18 @@ func DefaultServiceConfigFromEnv() Server {
 			RegistrationRequiresConfirmation:   util.GetEnvAsBool("SERVER_AUTH_REGISTRATION_REQUIRES_CONFIRMATION", false),
 			ConfirmationTokenValidity:          time.Second * time.Duration(util.GetEnvAsInt("SERVER_AUTH_CONFIRMATION_TOKEN_VALIDITY_SECONDS", 86400)),
 			ConfirmationTokenDebounceDuration:  time.Second * time.Duration(util.GetEnvAsInt("SERVER_AUTH_CONFIRMATION_TOKEN_DEBOUNCE_DURATION_SECONDS", 60)),
+
+			// 15 characters: NIST SP 800-63B Rev 4 requires 15 when a password is
+			// the only authentication factor, which it is here (no MFA).
+			PasswordMinLength:    util.GetEnvAsInt("SERVER_AUTH_PASSWORD_MIN_LENGTH", 15),
+			PasswordMaxLength:    util.GetEnvAsInt("SERVER_AUTH_PASSWORD_MAX_LENGTH", 500),
+			PasswordBlockedTerms: util.GetEnvAsStringArrTrimmed("SERVER_AUTH_PASSWORD_BLOCKED_TERMS", []string{"cloudtecko"}),
+
+			// 10 attempts per 15 minutes. Well inside NIST's ceiling of 100
+			// consecutive failures, and short enough that the lockout cannot be
+			// used to keep a user out for long.
+			LoginMaxFailedAttempts: util.GetEnvAsInt("SERVER_AUTH_LOGIN_MAX_FAILED_ATTEMPTS", 10),
+			LoginFailureWindow:     time.Second * time.Duration(util.GetEnvAsInt("SERVER_AUTH_LOGIN_FAILURE_WINDOW_SECONDS", 900)),
 		},
 		Management: ManagementServer{
 			Secret:           util.GetMgmtSecret("SERVER_MANAGEMENT_SECRET"),

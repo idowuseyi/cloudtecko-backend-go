@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
@@ -17,6 +18,7 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/db"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/hashing"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/password"
 	"github.com/labstack/echo/v4"
 )
 
@@ -79,6 +81,15 @@ func (s *Service) UpdatePassword(ctx context.Context, request dto.UpdatePassword
 		}
 	}
 
+	// Both change-password and reset-password funnel through here, so the policy
+	// is enforced once for both.
+	if err := password.Validate(request.NewPassword, s.passwordPolicy(request.User.Username.String)); err != nil {
+		// Logged at debug with the reason, returned to the caller without it: the
+		// specific rule a candidate broke is a hint to anyone probing the policy.
+		log.Debug().Err(err).Msg("Rejected new password: does not meet the password policy")
+		return dto.LoginResult{}, httperrors.ErrBadRequestInvalidPassword
+	}
+
 	hash, err := hashing.HashPassword(request.NewPassword, hashing.DefaultArgon2ParamsFromEnv())
 	if err != nil {
 		log.Err(err).Msg("Failed to hash new password")
@@ -136,11 +147,29 @@ func (s *Service) ResetPassword(ctx context.Context, request dto.ResetPasswordRe
 		return dto.LoginResult{}, httperrors.ErrConflictTokenExpired
 	}
 
-	return s.UpdatePassword(ctx, dto.UpdatePasswordRequest{
+	result, err := s.UpdatePassword(ctx, dto.UpdatePasswordRequest{
 		User:                            mapper.LocalUserToDTO(passwordResetToken.R.User),
 		NewPassword:                     request.NewPassword,
 		SkipCurrentPasswordVerification: true,
 	})
+	if err != nil {
+		return dto.LoginResult{}, err
+	}
+
+	// Consume the token. Without this the reset link stays usable for the rest of
+	// its validity, so anyone who later obtains it -- from a shared mailbox,
+	// browser history, or a forwarded mail -- can reset the password again. The
+	// confirmation-token flow already deleted its token; this one did not.
+	//
+	// Deleted only after the password change succeeds, so a failed attempt does
+	// not burn the user's only link.
+	if _, err := passwordResetToken.Delete(ctx, s.db); err != nil {
+		// The password IS already changed at this point, so this must not fail the
+		// request -- it is logged for follow-up instead.
+		log.Err(err).Msg("Failed to delete used password reset token")
+	}
+
+	return result, nil
 }
 
 func (s *Service) InitPasswordReset(ctx context.Context, request dto.InitPasswordResetRequest) (dto.InitPasswordResetResult, error) {
@@ -286,6 +315,29 @@ func (s *Service) Login(ctx context.Context, request dto.LoginRequest) (dto.Logi
 		return dto.LoginResult{}, echo.ErrUnauthorized
 	}
 
+	// Per-account throttling. The IP rate limiter does not cover this: an attacker
+	// spreading attempts across addresses hits it never, while hammering one
+	// account. Still Argon2-hash first, so a throttled account does not answer
+	// faster than a live one and become an enumeration oracle.
+	if s.loginThrottled(user) {
+		hashing.CompareDummyPasswordAndHash(request.Password)
+
+		log.Warn().
+			Str("userID", user.ID).
+			Int("failedAttempts", user.FailedLoginAttempts).
+			Msg("Login throttled: too many consecutive failed attempts")
+
+		// Deliberately the same 401 as a wrong password. A distinct status would
+		// tell an attacker the account exists and that they are close enough to
+		// have triggered the throttle.
+		//
+		// Note this returns BEFORE recordFailedLogin, so a throttled attempt does
+		// not extend the window. Otherwise an attacker could hold a user out
+		// indefinitely just by continuing to try, turning the protection into the
+		// denial-of-service it exists to avoid.
+		return dto.LoginResult{}, echo.ErrUnauthorized
+	}
+
 	match, err := hashing.ComparePasswordAndHash(request.Password, user.Password.String)
 	if err != nil {
 		log.Debug().Err(err).Msg("Failed to compare password with stored hash")
@@ -294,8 +346,12 @@ func (s *Service) Login(ctx context.Context, request dto.LoginRequest) (dto.Logi
 
 	if !match {
 		log.Debug().Msg("Provided password does not match stored hash")
+		s.recordFailedLogin(ctx, user)
+
 		return dto.LoginResult{}, echo.ErrUnauthorized
 	}
+
+	s.resetFailedLogins(ctx, user)
 
 	var result dto.LoginResult
 	err = db.WithTransaction(ctx, s.db, func(exec boil.ContextExecutor) error {
@@ -414,6 +470,11 @@ func (s *Service) Register(ctx context.Context, request dto.RegisterRequest) (dt
 	// An existing unconfirmed user re-registering is a resend, not a conflict.
 	if user != nil {
 		return s.resendConfirmation(ctx, user)
+	}
+
+	if err := password.Validate(request.Password, s.passwordPolicy(request.Username.String())); err != nil {
+		log.Debug().Err(err).Msg("Rejected registration password: does not meet the password policy")
+		return dto.RegisterResult{}, httperrors.ErrBadRequestInvalidPassword
 	}
 
 	hash, err := hashing.HashPassword(request.Password, hashing.DefaultArgon2ParamsFromEnv())
@@ -730,4 +791,97 @@ func (s *Service) resendConfirmation(ctx context.Context, user *models.User) (dt
 		RequiresConfirmation: user.RequiresConfirmation,
 		ConfirmationToken:    null.StringFrom(plaintext),
 	}, nil
+}
+
+// passwordPolicy builds the rules for SETTING a password, including the
+// context-specific values this particular user must not use.
+//
+// Never applied when verifying: rejecting input before the credential check
+// would lock out a user whose password predates the policy.
+func (s *Service) passwordPolicy(username string) password.Policy {
+	identifiers := append([]string{}, s.config.Auth.PasswordBlockedTerms...)
+
+	if username != "" {
+		identifiers = append(identifiers, username)
+
+		// The local part on its own, since "jane@example.com" -> "janejanejane"
+		// is the obvious thing to try.
+		if local, _, found := strings.Cut(username, "@"); found && local != "" {
+			identifiers = append(identifiers, local)
+		}
+	}
+
+	return password.Policy{
+		MinLength:   s.config.Auth.PasswordMinLength,
+		MaxLength:   s.config.Auth.PasswordMaxLength,
+		Identifiers: identifiers,
+	}
+}
+
+// loginThrottled reports whether an account has had too many consecutive failed
+// logins too recently.
+//
+// The window is deliberately short and the threshold generous. A hard lockout
+// would hand an attacker a denial-of-service primitive -- anyone knowing a
+// username could keep that user permanently out -- so this bounds the damage to
+// minutes while still cutting brute-force throughput by orders of magnitude.
+func (s *Service) loginThrottled(user *models.User) bool {
+	if s.config.Auth.LoginMaxFailedAttempts <= 0 {
+		return false
+	}
+
+	if user.FailedLoginAttempts < s.config.Auth.LoginMaxFailedAttempts {
+		return false
+	}
+
+	if !user.LastFailedLoginAt.Valid {
+		return false
+	}
+
+	return s.clock.Now().Before(user.LastFailedLoginAt.Time.Add(s.config.Auth.LoginFailureWindow))
+}
+
+// recordFailedLogin increments the consecutive-failure counter.
+//
+// Best-effort: a bookkeeping failure must not turn a wrong password into a 500,
+// which would itself distinguish this path from a normal rejection.
+func (s *Service) recordFailedLogin(ctx context.Context, user *models.User) {
+	log := util.LogFromContext(ctx)
+
+	// Restart the count when the previous failure has aged out, so unrelated
+	// mistakes months apart do not accumulate into a lockout.
+	if user.LastFailedLoginAt.Valid && s.clock.Now().After(user.LastFailedLoginAt.Time.Add(s.config.Auth.LoginFailureWindow)) {
+		user.FailedLoginAttempts = 0
+	}
+
+	user.FailedLoginAttempts++
+	user.LastFailedLoginAt = null.TimeFrom(s.clock.Now())
+
+	if _, err := user.Update(ctx, s.db, boil.Whitelist(
+		models.UserColumns.FailedLoginAttempts,
+		models.UserColumns.LastFailedLoginAt,
+		models.UserColumns.UpdatedAt,
+	)); err != nil {
+		log.Err(err).Str("userID", user.ID).Msg("Failed to record failed login attempt")
+	}
+}
+
+// resetFailedLogins clears the counter after a successful authentication.
+func (s *Service) resetFailedLogins(ctx context.Context, user *models.User) {
+	if user.FailedLoginAttempts == 0 && !user.LastFailedLoginAt.Valid {
+		return
+	}
+
+	log := util.LogFromContext(ctx)
+
+	user.FailedLoginAttempts = 0
+	user.LastFailedLoginAt = null.Time{}
+
+	if _, err := user.Update(ctx, s.db, boil.Whitelist(
+		models.UserColumns.FailedLoginAttempts,
+		models.UserColumns.LastFailedLoginAt,
+		models.UserColumns.UpdatedAt,
+	)); err != nil {
+		log.Err(err).Str("userID", user.ID).Msg("Failed to reset failed login attempts")
+	}
 }

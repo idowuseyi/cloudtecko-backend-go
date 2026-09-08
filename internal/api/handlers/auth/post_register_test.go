@@ -359,14 +359,24 @@ func TestPostRegisterPasswordMinimumLength(t *testing.T) {
 	test.WithTestServer(t, func(s *api.Server) {
 		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/register", test.GenericPayload{
 			"username": "tooshort@example.com",
-			"password": strings.Repeat("a", 14),
+			"password": "chairlamprocke", // 14 characters
 		}, nil)
 		require.Equal(t, http.StatusBadRequest, res.Result().StatusCode, "14 characters must be rejected")
 
+		// Note this is NOT strings.Repeat("a", 15): length alone is not sufficient,
+		// the blocklist rejects a password with no entropy however long it is.
 		res = test.PerformRequest(t, s, "POST", "/api/v1/auth/register", test.GenericPayload{
 			"username": "longenough@example.com",
-			"password": strings.Repeat("a", 15),
+			"password": "chairlamprocket", // 15 characters
 		}, nil)
 		require.Equal(t, http.StatusOK, res.Result().StatusCode, "15 characters must be accepted")
+
+		// Length satisfied, entropy not: the blocklist must still refuse it.
+		res = test.PerformRequest(t, s, "POST", "/api/v1/auth/register", test.GenericPayload{
+			"username": "norepeats@example.com",
+			"password": strings.Repeat("a", 15),
+		}, nil)
+		require.Equal(t, http.StatusBadRequest, res.Result().StatusCode,
+			"a long password with no entropy must be rejected")
 	})
 }

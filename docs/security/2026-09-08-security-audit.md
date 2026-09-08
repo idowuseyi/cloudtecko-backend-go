@@ -81,8 +81,8 @@ S-021 — no password policy — Low — api/definitions/auth.yml:57,63,75,104 �
   registration is rejected while 15 succeeds, and a one-character login returns
   401 (wrong credentials) rather than 400 (invalid input).
 
-  A dictionary/breach strength check is a separate, larger piece of work and is
-  not included — length alone does not stop "aaaaaaaaaaaaaaa" — deferred(strength check only; the length policy is fixed. Flip condition: before onboarding real users, add a breached-password check such as HaveIBeenPwned's k-anonymity range API)
+  Now accompanied by a blocklist (S-025), so length is no longer the only
+  control — fixed
 
 S-022 — unused database drivers are compiled into the binary — Low — go.mod — `sql-migrate` and `sqlboiler` transitively pull in the mssql, oci8, sqlite3 and mysql drivers, and `go version -m` confirms they ship in the binary, enlarging the attack surface for code that can never be reached; `go.not` only *asserts* absence, so listing them there would fail `make check-embedded-modules-go-not` rather than remove them — no clean fix without replacing sql-migrate — deferred(accepted risk; flip condition: if a CVE is published against any of these drivers)
 
@@ -102,6 +102,24 @@ removed rather than left inert — a config knob that silently does nothing is
 worse than one that is gone. Its default was already `0`, so deployments using
 the defaults see no change. Verified live: a retry inside the debounce is
 ignored, and a retry past it leaves exactly one row carrying a different hash.
+
+S-025 — no blocklist: a long password could still be trivially guessable — Medium — internal/auth/service.go — a 15-character minimum by itself accepts "aaaaaaaaaaaaaaa", "123456789012345", "qwertyuiopasdfgh", "passwordpassword" and "cloudtecko-is-great". NIST SP 800-63B Rev 4 requires verifiers to compare a candidate against a list of commonly-used, expected or compromised values precisely because length alone does not imply entropy — added internal/util/password, applied at all three paths that SET a password (register, change-password, reset). It rejects repeated units, ascending/descending runs, keyboard rows, a curated list of common values, common words merely padded to reach the length, and context-specific values (the user's own username, its local part, and the service name). It deliberately imposes NO composition rules, which NIST forbids because they push users toward P@ssw0rd1. Verified live: all six shapes above return 400 while "chair lamp rocket vinegar" and "vinegar rocket chair" (no digits, symbols or uppercase) return 200 — fixed
+
+S-026 — passwords were not Unicode-normalized — Low — internal/util/hashing/argon2.go — the same characters can arrive as different byte sequences ("ä" as U+00E4, or "a" plus a combining diaeresis) depending on keyboard and platform. Without normalization a user could set a password on one device and be unable to log in from another, and the failure would look indistinguishable from a wrong password. NIST requires normalization where Unicode is accepted — NFKC applied inside HashPassword and ComparePasswordAndHash rather than at each call site, so the two cannot drift apart — fixed
+
+S-027 — password reset tokens were not single-use — Medium — internal/auth/service.go:117 — ResetPassword validated the token, changed the password and never deleted it, so the reset link stayed usable for the remainder of its 15-minute validity. Anyone who subsequently obtained it — a shared mailbox, browser history, a forwarded mail — could reset the password again. The confirmation-token flow already deleted its token, which is what made the omission visible — the token is deleted after a successful reset (and only after, so a failed attempt does not burn the user's only link) — fixed
+
+S-028 — failed login attempts were throttled per-IP but not per-account — High — internal/auth/service.go — the rate limiter added in S-004 caps requests per source address, which an attacker distributing attempts across addresses never trips while hammering a single account. NIST SP 800-63B Rev 4 requires limiting consecutive failed attempts on an account — added failed_login_attempts and last_failed_login_at to users (migration 20260908110000); 10 consecutive failures within 15 minutes throttles the account, a success clears the counter, and a failure older than the window restarts it.
+
+  Three deliberate properties: the throttled response is the same 401 as a wrong
+  password, so the throttle is not a new account-enumeration oracle; the Argon2
+  work is still performed so a throttled account does not answer faster than a
+  live one; and a throttled attempt returns BEFORE incrementing, so an attacker
+  cannot hold a user out indefinitely by continuing to try — which is the
+  denial-of-service that hard lockouts create. Verified live: 3 failures
+  throttle the account, the correct password is then refused with 401, the
+  counter stops at 3, and after the window the correct password succeeds and
+  resets the counter to 0 — fixed
 
 ## Reviewed and found solid
 
@@ -165,6 +183,19 @@ ignored, and a retry past it leaves exactly one row carrying a different hash.
 - Password-reset and confirmation tokens are now hashed too (S-024), so no
   credential-bearing token is stored in plaintext anywhere. **That change removed
   the password-reset reuse window** -- see S-024 for the behaviour consequence.
+- **Two password controls remain unimplemented, both deliberate.**
+  1. *Breach-corpus checking.* The blocklist in S-025 catches structurally weak
+     passwords but not one that is individually unusual yet known to be
+     compromised. HaveIBeenPwned's k-anonymity range API is the standard answer.
+     It is not wired in because it puts an outbound network call on the
+     registration path, and the failure policy — reject or allow when the service
+     is unreachable — is a product decision, not a technical one. The 15-character
+     minimum already excludes most breach-corpus entries, which are shorter.
+  2. *A pepper.* NIST SHOULD-level: a keyed hash using a secret held outside the
+     database, so a stolen database alone cannot be cracked offline. Worth doing
+     before real user data exists, since adding one later requires rehashing on
+     next login. It needs a key-management decision (where the secret lives, how
+     it rotates) that has not been made.
 
 ## Sources
 
