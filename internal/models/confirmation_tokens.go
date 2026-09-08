@@ -23,58 +23,58 @@ import (
 
 // ConfirmationToken is an object representing the database table.
 type ConfirmationToken struct {
-	Token      string    `boil:"token" json:"token" toml:"token" yaml:"token"`
 	ValidUntil time.Time `boil:"valid_until" json:"valid_until" toml:"valid_until" yaml:"valid_until"`
 	UserID     string    `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
 	CreatedAt  time.Time `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt  time.Time `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	TokenHash  []byte    `boil:"token_hash" json:"token_hash" toml:"token_hash" yaml:"token_hash"`
 
 	R *confirmationTokenR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L confirmationTokenL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var ConfirmationTokenColumns = struct {
-	Token      string
 	ValidUntil string
 	UserID     string
 	CreatedAt  string
 	UpdatedAt  string
+	TokenHash  string
 }{
-	Token:      "token",
 	ValidUntil: "valid_until",
 	UserID:     "user_id",
 	CreatedAt:  "created_at",
 	UpdatedAt:  "updated_at",
+	TokenHash:  "token_hash",
 }
 
 var ConfirmationTokenTableColumns = struct {
-	Token      string
 	ValidUntil string
 	UserID     string
 	CreatedAt  string
 	UpdatedAt  string
+	TokenHash  string
 }{
-	Token:      "confirmation_tokens.token",
 	ValidUntil: "confirmation_tokens.valid_until",
 	UserID:     "confirmation_tokens.user_id",
 	CreatedAt:  "confirmation_tokens.created_at",
 	UpdatedAt:  "confirmation_tokens.updated_at",
+	TokenHash:  "confirmation_tokens.token_hash",
 }
 
 // Generated where
 
 var ConfirmationTokenWhere = struct {
-	Token      whereHelperstring
 	ValidUntil whereHelpertime_Time
 	UserID     whereHelperstring
 	CreatedAt  whereHelpertime_Time
 	UpdatedAt  whereHelpertime_Time
+	TokenHash  whereHelper__byte
 }{
-	Token:      whereHelperstring{field: "\"confirmation_tokens\".\"token\""},
 	ValidUntil: whereHelpertime_Time{field: "\"confirmation_tokens\".\"valid_until\""},
 	UserID:     whereHelperstring{field: "\"confirmation_tokens\".\"user_id\""},
 	CreatedAt:  whereHelpertime_Time{field: "\"confirmation_tokens\".\"created_at\""},
 	UpdatedAt:  whereHelpertime_Time{field: "\"confirmation_tokens\".\"updated_at\""},
+	TokenHash:  whereHelper__byte{field: "\"confirmation_tokens\".\"token_hash\""},
 }
 
 // ConfirmationTokenRels is where relationship names are stored.
@@ -114,10 +114,10 @@ func (r *confirmationTokenR) GetUser() *User {
 type confirmationTokenL struct{}
 
 var (
-	confirmationTokenAllColumns            = []string{"token", "valid_until", "user_id", "created_at", "updated_at"}
-	confirmationTokenColumnsWithoutDefault = []string{"valid_until", "user_id", "created_at", "updated_at"}
-	confirmationTokenColumnsWithDefault    = []string{"token"}
-	confirmationTokenPrimaryKeyColumns     = []string{"token"}
+	confirmationTokenAllColumns            = []string{"valid_until", "user_id", "created_at", "updated_at", "token_hash"}
+	confirmationTokenColumnsWithoutDefault = []string{"valid_until", "user_id", "created_at", "updated_at", "token_hash"}
+	confirmationTokenColumnsWithDefault    = []string{}
+	confirmationTokenPrimaryKeyColumns     = []string{"token_hash"}
 	confirmationTokenGeneratedColumns      = []string{}
 )
 
@@ -351,7 +351,7 @@ func (o *ConfirmationToken) SetUser(ctx context.Context, exec boil.ContextExecut
 		strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
 		strmangle.WhereClause("\"", "\"", 2, confirmationTokenPrimaryKeyColumns),
 	)
-	values := []interface{}{related.ID, o.Token}
+	values := []interface{}{related.ID, o.TokenHash}
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -395,7 +395,7 @@ func ConfirmationTokens(mods ...qm.QueryMod) confirmationTokenQuery {
 
 // FindConfirmationToken retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindConfirmationToken(ctx context.Context, exec boil.ContextExecutor, token string, selectCols ...string) (*ConfirmationToken, error) {
+func FindConfirmationToken(ctx context.Context, exec boil.ContextExecutor, tokenHash []byte, selectCols ...string) (*ConfirmationToken, error) {
 	confirmationTokenObj := &ConfirmationToken{}
 
 	sel := "*"
@@ -403,10 +403,10 @@ func FindConfirmationToken(ctx context.Context, exec boil.ContextExecutor, token
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"confirmation_tokens\" where \"token\"=$1", sel,
+		"select %s from \"confirmation_tokens\" where \"token_hash\"=$1", sel,
 	)
 
-	q := queries.Raw(query, token)
+	q := queries.Raw(query, tokenHash)
 
 	err := q.Bind(ctx, exec, confirmationTokenObj)
 	if err != nil {
@@ -769,7 +769,7 @@ func (o *ConfirmationToken) Delete(ctx context.Context, exec boil.ContextExecuto
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), confirmationTokenPrimaryKeyMapping)
-	sql := "DELETE FROM \"confirmation_tokens\" WHERE \"token\"=$1"
+	sql := "DELETE FROM \"confirmation_tokens\" WHERE \"token_hash\"=$1"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -846,7 +846,7 @@ func (o ConfirmationTokenSlice) DeleteAll(ctx context.Context, exec boil.Context
 // Reload refetches the object from the database
 // using the primary keys with an executor.
 func (o *ConfirmationToken) Reload(ctx context.Context, exec boil.ContextExecutor) error {
-	ret, err := FindConfirmationToken(ctx, exec, o.Token)
+	ret, err := FindConfirmationToken(ctx, exec, o.TokenHash)
 	if err != nil {
 		return err
 	}
@@ -885,16 +885,16 @@ func (o *ConfirmationTokenSlice) ReloadAll(ctx context.Context, exec boil.Contex
 }
 
 // ConfirmationTokenExists checks if the ConfirmationToken row exists.
-func ConfirmationTokenExists(ctx context.Context, exec boil.ContextExecutor, token string) (bool, error) {
+func ConfirmationTokenExists(ctx context.Context, exec boil.ContextExecutor, tokenHash []byte) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"confirmation_tokens\" where \"token\"=$1 limit 1)"
+	sql := "select exists(select 1 from \"confirmation_tokens\" where \"token_hash\"=$1 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
 		fmt.Fprintln(writer, sql)
-		fmt.Fprintln(writer, token)
+		fmt.Fprintln(writer, tokenHash)
 	}
-	row := exec.QueryRowContext(ctx, sql, token)
+	row := exec.QueryRowContext(ctx, sql, tokenHash)
 
 	err := row.Scan(&exists)
 	if err != nil {
@@ -906,5 +906,5 @@ func ConfirmationTokenExists(ctx context.Context, exec boil.ContextExecutor, tok
 
 // Exists checks if the ConfirmationToken row exists.
 func (o *ConfirmationToken) Exists(ctx context.Context, exec boil.ContextExecutor) (bool, error) {
-	return ConfirmationTokenExists(ctx, exec, o.Token)
+	return ConfirmationTokenExists(ctx, exec, o.TokenHash)
 }

@@ -18,9 +18,10 @@ const (
 	HashedTestUserPassword = "$argon2id$v=19$m=65536,t=1,p=4$RFO8ulg2c2zloG0029pAUQ$2Po6NUIhVCMm9vivVDuzo7k5KVWfZzJJfeXzC+n+row" //nolint:gosec
 )
 
-// Access and refresh tokens are stored as a hash, so the plaintext lives here
-// and only hashing.HashToken(...) of it reaches the database. Tests authenticate
-// with these values; the database never contains them.
+// Every credential-bearing token (access, refresh, password-reset, confirmation)
+// is stored as a hash, so the plaintext lives here and only
+// hashing.HashToken(...) of it reaches the database. Tests authenticate with
+// these values; the database never contains them.
 //
 //nolint:gosec // static test fixtures for the throwaway test database
 const (
@@ -30,6 +31,8 @@ const (
 	User2RefreshToken1Plain           = "ea909c75-63d1-4348-a63c-4bcf8ab334a2"
 	UserDeactivatedAccessToken1Plain  = "24d0b38d-387c-400c-80fc-a71d85031d4c"
 	UserDeactivatedRefreshToken1Plain = "b6e13a88-7b18-4f17-b819-71b196be2444"
+
+	UserRequiresConfirmationConfirmationTokenPlain = "c9182e0b-4a46-4825-9f10-56f04a8b1665"
 )
 
 // Insertable represents a common interface for all model instances so they may be inserted via the Inserts() func
@@ -130,7 +133,7 @@ func Fixtures() FixtureMap {
 	}
 
 	f.UserRequiresConfirmationConfirmationToken = &models.ConfirmationToken{
-		Token:      "c9182e0b-4a46-4825-9f10-56f04a8b1665",
+		TokenHash:  hashing.HashToken(UserRequiresConfirmationConfirmationTokenPlain),
 		ValidUntil: now.Add(time.Hour),
 		UserID:     f.UserRequiresConfirmation.ID,
 	}

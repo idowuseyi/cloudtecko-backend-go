@@ -149,7 +149,7 @@ func testConfirmationTokensExists(t *testing.T) {
 		t.Error(err)
 	}
 
-	e, err := ConfirmationTokenExists(ctx, tx, o.Token)
+	e, err := ConfirmationTokenExists(ctx, tx, o.TokenHash)
 	if err != nil {
 		t.Errorf("Unable to check if ConfirmationToken exists: %s", err)
 	}
@@ -175,7 +175,7 @@ func testConfirmationTokensFind(t *testing.T) {
 		t.Error(err)
 	}
 
-	confirmationTokenFound, err := FindConfirmationToken(ctx, tx, o.Token)
+	confirmationTokenFound, err := FindConfirmationToken(ctx, tx, o.TokenHash)
 	if err != nil {
 		t.Error(err)
 	}
@@ -537,7 +537,7 @@ func testConfirmationTokensSelect(t *testing.T) {
 }
 
 var (
-	confirmationTokenDBTypes = map[string]string{`Token`: `uuid`, `ValidUntil`: `timestamp with time zone`, `UserID`: `uuid`, `CreatedAt`: `timestamp with time zone`, `UpdatedAt`: `timestamp with time zone`}
+	confirmationTokenDBTypes = map[string]string{`ValidUntil`: `timestamp with time zone`, `UserID`: `uuid`, `CreatedAt`: `timestamp with time zone`, `UpdatedAt`: `timestamp with time zone`, `TokenHash`: `bytea`}
 	_                        = bytes.MinRead
 )
 

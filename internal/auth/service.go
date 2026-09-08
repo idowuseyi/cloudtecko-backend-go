@@ -118,7 +118,7 @@ func (s *Service) ResetPassword(ctx context.Context, request dto.ResetPasswordRe
 	log := util.LogFromContext(ctx).With().Logger()
 
 	passwordResetToken, err := models.PasswordResetTokens(
-		models.PasswordResetTokenWhere.Token.EQ(request.ResetToken),
+		models.PasswordResetTokenWhere.TokenHash.EQ(hashing.HashToken(request.ResetToken)),
 		qm.Load(models.PasswordResetTokenRels.User),
 	).One(ctx, s.db)
 	if err != nil {
@@ -187,30 +187,33 @@ func (s *Service) InitPasswordReset(ctx context.Context, request dto.InitPasswor
 
 	var result dto.InitPasswordResetResult
 	if err := db.WithTransaction(ctx, s.db, func(exec boil.ContextExecutor) error {
-		passwordResetToken, err := user.PasswordResetTokens(
-			models.PasswordResetTokenWhere.CreatedAt.GT(s.clock.Now().Add(-s.config.Auth.PasswordResetTokenReuseDuration)),
-			models.PasswordResetTokenWhere.ValidUntil.GT(s.clock.Now()),
-		).One(ctx, exec)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				log.Debug().Err(err).Msg("No valid password reset token exists, creating new one")
-
-				passwordResetToken = &models.PasswordResetToken{
-					UserID:     user.ID,
-					ValidUntil: s.clock.Now().Add(s.config.Auth.PasswordResetTokenValidity),
-				}
-
-				if err := passwordResetToken.Insert(ctx, exec, boil.Infer()); err != nil {
-					log.Err(err).Msg("Failed to insert password reset token")
-					return err
-				}
-			} else {
-				log.Err(err).Msg("Failed to check for existing valid password reset token")
-				return err
-			}
+		// Only the hash of a reset token is stored, so an existing token's value
+		// can no longer be re-sent. Requesting a reset therefore invalidates any
+		// earlier one: exactly one live reset link per user, which is both the
+		// stronger option and what users expect from password reset.
+		if _, err := user.PasswordResetTokens().DeleteAll(ctx, exec); err != nil {
+			log.Err(err).Msg("Failed to delete existing password reset tokens")
+			return err
 		}
 
-		result.ResetToken = null.StringFrom(passwordResetToken.Token)
+		plaintext, tokenHash, err := hashing.NewToken()
+		if err != nil {
+			log.Err(err).Msg("Failed to generate password reset token")
+			return err
+		}
+
+		passwordResetToken := &models.PasswordResetToken{
+			TokenHash:  tokenHash,
+			UserID:     user.ID,
+			ValidUntil: s.clock.Now().Add(s.config.Auth.PasswordResetTokenValidity),
+		}
+
+		if err := passwordResetToken.Insert(ctx, exec, boil.Infer()); err != nil {
+			log.Err(err).Msg("Failed to insert password reset token")
+			return err
+		}
+
+		result.ResetToken = null.StringFrom(plaintext)
 
 		return nil
 	}); err != nil {
@@ -408,41 +411,9 @@ func (s *Service) Register(ctx context.Context, request dto.RegisterRequest) (dt
 		return dto.RegisterResult{}, err
 	}
 
+	// An existing unconfirmed user re-registering is a resend, not a conflict.
 	if user != nil {
-		if !user.RequiresConfirmation {
-			log.Debug().Msg("User with given username already exists")
-			return dto.RegisterResult{}, httperrors.ErrConflictUserAlreadyExists
-		}
-
-		confirmationTokenInDebounceTimeExists, err := user.ConfirmationTokens(
-			models.ConfirmationTokenWhere.CreatedAt.GT(s.clock.Now().Add(-s.config.Auth.ConfirmationTokenDebounceDuration)),
-			models.ConfirmationTokenWhere.ValidUntil.GT(s.clock.Now()),
-		).Exists(ctx, s.db)
-		if err != nil {
-			log.Err(err).Msg("Failed to check for existing confirmation token")
-			return dto.RegisterResult{}, err
-		}
-
-		if confirmationTokenInDebounceTimeExists {
-			return dto.RegisterResult{
-				RequiresConfirmation: user.RequiresConfirmation,
-			}, nil
-		}
-
-		confirmationToken := models.ConfirmationToken{
-			UserID:     user.ID,
-			ValidUntil: s.clock.Now().Add(s.config.Auth.ConfirmationTokenValidity),
-		}
-
-		if err := confirmationToken.Insert(ctx, s.db, boil.Infer()); err != nil {
-			log.Err(err).Msg("Failed to insert confirmation token")
-			return dto.RegisterResult{}, err
-		}
-
-		return dto.RegisterResult{
-			RequiresConfirmation: user.RequiresConfirmation,
-			ConfirmationToken:    null.StringFrom(confirmationToken.Token),
-		}, nil
+		return s.resendConfirmation(ctx, user)
 	}
 
 	hash, err := hashing.HashPassword(request.Password, hashing.DefaultArgon2ParamsFromEnv())
@@ -480,7 +451,14 @@ func (s *Service) Register(ctx context.Context, request dto.RegisterRequest) (dt
 		}
 
 		if result.RequiresConfirmation {
+			plaintext, tokenHash, err := hashing.NewToken()
+			if err != nil {
+				log.Err(err).Msg("Failed to generate confirmation token")
+				return err
+			}
+
 			confirmationToken := models.ConfirmationToken{
+				TokenHash:  tokenHash,
 				UserID:     user.ID,
 				ValidUntil: s.clock.Now().Add(s.config.Auth.ConfirmationTokenValidity),
 			}
@@ -490,7 +468,7 @@ func (s *Service) Register(ctx context.Context, request dto.RegisterRequest) (dt
 				return err
 			}
 
-			result.ConfirmationToken = null.StringFrom(confirmationToken.Token)
+			result.ConfirmationToken = null.StringFrom(plaintext)
 		}
 
 		return nil
@@ -552,7 +530,7 @@ func (s *Service) CompleteRegister(ctx context.Context, request dto.CompleteRegi
 	var result dto.LoginResult
 	err := db.WithTransaction(ctx, s.db, func(exec boil.ContextExecutor) error {
 		confirmationToken, err := models.ConfirmationTokens(
-			models.ConfirmationTokenWhere.Token.EQ(request.ConfirmationToken),
+			models.ConfirmationTokenWhere.TokenHash.EQ(hashing.HashToken(request.ConfirmationToken)),
 			models.ConfirmationTokenWhere.ValidUntil.GT(s.clock.Now()),
 			qm.Load(models.ConfirmationTokenRels.User),
 		).One(ctx, s.db)
@@ -703,4 +681,53 @@ func (s *Service) revokeRefreshTokenFamily(ctx context.Context, token *models.Re
 
 		return nil
 	})
+}
+
+// resendConfirmation handles a registration attempt for a username that already
+// exists but has never been confirmed: it re-issues a confirmation token unless
+// the debounce window says one was sent recently.
+func (s *Service) resendConfirmation(ctx context.Context, user *models.User) (dto.RegisterResult, error) {
+	log := util.LogFromContext(ctx).With().Str("username", user.Username.String).Logger()
+
+	if !user.RequiresConfirmation {
+		log.Debug().Msg("User with given username already exists")
+		return dto.RegisterResult{}, httperrors.ErrConflictUserAlreadyExists
+	}
+
+	confirmationTokenInDebounceTimeExists, err := user.ConfirmationTokens(
+		models.ConfirmationTokenWhere.CreatedAt.GT(s.clock.Now().Add(-s.config.Auth.ConfirmationTokenDebounceDuration)),
+		models.ConfirmationTokenWhere.ValidUntil.GT(s.clock.Now()),
+	).Exists(ctx, s.db)
+	if err != nil {
+		log.Err(err).Msg("Failed to check for existing confirmation token")
+		return dto.RegisterResult{}, err
+	}
+
+	if confirmationTokenInDebounceTimeExists {
+		return dto.RegisterResult{
+			RequiresConfirmation: user.RequiresConfirmation,
+		}, nil
+	}
+
+	plaintext, tokenHash, err := hashing.NewToken()
+	if err != nil {
+		log.Err(err).Msg("Failed to generate confirmation token")
+		return dto.RegisterResult{}, err
+	}
+
+	confirmationToken := models.ConfirmationToken{
+		TokenHash:  tokenHash,
+		UserID:     user.ID,
+		ValidUntil: s.clock.Now().Add(s.config.Auth.ConfirmationTokenValidity),
+	}
+
+	if err := confirmationToken.Insert(ctx, s.db, boil.Infer()); err != nil {
+		log.Err(err).Msg("Failed to insert confirmation token")
+		return dto.RegisterResult{}, err
+	}
+
+	return dto.RegisterResult{
+		RequiresConfirmation: user.RequiresConfirmation,
+		ConfirmationToken:    null.StringFrom(plaintext),
+	}, nil
 }

@@ -86,7 +86,6 @@ type AuthServer struct {
 	RefreshTokenValidity               time.Duration
 	PasswordResetTokenValidity         time.Duration
 	PasswordResetTokenDebounceDuration time.Duration
-	PasswordResetTokenReuseDuration    time.Duration
 	DefaultUserScopes                  []string
 	LastAuthenticatedAtThreshold       time.Duration
 	RegistrationRequiresConfirmation   bool
@@ -255,7 +254,6 @@ func DefaultServiceConfigFromEnv() Server {
 			RefreshTokenValidity:               time.Second * time.Duration(util.GetEnvAsInt("SERVER_AUTH_REFRESH_TOKEN_VALIDITY", 2592000)),
 			PasswordResetTokenValidity:         time.Second * time.Duration(util.GetEnvAsInt("SERVER_AUTH_PASSWORD_RESET_TOKEN_VALIDITY", 900)),
 			PasswordResetTokenDebounceDuration: time.Second * time.Duration(util.GetEnvAsInt("SERVER_AUTH_PASSWORD_RESET_TOKEN_DEBOUNCE_DURATION_SECONDS", 60)),
-			PasswordResetTokenReuseDuration:    time.Second * time.Duration(util.GetEnvAsInt("SERVER_AUTH_PASSWORD_RESET_TOKEN_REUSE_DURATION_SECONDS", 0)),
 			DefaultUserScopes:                  util.GetEnvAsStringArr("SERVER_AUTH_DEFAULT_USER_SCOPES", []string{"app"}),
 			LastAuthenticatedAtThreshold:       time.Second * time.Duration(util.GetEnvAsInt("SERVER_AUTH_LAST_AUTHENTICATED_AT_THRESHOLD", 900)),
 			RegistrationRequiresConfirmation:   util.GetEnvAsBool("SERVER_AUTH_REGISTRATION_REQUIRES_CONFIRMATION", false),

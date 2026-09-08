@@ -14,6 +14,7 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test/fixtures"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/hashing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,16 +24,20 @@ func TestPostForgotPasswordCompleteSuccess(t *testing.T) {
 		ctx := t.Context()
 		fix := fixtures.Fixtures()
 
+		resetTokenPlain, resetTokenHash, err := hashing.NewToken()
+		require.NoError(t, err)
+
 		passwordResetToken := models.PasswordResetToken{
+			TokenHash:  resetTokenHash,
 			UserID:     fix.User1.ID,
 			ValidUntil: s.Clock.Now().Add(s.Config.Auth.PasswordResetTokenValidity),
 		}
 
-		err := passwordResetToken.Insert(ctx, s.DB, boil.Infer())
+		err = passwordResetToken.Insert(ctx, s.DB, boil.Infer())
 		require.NoError(t, err)
 
 		payload := test.GenericPayload{
-			"token":    passwordResetToken.Token,
+			"token":    resetTokenPlain,
 			"password": newPassword,
 		}
 
@@ -104,16 +109,20 @@ func TestPostForgotPasswordCompleteExpiredToken(t *testing.T) {
 		ctx := t.Context()
 		fix := fixtures.Fixtures()
 
+		resetTokenPlain, resetTokenHash, err := hashing.NewToken()
+		require.NoError(t, err)
+
 		passwordResetToken := models.PasswordResetToken{
+			TokenHash:  resetTokenHash,
 			UserID:     fix.User1.ID,
 			ValidUntil: s.Clock.Now().Add(time.Minute * -10),
 		}
 
-		err := passwordResetToken.Insert(ctx, s.DB, boil.Infer())
+		err = passwordResetToken.Insert(ctx, s.DB, boil.Infer())
 		require.NoError(t, err)
 
 		payload := test.GenericPayload{
-			"token":    passwordResetToken.Token,
+			"token":    resetTokenPlain,
 			"password": newPassword,
 		}
 
@@ -144,16 +153,20 @@ func TestPostForgotPasswordCompleteDeactivatedUser(t *testing.T) {
 		ctx := t.Context()
 		fix := fixtures.Fixtures()
 
+		resetTokenPlain, resetTokenHash, err := hashing.NewToken()
+		require.NoError(t, err)
+
 		passwordResetToken := models.PasswordResetToken{
+			TokenHash:  resetTokenHash,
 			UserID:     fix.UserDeactivated.ID,
 			ValidUntil: s.Clock.Now().Add(s.Config.Auth.PasswordResetTokenValidity),
 		}
 
-		err := passwordResetToken.Insert(ctx, s.DB, boil.Infer())
+		err = passwordResetToken.Insert(ctx, s.DB, boil.Infer())
 		require.NoError(t, err)
 
 		payload := test.GenericPayload{
-			"token":    passwordResetToken.Token,
+			"token":    resetTokenPlain,
 			"password": newPassword,
 		}
 
@@ -184,16 +197,20 @@ func TestPostForgotPasswordCompleteUserWithoutPassword(t *testing.T) {
 		ctx := t.Context()
 		fix := fixtures.Fixtures()
 
+		resetTokenPlain, resetTokenHash, err := hashing.NewToken()
+		require.NoError(t, err)
+
 		passwordResetToken := models.PasswordResetToken{
+			TokenHash:  resetTokenHash,
 			UserID:     fix.User2.ID,
 			ValidUntil: s.Clock.Now().Add(s.Config.Auth.PasswordResetTokenValidity),
 		}
 
-		err := passwordResetToken.Insert(ctx, s.DB, boil.Infer())
+		err = passwordResetToken.Insert(ctx, s.DB, boil.Infer())
 		require.NoError(t, err)
 
 		payload := test.GenericPayload{
-			"token":    passwordResetToken.Token,
+			"token":    resetTokenPlain,
 			"password": newPassword,
 		}
 

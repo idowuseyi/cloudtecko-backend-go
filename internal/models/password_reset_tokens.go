@@ -23,58 +23,58 @@ import (
 
 // PasswordResetToken is an object representing the database table.
 type PasswordResetToken struct {
-	Token      string    `boil:"token" json:"token" toml:"token" yaml:"token"`
 	ValidUntil time.Time `boil:"valid_until" json:"valid_until" toml:"valid_until" yaml:"valid_until"`
 	UserID     string    `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
 	CreatedAt  time.Time `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt  time.Time `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	TokenHash  []byte    `boil:"token_hash" json:"token_hash" toml:"token_hash" yaml:"token_hash"`
 
 	R *passwordResetTokenR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L passwordResetTokenL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var PasswordResetTokenColumns = struct {
-	Token      string
 	ValidUntil string
 	UserID     string
 	CreatedAt  string
 	UpdatedAt  string
+	TokenHash  string
 }{
-	Token:      "token",
 	ValidUntil: "valid_until",
 	UserID:     "user_id",
 	CreatedAt:  "created_at",
 	UpdatedAt:  "updated_at",
+	TokenHash:  "token_hash",
 }
 
 var PasswordResetTokenTableColumns = struct {
-	Token      string
 	ValidUntil string
 	UserID     string
 	CreatedAt  string
 	UpdatedAt  string
+	TokenHash  string
 }{
-	Token:      "password_reset_tokens.token",
 	ValidUntil: "password_reset_tokens.valid_until",
 	UserID:     "password_reset_tokens.user_id",
 	CreatedAt:  "password_reset_tokens.created_at",
 	UpdatedAt:  "password_reset_tokens.updated_at",
+	TokenHash:  "password_reset_tokens.token_hash",
 }
 
 // Generated where
 
 var PasswordResetTokenWhere = struct {
-	Token      whereHelperstring
 	ValidUntil whereHelpertime_Time
 	UserID     whereHelperstring
 	CreatedAt  whereHelpertime_Time
 	UpdatedAt  whereHelpertime_Time
+	TokenHash  whereHelper__byte
 }{
-	Token:      whereHelperstring{field: "\"password_reset_tokens\".\"token\""},
 	ValidUntil: whereHelpertime_Time{field: "\"password_reset_tokens\".\"valid_until\""},
 	UserID:     whereHelperstring{field: "\"password_reset_tokens\".\"user_id\""},
 	CreatedAt:  whereHelpertime_Time{field: "\"password_reset_tokens\".\"created_at\""},
 	UpdatedAt:  whereHelpertime_Time{field: "\"password_reset_tokens\".\"updated_at\""},
+	TokenHash:  whereHelper__byte{field: "\"password_reset_tokens\".\"token_hash\""},
 }
 
 // PasswordResetTokenRels is where relationship names are stored.
@@ -114,10 +114,10 @@ func (r *passwordResetTokenR) GetUser() *User {
 type passwordResetTokenL struct{}
 
 var (
-	passwordResetTokenAllColumns            = []string{"token", "valid_until", "user_id", "created_at", "updated_at"}
-	passwordResetTokenColumnsWithoutDefault = []string{"valid_until", "user_id", "created_at", "updated_at"}
-	passwordResetTokenColumnsWithDefault    = []string{"token"}
-	passwordResetTokenPrimaryKeyColumns     = []string{"token"}
+	passwordResetTokenAllColumns            = []string{"valid_until", "user_id", "created_at", "updated_at", "token_hash"}
+	passwordResetTokenColumnsWithoutDefault = []string{"valid_until", "user_id", "created_at", "updated_at", "token_hash"}
+	passwordResetTokenColumnsWithDefault    = []string{}
+	passwordResetTokenPrimaryKeyColumns     = []string{"token_hash"}
 	passwordResetTokenGeneratedColumns      = []string{}
 )
 
@@ -351,7 +351,7 @@ func (o *PasswordResetToken) SetUser(ctx context.Context, exec boil.ContextExecu
 		strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
 		strmangle.WhereClause("\"", "\"", 2, passwordResetTokenPrimaryKeyColumns),
 	)
-	values := []interface{}{related.ID, o.Token}
+	values := []interface{}{related.ID, o.TokenHash}
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -395,7 +395,7 @@ func PasswordResetTokens(mods ...qm.QueryMod) passwordResetTokenQuery {
 
 // FindPasswordResetToken retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindPasswordResetToken(ctx context.Context, exec boil.ContextExecutor, token string, selectCols ...string) (*PasswordResetToken, error) {
+func FindPasswordResetToken(ctx context.Context, exec boil.ContextExecutor, tokenHash []byte, selectCols ...string) (*PasswordResetToken, error) {
 	passwordResetTokenObj := &PasswordResetToken{}
 
 	sel := "*"
@@ -403,10 +403,10 @@ func FindPasswordResetToken(ctx context.Context, exec boil.ContextExecutor, toke
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"password_reset_tokens\" where \"token\"=$1", sel,
+		"select %s from \"password_reset_tokens\" where \"token_hash\"=$1", sel,
 	)
 
-	q := queries.Raw(query, token)
+	q := queries.Raw(query, tokenHash)
 
 	err := q.Bind(ctx, exec, passwordResetTokenObj)
 	if err != nil {
@@ -769,7 +769,7 @@ func (o *PasswordResetToken) Delete(ctx context.Context, exec boil.ContextExecut
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), passwordResetTokenPrimaryKeyMapping)
-	sql := "DELETE FROM \"password_reset_tokens\" WHERE \"token\"=$1"
+	sql := "DELETE FROM \"password_reset_tokens\" WHERE \"token_hash\"=$1"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -846,7 +846,7 @@ func (o PasswordResetTokenSlice) DeleteAll(ctx context.Context, exec boil.Contex
 // Reload refetches the object from the database
 // using the primary keys with an executor.
 func (o *PasswordResetToken) Reload(ctx context.Context, exec boil.ContextExecutor) error {
-	ret, err := FindPasswordResetToken(ctx, exec, o.Token)
+	ret, err := FindPasswordResetToken(ctx, exec, o.TokenHash)
 	if err != nil {
 		return err
 	}
@@ -885,16 +885,16 @@ func (o *PasswordResetTokenSlice) ReloadAll(ctx context.Context, exec boil.Conte
 }
 
 // PasswordResetTokenExists checks if the PasswordResetToken row exists.
-func PasswordResetTokenExists(ctx context.Context, exec boil.ContextExecutor, token string) (bool, error) {
+func PasswordResetTokenExists(ctx context.Context, exec boil.ContextExecutor, tokenHash []byte) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"password_reset_tokens\" where \"token\"=$1 limit 1)"
+	sql := "select exists(select 1 from \"password_reset_tokens\" where \"token_hash\"=$1 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
 		fmt.Fprintln(writer, sql)
-		fmt.Fprintln(writer, token)
+		fmt.Fprintln(writer, tokenHash)
 	}
-	row := exec.QueryRowContext(ctx, sql, token)
+	row := exec.QueryRowContext(ctx, sql, tokenHash)
 
 	err := row.Scan(&exists)
 	if err != nil {
@@ -906,5 +906,5 @@ func PasswordResetTokenExists(ctx context.Context, exec boil.ContextExecutor, to
 
 // Exists checks if the PasswordResetToken row exists.
 func (o *PasswordResetToken) Exists(ctx context.Context, exec boil.ContextExecutor) (bool, error) {
-	return PasswordResetTokenExists(ctx, exec, o.Token)
+	return PasswordResetTokenExists(ctx, exec, o.TokenHash)
 }

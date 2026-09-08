@@ -1264,7 +1264,7 @@ func (o *User) AddConfirmationTokens(ctx context.Context, exec boil.ContextExecu
 				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
 				strmangle.WhereClause("\"", "\"", 2, confirmationTokenPrimaryKeyColumns),
 			)
-			values := []interface{}{o.ID, rel.Token}
+			values := []interface{}{o.ID, rel.TokenHash}
 
 			if boil.IsDebug(ctx) {
 				writer := boil.DebugWriterFrom(ctx)
@@ -1317,7 +1317,7 @@ func (o *User) AddPasswordResetTokens(ctx context.Context, exec boil.ContextExec
 				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
 				strmangle.WhereClause("\"", "\"", 2, passwordResetTokenPrimaryKeyColumns),
 			)
-			values := []interface{}{o.ID, rel.Token}
+			values := []interface{}{o.ID, rel.TokenHash}
 
 			if boil.IsDebug(ctx) {
 				writer := boil.DebugWriterFrom(ctx)

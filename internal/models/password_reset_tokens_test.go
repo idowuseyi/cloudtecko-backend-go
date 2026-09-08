@@ -149,7 +149,7 @@ func testPasswordResetTokensExists(t *testing.T) {
 		t.Error(err)
 	}
 
-	e, err := PasswordResetTokenExists(ctx, tx, o.Token)
+	e, err := PasswordResetTokenExists(ctx, tx, o.TokenHash)
 	if err != nil {
 		t.Errorf("Unable to check if PasswordResetToken exists: %s", err)
 	}
@@ -175,7 +175,7 @@ func testPasswordResetTokensFind(t *testing.T) {
 		t.Error(err)
 	}
 
-	passwordResetTokenFound, err := FindPasswordResetToken(ctx, tx, o.Token)
+	passwordResetTokenFound, err := FindPasswordResetToken(ctx, tx, o.TokenHash)
 	if err != nil {
 		t.Error(err)
 	}
@@ -537,7 +537,7 @@ func testPasswordResetTokensSelect(t *testing.T) {
 }
 
 var (
-	passwordResetTokenDBTypes = map[string]string{`Token`: `uuid`, `ValidUntil`: `timestamp with time zone`, `UserID`: `uuid`, `CreatedAt`: `timestamp with time zone`, `UpdatedAt`: `timestamp with time zone`}
+	passwordResetTokenDBTypes = map[string]string{`ValidUntil`: `timestamp with time zone`, `UserID`: `uuid`, `CreatedAt`: `timestamp with time zone`, `UpdatedAt`: `timestamp with time zone`, `TokenHash`: `bytea`}
 	_                         = bytes.MinRead
 )
 

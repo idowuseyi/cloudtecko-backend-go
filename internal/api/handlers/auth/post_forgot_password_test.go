@@ -3,6 +3,7 @@ package auth_test
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -15,15 +16,26 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test/fixtures"
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
-	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/db"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/hashing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+// resetTokenFromMail pulls the reset token out of the sent mail.
+//
+// The test can no longer read the token out of the database -- only its hash is
+// stored -- so it takes the same path a real user does: the link in the email.
+func resetTokenFromMail(t *testing.T, html string) string {
+	t.Helper()
+
+	matches := regexp.MustCompile(`set-new-password\?token=([0-9a-f-]{36})`).FindStringSubmatch(html)
+	require.Len(t, matches, 2, "no reset token found in mail")
+
+	return matches[1]
+}
+
 func TestPostForgotPasswordSuccess(t *testing.T) {
 	config := config.DefaultServiceConfigFromEnv()
-	config.Auth.PasswordResetTokenReuseDuration = 120 * time.Second
 	config.Auth.PasswordResetTokenDebounceDuration = 60 * time.Second
 
 	test.WithTestServerConfigurable(t, config, func(s *api.Server) {
@@ -36,12 +48,15 @@ func TestPostForgotPasswordSuccess(t *testing.T) {
 		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/forgot-password", payload, nil)
 		require.Equal(t, http.StatusNoContent, res.Result().StatusCode)
 
-		passwordResetToken, err := fix.User1.PasswordResetTokens().One(ctx, s.DB)
-		require.NoError(t, err)
-
 		mail := test.GetLastSentMail(t, s.Mailer)
 		require.NotNil(t, mail)
-		assert.Contains(t, string(mail.HTML), fmt.Sprintf("http://localhost:3000/set-new-password?token=%s", passwordResetToken.Token))
+		firstToken := resetTokenFromMail(t, string(mail.HTML))
+
+		// The mailed token must hash to the stored row, and must not itself appear
+		// in the database.
+		stored, err := fix.User1.PasswordResetTokens().One(ctx, s.DB)
+		require.NoError(t, err)
+		assert.Equal(t, hashing.HashToken(firstToken), stored.TokenHash)
 
 		// retrying should not send a new mail because of the debounce time
 		{
@@ -52,11 +67,13 @@ func TestPostForgotPasswordSuccess(t *testing.T) {
 			assert.Len(t, sentMails, 1)
 		}
 
-		// CreatedAt of token exceeds debounce time, retrying should send a new mail
-		// but with the same token as the reuse duration has not passed yet
+		// Past the debounce a new mail goes out with a NEW token, and the previous
+		// one is invalidated. The old behaviour re-sent the same token, which is
+		// impossible now that only its hash is stored.
 		{
-			passwordResetToken.CreatedAt = s.Clock.Now().Add(-s.Config.Auth.PasswordResetTokenDebounceDuration)
-			_, err = passwordResetToken.Update(ctx, s.DB, boil.Whitelist(models.PasswordResetTokenColumns.CreatedAt))
+			_, err = models.PasswordResetTokens().UpdateAll(ctx, s.DB, models.M{
+				models.PasswordResetTokenColumns.CreatedAt: s.Clock.Now().Add(-s.Config.Auth.PasswordResetTokenDebounceDuration),
+			})
 			require.NoError(t, err)
 
 			res := test.PerformRequest(t, s, "POST", "/api/v1/auth/forgot-password", payload, nil)
@@ -65,59 +82,52 @@ func TestPostForgotPasswordSuccess(t *testing.T) {
 			sentMails := test.GetSentMails(t, s.Mailer)
 			require.Len(t, sentMails, 2)
 
-			passwordResetTokens, err := fix.User1.PasswordResetTokens().All(ctx, s.DB)
-			require.NoError(t, err)
+			secondToken := resetTokenFromMail(t, string(sentMails[1].HTML))
+			assert.NotEqual(t, firstToken, secondToken, "a fresh token must be issued")
 
-			assert.Len(t, passwordResetTokens, 1)
-			for _, mail := range sentMails {
-				assert.Contains(t, string(mail.HTML), fmt.Sprintf("http://localhost:3000/set-new-password?token=%s", passwordResetTokens[0].Token))
-			}
+			// Exactly one live reset token per user.
+			remaining, err := fix.User1.PasswordResetTokens().All(ctx, s.DB)
+			require.NoError(t, err)
+			require.Len(t, remaining, 1)
+			assert.Equal(t, hashing.HashToken(secondToken), remaining[0].TokenHash)
 		}
+	})
+}
 
-		// CreatedAt of token exceeds reuse time, retrying should send a new mail with a new token
-		{
-			passwordResetToken.CreatedAt = s.Clock.Now().Add(-s.Config.Auth.PasswordResetTokenReuseDuration)
-			_, err = passwordResetToken.Update(ctx, s.DB, boil.Whitelist(models.PasswordResetTokenColumns.CreatedAt))
-			require.NoError(t, err)
+// Requesting a second reset must make the first link stop working. This is the
+// deliberate behaviour change that hashing forced: the old token cannot be
+// re-sent, so it is revoked rather than left live alongside the new one.
+func TestPostForgotPasswordInvalidatesPreviousToken(t *testing.T) {
+	config := config.DefaultServiceConfigFromEnv()
+	config.Auth.PasswordResetTokenDebounceDuration = 0
 
-			res := test.PerformRequest(t, s, "POST", "/api/v1/auth/forgot-password", payload, nil)
-			require.Equal(t, http.StatusNoContent, res.Result().StatusCode)
+	test.WithTestServerConfigurable(t, config, func(s *api.Server) {
+		ctx := t.Context()
+		fix := fixtures.Fixtures()
+		payload := test.GenericPayload{"username": fix.User1.Username}
 
-			sentMails := test.GetSentMails(t, s.Mailer)
-			require.Len(t, sentMails, 3)
+		require.Equal(t, http.StatusNoContent,
+			test.PerformRequest(t, s, "POST", "/api/v1/auth/forgot-password", payload, nil).Result().StatusCode)
+		firstToken := resetTokenFromMail(t, string(test.GetLastSentMail(t, s.Mailer).HTML))
 
-			passwordResetTokens, err := fix.User1.PasswordResetTokens(
-				db.OrderBy(types.OrderDirDesc, models.PasswordResetTokenColumns.CreatedAt),
-			).All(ctx, s.DB)
-			require.NoError(t, err)
+		require.Equal(t, http.StatusNoContent,
+			test.PerformRequest(t, s, "POST", "/api/v1/auth/forgot-password", payload, nil).Result().StatusCode)
+		secondToken := resetTokenFromMail(t, string(test.GetLastSentMail(t, s.Mailer).HTML))
+		require.NotEqual(t, firstToken, secondToken)
 
-			require.Len(t, passwordResetTokens, 2)
+		count, err := models.PasswordResetTokens().Count(ctx, s.DB)
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), count, "only the newest reset token may remain")
 
-			assert.Contains(t, string(sentMails[2].HTML), fmt.Sprintf("http://localhost:3000/set-new-password?token=%s", passwordResetTokens[0].Token))
-		}
+		// The superseded link is dead...
+		resOld := test.PerformRequest(t, s, "POST", "/api/v1/auth/forgot-password/complete",
+			test.GenericPayload{"token": firstToken, "password": "a-brand-new-password"}, nil)
+		assert.Equal(t, http.StatusNotFound, resOld.Result().StatusCode)
 
-		// Token validity is expired, retrying should send a new mail with a new token
-		{
-			_, err = models.PasswordResetTokens().UpdateAll(ctx, s.DB, models.M{
-				models.PasswordResetTokenColumns.ValidUntil: s.Clock.Now().Add(-1 * time.Second),
-			})
-			require.NoError(t, err)
-
-			res := test.PerformRequest(t, s, "POST", "/api/v1/auth/forgot-password", payload, nil)
-			require.Equal(t, http.StatusNoContent, res.Result().StatusCode)
-
-			sentMails := test.GetSentMails(t, s.Mailer)
-			require.Len(t, sentMails, 4)
-
-			passwordResetTokens, err := fix.User1.PasswordResetTokens(
-				db.OrderBy(types.OrderDirDesc, models.PasswordResetTokenColumns.CreatedAt),
-			).All(ctx, s.DB)
-			require.NoError(t, err)
-
-			require.Len(t, passwordResetTokens, 3)
-
-			assert.Contains(t, string(sentMails[3].HTML), fmt.Sprintf("http://localhost:3000/set-new-password?token=%s", passwordResetTokens[0].Token))
-		}
+		// ...and the newest one works.
+		resNew := test.PerformRequest(t, s, "POST", "/api/v1/auth/forgot-password/complete",
+			test.GenericPayload{"token": secondToken, "password": "a-brand-new-password"}, nil)
+		assert.Equal(t, http.StatusOK, resNew.Result().StatusCode)
 	})
 }
 
@@ -132,12 +142,12 @@ func TestPostForgotPasswordSuccessLowercaseTrimWhitespaces(t *testing.T) {
 		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/forgot-password", payload, nil)
 		assert.Equal(t, http.StatusNoContent, res.Result().StatusCode)
 
-		passwordResetToken, err := fix.User1.PasswordResetTokens().One(ctx, s.DB)
+		stored, err := fix.User1.PasswordResetTokens().One(ctx, s.DB)
 		require.NoError(t, err)
 
 		mail := test.GetLastSentMail(t, s.Mailer)
 		require.NotNil(t, mail)
-		assert.Contains(t, string(mail.HTML), fmt.Sprintf("http://localhost:3000/set-new-password?token=%s", passwordResetToken.Token))
+		assert.Equal(t, hashing.HashToken(resetTokenFromMail(t, string(mail.HTML))), stored.TokenHash)
 	})
 }
 

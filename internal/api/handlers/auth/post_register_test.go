@@ -2,6 +2,7 @@ package auth_test
 
 import (
 	"net/http"
+	"regexp"
 	"testing"
 	"time"
 
@@ -141,10 +142,17 @@ func TestPostRegisterWithConfirmationSuccess(t *testing.T) {
 		require.Len(t, mails, 1)
 
 		mail := mails[0]
-		expectedConfirmationLink, err := url.ConfirmationDeeplinkURL(s.Config, confirmationToken.Token)
-		require.NoError(t, err)
-
 		assert.Equal(t, username, mail.To[0])
+
+		// The token cannot be read back out of the database, so take the same path
+		// the user does -- the link in the mail -- and check it hashes to the
+		// stored row.
+		matches := regexp.MustCompile(`token=([0-9a-f-]{36})`).FindStringSubmatch(string(mail.HTML))
+		require.Len(t, matches, 2, "no confirmation token found in mail")
+		assert.Equal(t, hashing.HashToken(matches[1]), confirmationToken.TokenHash)
+
+		expectedConfirmationLink, err := url.ConfirmationDeeplinkURL(s.Config, matches[1])
+		require.NoError(t, err)
 		assert.Contains(t, string(mail.HTML), expectedConfirmationLink.String())
 
 		// directly register again should trigger the debounce
@@ -184,10 +192,14 @@ func TestPostRegisterWithConfirmationSuccess(t *testing.T) {
 		lastSentMail := test.GetLastSentMail(t, s.Mailer)
 		require.NotNil(t, lastSentMail)
 
-		expectedConfirmationLink, err = url.ConfirmationDeeplinkURL(s.Config, confirmationTokens[0].Token)
-		require.NoError(t, err)
-
 		assert.Equal(t, username, lastSentMail.To[0])
+
+		resendMatches := regexp.MustCompile(`token=([0-9a-f-]{36})`).FindStringSubmatch(string(lastSentMail.HTML))
+		require.Len(t, resendMatches, 2, "no confirmation token found in resent mail")
+		assert.Equal(t, hashing.HashToken(resendMatches[1]), confirmationTokens[0].TokenHash)
+
+		expectedConfirmationLink, err = url.ConfirmationDeeplinkURL(s.Config, resendMatches[1])
+		require.NoError(t, err)
 		assert.Contains(t, string(lastSentMail.HTML), expectedConfirmationLink.String())
 	})
 }

@@ -23,7 +23,7 @@ func TestPostCompleteRegister(t *testing.T) {
 		fix := fixtures.Fixtures()
 		ctx := t.Context()
 
-		res := test.PerformRequest(t, s, "POST", fmt.Sprintf("/api/v1/auth/register/%s", fix.UserRequiresConfirmationConfirmationToken.Token), nil, nil)
+		res := test.PerformRequest(t, s, "POST", fmt.Sprintf("/api/v1/auth/register/%s", fixtures.UserRequiresConfirmationConfirmationTokenPlain), nil, nil)
 		require.Equal(t, http.StatusOK, res.Result().StatusCode)
 
 		var response types.PostLoginResponse
@@ -42,7 +42,7 @@ func TestPostCompleteRegister(t *testing.T) {
 
 		// trying again with the same token should fail
 		{
-			res := test.PerformRequest(t, s, "POST", fmt.Sprintf("/api/v1/auth/register/%s", fix.UserRequiresConfirmationConfirmationToken.Token), nil, nil)
+			res := test.PerformRequest(t, s, "POST", fmt.Sprintf("/api/v1/auth/register/%s", fixtures.UserRequiresConfirmationConfirmationTokenPlain), nil, nil)
 			test.RequireHTTPError(t, res, httperrors.NewFromEcho(echo.ErrUnauthorized))
 		}
 	})
@@ -64,7 +64,7 @@ func TestPostCompleteRegisterTokenExpired(t *testing.T) {
 		_, err := fix.UserRequiresConfirmationConfirmationToken.Update(ctx, s.DB, boil.Whitelist(models.ConfirmationTokenColumns.ValidUntil))
 		require.NoError(t, err)
 
-		res := test.PerformRequest(t, s, "POST", fmt.Sprintf("/api/v1/auth/register/%s", fix.UserRequiresConfirmationConfirmationToken.Token), nil, nil)
+		res := test.PerformRequest(t, s, "POST", fmt.Sprintf("/api/v1/auth/register/%s", fixtures.UserRequiresConfirmationConfirmationTokenPlain), nil, nil)
 		test.RequireHTTPError(t, res, httperrors.NewFromEcho(echo.ErrUnauthorized))
 	})
 }
