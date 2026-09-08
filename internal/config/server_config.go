@@ -135,7 +135,14 @@ func DefaultServiceConfigFromEnv() Server {
 	// If you need dotenv ENV variables available in a test, do that explicitly within that
 	// test before executing DefaultServiceConfigFromEnv (or test.WithTestServer).
 	// See /internal/test/helper_dot_env.go: test.DotEnvLoadLocalOrSkipTest(t)
-	if !testing.Testing() {
+	//
+	// DOTENV_DISABLE exists because this load *overrides* real ENV variables (it
+	// uses os.Setenv). Once a developer puts managed-database credentials in
+	// .env.local for the no-Docker workflow, `docker compose up` would otherwise
+	// silently point the containerised app at the cloud database instead of the
+	// container's Postgres -- a data-loss path, not just a surprise.
+	// docker-compose.yml sets it, so the compose stack always uses its own ENV.
+	if !testing.Testing() && !util.GetEnvAsBool("DOTENV_DISABLE", false) {
 		DotEnvTryLoad(filepath.Join(util.GetProjectRootDir(), ".env.local"), os.Setenv)
 	}
 

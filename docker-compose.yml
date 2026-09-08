@@ -57,6 +57,11 @@ services:
       # optional: project root directory, used for relative path resolution (e.g. fixtures)
       PROJECT_ROOT_DIR: *PROJECT_ROOT_DIR
 
+      # Never let a developer's .env.local (which holds managed-database
+      # credentials for the no-Docker workflow) override the compose ENV and
+      # point this container at a cloud database.
+      DOTENV_DISABLE: "true"
+
       # optional: env for integresql client testing
       # INTEGRESQL_CLIENT_BASE_URL: "http://integresql:5000/api"
 
