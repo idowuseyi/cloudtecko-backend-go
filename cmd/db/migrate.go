@@ -49,7 +49,20 @@ func ApplyMigrations(ctx context.Context, serviceConfig config.Server) (int, err
 	// pin migrate to use the globally defined `migrations` table identifier
 	migrate.SetTable(config.DatabaseMigrationTable)
 
-	db, err := sql.Open("postgres", serviceConfig.Database.ConnectionString())
+	// Migrations go to MigrationDatabase, which equals Database unless
+	// MIGRATION_DATABASE_URL points at a direct (non-pooled) endpoint. Running DDL
+	// through a transaction pooler is unreliable on managed providers.
+	migrationConfig := serviceConfig.MigrationDatabase
+	dialect := migrationConfig.Dialect
+	if dialect == "" {
+		dialect = config.DialectPostgres
+	}
+
+	if dialect != config.DialectPostgres {
+		return 0, fmt.Errorf("cannot apply migrations: dialect %q is not supported, migrations/ is Postgres DDL (see docs/database-dialects.md)", dialect)
+	}
+
+	db, err := sql.Open(dialect, migrationConfig.ConnectionString())
 	if err != nil {
 		return 0, fmt.Errorf("failed to open the database: %w", err)
 	}
@@ -69,7 +82,7 @@ func ApplyMigrations(ctx context.Context, serviceConfig config.Server) (int, err
 		Dir: config.DatabaseMigrationFolder,
 	}
 
-	missingMigrations, _, err := migrate.PlanMigration(db, "postgres", migrations, migrate.Up, 0)
+	missingMigrations, _, err := migrate.PlanMigration(db, dialect, migrations, migrate.Up, 0)
 	if err != nil {
 		log.Err(err).Msg("Error while planning migrations")
 		return 0, fmt.Errorf("failed to plan migrations: %w", err)
@@ -79,7 +92,7 @@ func ApplyMigrations(ctx context.Context, serviceConfig config.Server) (int, err
 	for i := 0; i < len(missingMigrations); i++ {
 		log.Info().Str("migrationId", missingMigrations[i].Id).Msg("Applying migration")
 
-		n, err := migrate.ExecMax(db, "postgres", migrations, migrate.Up, 1)
+		n, err := migrate.ExecMax(db, dialect, migrations, migrate.Up, 1)
 		if err != nil {
 			log.Err(err).Msg("Error while applying migration")
 			return 0, fmt.Errorf("failed to apply migration: %w", err)

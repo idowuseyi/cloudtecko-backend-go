@@ -1,11 +1,13 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/dropbox/godropbox/time2"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/auth"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/i18n"
@@ -13,7 +15,6 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/persistence"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/push"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/push/provider"
-	"github.com/dropbox/godropbox/time2"
 	"github.com/rs/zerolog/log"
 )
 
@@ -69,7 +70,7 @@ func NewMailer(config config.Server) (*mailer.Mailer, error) {
 }
 
 func NewDB(config config.Server) (*sql.DB, error) {
-	return persistence.NewDB(config.Database)
+	return persistence.NewDB(context.Background(), config.Database)
 }
 
 func NewI18N(config config.Server) (*i18n.Service, error) {

@@ -4,35 +4,33 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
 
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
 )
 
-const (
-	dbPingTimeout = 10 * time.Second
-)
+// postgresDriverName is the driver registered by github.com/lib/pq, which is
+// blank-imported in internal/api/server.go and cmd/*.
+const postgresDriverName = "postgres"
 
-func NewDB(cfg config.Database) (*sql.DB, error) {
-	db, err := sql.Open("postgres", cfg.ConnectionString())
+func newPostgresDB(ctx context.Context, cfg config.Database) (*sql.DB, error) {
+	db, err := sql.Open(postgresDriverName, cfg.ConnectionString())
 	if err != nil {
 		return nil, fmt.Errorf("failed to open db connection: %w", err)
 	}
 
-	if cfg.MaxOpenConns > 0 {
-		db.SetMaxOpenConns(cfg.MaxOpenConns)
-	}
-	if cfg.MaxIdleConns > 0 {
-		db.SetMaxIdleConns(cfg.MaxIdleConns)
-	}
-	if cfg.ConnMaxLifetime > 0 {
-		db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
+	applyPoolSettings(db, cfg)
+
+	if !cfg.PingOnConnect {
+		return db, nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), dbPingTimeout)
+	pingCtx, cancel := context.WithTimeout(ctx, cfg.PingTimeout)
 	defer cancel()
 
-	if err := db.PingContext(ctx); err != nil {
+	if err := db.PingContext(pingCtx); err != nil {
+		// Close the handle we just opened; the caller only cleans up on success.
+		_ = db.Close()
+
 		return nil, fmt.Errorf("failed to ping DB: %w", err)
 	}
 

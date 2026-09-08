@@ -146,7 +146,11 @@ linters:
         - '0644'
         - '0755'
       ignored-files:
+        # Config defaults are inherently literal values (ports, timeouts, pool
+        # sizes); naming each one hurts readability more than it helps.
         - internal/config/server_config.go
+        - internal/config/db_config.go
+        - internal/config/db_url.go
         - fixtures.go
     gocritic:
       disabled-checks:

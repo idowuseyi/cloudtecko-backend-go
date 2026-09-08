@@ -7,16 +7,20 @@
 # dev container. Deriving the path instead lets every target run on the host too.
 REPO_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
+# Exported to every recipe so the app, the scripts build tag and the test suite all
+# resolve migrations/, web/ and api/ correctly when run on the host. `?=` means the
+# dev container's own PROJECT_ROOT_DIR=/app still wins, so this is a no-op there.
+export PROJECT_ROOT_DIR ?= $(REPO_DIR)
+
 # IntegreSQL is reachable as a compose service hostname inside the dev container,
 # but as localhost when the stack is started with `make dev-infra-up` on the host.
 INTEGRESQL_BASE_URL ?= $(or $(INTEGRESQL_CLIENT_BASE_URL),http://integresql:5000/api)
 
 # `gsdev` is a shell shim that only exists inside the dev image (Dockerfile:184).
 # Outside it, run the very same entrypoint through `go run` so scripts/ targets work.
-# PROJECT_ROOT_DIR is passed explicitly: the scripts-tagged build of
-# util.GetProjectRootDir() falls back to the hardcoded "/app" container path.
-# Inside the dev container REPO_DIR is /app, so this is a no-op there.
-GSDEV ?= PROJECT_ROOT_DIR=$(REPO_DIR) $(shell command -v gsdev 2> /dev/null || echo "go run -tags scripts $(REPO_DIR)/scripts/main.go")
+# The scripts-tagged build of util.GetProjectRootDir() falls back to the hardcoded
+# "/app" container path, so it relies on the exported PROJECT_ROOT_DIR above.
+GSDEV ?= $(shell command -v gsdev 2> /dev/null || echo "go run -tags scripts $(REPO_DIR)/scripts/main.go")
 
 ### -----------------------
 # --- Building

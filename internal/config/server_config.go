@@ -3,7 +3,6 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
@@ -102,19 +101,23 @@ type I18n struct {
 }
 
 type Server struct {
-	Database   Database
-	Echo       EchoServer
-	Pprof      PprofServer
-	Paths      PathsServer
-	Auth       AuthServer
-	Management ManagementServer
-	Mailer     Mailer
-	SMTP       transport.SMTPMailTransportConfig
-	Frontend   FrontendServer
-	Logger     LoggerServer
-	Push       PushService
-	FCMConfig  provider.FCMConfig
-	I18n       I18n
+	Database Database
+	// MigrationDatabase is the connection used to APPLY migrations. It equals
+	// Database unless MIGRATION_DATABASE_URL is set, which managed providers need
+	// when application traffic goes through a pooled endpoint but DDL must not.
+	MigrationDatabase Database
+	Echo              EchoServer
+	Pprof             PprofServer
+	Paths             PathsServer
+	Auth              AuthServer
+	Management        ManagementServer
+	Mailer            Mailer
+	SMTP              transport.SMTPMailTransportConfig
+	Frontend          FrontendServer
+	Logger            LoggerServer
+	Push              PushService
+	FCMConfig         provider.FCMConfig
+	I18n              I18n
 }
 
 // DefaultServiceConfigFromEnv returns the server config as parsed from environment variables
@@ -136,20 +139,11 @@ func DefaultServiceConfigFromEnv() Server {
 		DotEnvTryLoad(filepath.Join(util.GetProjectRootDir(), ".env.local"), os.Setenv)
 	}
 
+	databaseConfig := databaseConfigFromEnv()
+
 	return Server{
-		Database: Database{
-			Host:     util.GetEnv("PGHOST", "postgres"),
-			Port:     util.GetEnvAsInt("PGPORT", 5432),
-			Database: util.GetEnv("PGDATABASE", "development"),
-			Username: util.GetEnv("PGUSER", "dbuser"),
-			Password: util.GetEnv("PGPASSWORD", ""),
-			AdditionalParams: map[string]string{
-				"sslmode": util.GetEnv("PGSSLMODE", "disable"),
-			},
-			MaxOpenConns:    util.GetEnvAsInt("DB_MAX_OPEN_CONNS", runtime.NumCPU()*2),
-			MaxIdleConns:    util.GetEnvAsInt("DB_MAX_IDLE_CONNS", 1),
-			ConnMaxLifetime: time.Second * time.Duration(util.GetEnvAsInt("DB_CONN_MAX_LIFETIME_SEC", 60)),
-		},
+		Database:          databaseConfig,
+		MigrationDatabase: migrationDatabaseConfigFromEnv(databaseConfig),
 		Echo: EchoServer{
 			Debug:                          util.GetEnvAsBool("SERVER_ECHO_DEBUG", false),
 			ListenAddress:                  util.GetEnv("SERVER_ECHO_LISTEN_ADDRESS", ":8080"),
