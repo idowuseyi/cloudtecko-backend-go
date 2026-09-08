@@ -1,0 +1,33 @@
+# ship — gate check in CI. Copy to a target project as
+# .github/workflows/ship-gate.yml. It runs the same .workflow/check-gate.sh that
+# the agent runs locally, so a gate cannot be bypassed by an agent that "forgot"
+# to run it. The job fails (red X) whenever the current phase's artifact is
+# incomplete, its ## Sources is empty, or the project's tests/lint do not pass.
+name: ship-gate
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Set up whatever toolchains your project needs so check-gate.sh can run
+      # the real build/test/lint. Uncomment/adjust for your stack:
+      # - uses: actions/setup-node@v4
+      #   with: { node-version: 'lts/*' }
+      # - run: npm ci
+      # - uses: actions/setup-python@v5
+      #   with: { python-version: '3.x' }
+      # - run: pip install -r requirements.txt
+
+      - name: Run ship gate check
+        run: |
+          if [ ! -f .workflow/check-gate.sh ]; then
+            echo "No .workflow/check-gate.sh — run /ship-bootstrap first."
+            exit 1
+          fi
+          bash .workflow/check-gate.sh
