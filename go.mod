@@ -6,7 +6,7 @@ require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/aarondl/null/v8 v8.1.3
 	github.com/aarondl/randomize v0.0.2
-	github.com/aarondl/sqlboiler/v4 v4.19.5
+	github.com/aarondl/sqlboiler/v4 v4.19.7
 	github.com/aarondl/strmangle v0.0.9
 	github.com/allaboutapps/integresql-client-go v1.0.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
