@@ -184,7 +184,7 @@ func DefaultServiceConfigFromEnv() Server {
 		MigrationDatabase: migrationDatabaseConfigFromEnv(databaseConfig),
 		Echo: EchoServer{
 			Debug:                          util.GetEnvAsBool("SERVER_ECHO_DEBUG", false),
-			ListenAddress:                  util.GetEnv("SERVER_ECHO_LISTEN_ADDRESS", ":8080"),
+			ListenAddress:                  listenAddressFromEnv(),
 			HideInternalServerErrorDetails: util.GetEnvAsBool("SERVER_ECHO_HIDE_INTERNAL_SERVER_ERROR_DETAILS", true),
 			BaseURL:                        util.GetEnv("SERVER_ECHO_BASE_URL", "http://localhost:8080"),
 			EnableCORSMiddleware:           util.GetEnvAsBool("SERVER_ECHO_ENABLE_CORS_MIDDLEWARE", true),
@@ -311,4 +311,22 @@ func DefaultServiceConfigFromEnv() Server {
 			BundleDirAbs:    util.GetEnv("SERVER_I18N_BUNDLE_DIR_ABS", filepath.Join(util.GetProjectRootDir(), "/web/i18n")), // /app/web/i18n
 		},
 	}
+}
+
+// listenAddressFromEnv resolves the address the HTTP server binds to.
+//
+// SERVER_ECHO_LISTEN_ADDRESS wins when set. Otherwise PORT is honoured, because
+// Render, Vercel, Cloud Run, Railway and Heroku all inject it and expect the
+// process to bind to it; a service that ignores PORT simply never becomes
+// reachable, and the platform reports an opaque health-check timeout.
+func listenAddressFromEnv() string {
+	if addr := util.GetEnv("SERVER_ECHO_LISTEN_ADDRESS", ""); addr != "" {
+		return addr
+	}
+
+	if port := util.GetEnv("PORT", ""); port != "" {
+		return ":" + port
+	}
+
+	return ":8080"
 }

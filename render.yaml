@@ -1,0 +1,74 @@
+# Render blueprint — primary deployment target.
+#
+# Render injects PORT; internal/config resolves the listen address from it when
+# SERVER_ECHO_LISTEN_ADDRESS is unset.
+#
+# Secrets (DATABASE_URL, MIGRATION_DATABASE_URL, SERVER_MANAGEMENT_SECRET) are
+# marked sync:false so Render prompts for them rather than storing them here.
+# Nothing secret belongs in this file — it is committed.
+services:
+  - type: web
+    name: cloudtecko-backend
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: /app/app server
+
+    # /-/ready is the ONLY management route whose mgmt-secret check is skipped
+    # (see internal/api/router/router.go), which is exactly why it exists.
+    # /-/healthy would return 400 here, since Render cannot send the secret.
+    healthCheckPath: /-/ready
+
+    # Migrations run once per deploy, before the new instance takes traffic.
+    # The image's default CMD is "server --migrate"; that is deliberately NOT
+    # used, because with more than one instance every replica would race to
+    # apply the same migrations on boot.
+    preDeployCommand: /app/app db migrate
+
+    envVars:
+      # The app resolves migrations/, web/templates, web/i18n and api/swagger.yml
+      # relative to this. The image lays everything out under /app.
+      - key: PROJECT_ROOT_DIR
+        value: /app
+
+      # Application traffic. Use the POOLED endpoint if the provider has one.
+      - key: DATABASE_URL
+        sync: false
+
+      # DDL. Use the DIRECT (non-pooled) endpoint: transaction poolers cannot
+      # run migrations reliably. Falls back to DATABASE_URL when unset.
+      - key: MIGRATION_DATABASE_URL
+        sync: false
+
+      # Without this a random secret is generated per process, so it would differ
+      # between instances and change on every restart.
+      - key: SERVER_MANAGEMENT_SECRET
+        sync: false
+
+      # The container filesystem is not writable; the liveness probe touches a
+      # file in each of these paths.
+      - key: SERVER_MANAGEMENT_PROBE_WRITEABLE_PATHS_ABS
+        value: /tmp
+
+      # Do not publish the full API specification in production.
+      - key: SERVER_ECHO_ENABLE_PUBLIC_SWAGGER
+        value: "false"
+
+      # Set to the browser origins that call this API. Empty means CORS stays off.
+      - key: SERVER_ECHO_CORS_ALLOW_ORIGINS
+        sync: false
+
+      - key: SERVER_ECHO_BASE_URL
+        sync: false
+      - key: SERVER_FRONTEND_BASE_URL
+        sync: false
+
+      - key: SERVER_LOGGER_LEVEL
+        value: info
+      - key: SERVER_LOGGER_REQUEST_LEVEL
+        value: info
+
+      # Managed Postgres plans cap connections well below what NumCPU*2 assumes.
+      - key: DB_MAX_OPEN_CONNS
+        value: "10"

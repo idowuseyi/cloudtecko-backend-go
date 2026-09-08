@@ -275,11 +275,19 @@ FROM gcr.io/distroless/base-debian13:debug AS app
 
 COPY --from=builder /app/bin/app /app/
 COPY --from=builder /app/api/swagger.yml /app/api/
-COPY --from=builder /app/assets /app/assets/
+# assets is the only tree written to at runtime: the liveness probe touches
+# assets/mnt/.healthy. It must therefore be owned by the runtime user.
+# 65532 is distroless' "nonroot"; the numeric form avoids depending on the
+# target image's /etc/passwd.
+COPY --from=builder --chown=65532:65532 /app/assets /app/assets/
 COPY --from=builder /app/migrations /app/migrations/
 COPY --from=builder /app/web /app/web/
 
 WORKDIR /app
+
+# Run unprivileged. The upstream image ran as root, which Trivy flags as DS-0002:
+# nothing here needs root, and a container escape is far cheaper from uid 0.
+USER 65532:65532
 
 # Must comply to vector form
 # https://github.com/GoogleContainerTools/distroless#entrypoints

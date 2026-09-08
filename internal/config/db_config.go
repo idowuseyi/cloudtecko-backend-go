@@ -105,11 +105,19 @@ func databaseConfigFromEnv() Database {
 // unset the application database is used, which is the correct behaviour for the
 // local Docker Postgres.
 func migrationDatabaseConfigFromEnv(appDB Database) Database {
-	if util.GetEnv("MIGRATION_DATABASE_URL", "") == "" {
+	// DATABASE_URL_UNPOOLED is what Vercel's Neon integration injects alongside
+	// the pooled DATABASE_URL. Honouring it here means the container entrypoint
+	// does not need a shell to remap variable names.
+	urlEnvKey := "MIGRATION_DATABASE_URL"
+	if util.GetEnv(urlEnvKey, "") == "" {
+		urlEnvKey = "DATABASE_URL_UNPOOLED"
+	}
+
+	if util.GetEnv(urlEnvKey, "") == "" {
 		return appDB
 	}
 
-	dbConfig := baseDatabaseConfigFromEnv("MIGRATION_DATABASE_URL")
+	dbConfig := baseDatabaseConfigFromEnv(urlEnvKey)
 
 	// Migrations are a short, single-connection workload.
 	dbConfig.MaxOpenConns = 1

@@ -1,0 +1,59 @@
+# Vercel container service — secondary deployment target.
+#
+# Vercel's Services runtime builds this file on its own builder, so it must be
+# self-contained: it cannot reference an image built from ./Dockerfile. It is a
+# slimmed-down version of that file's builder + app stages, skipping the whole
+# development toolchain (go-swagger, sqlboiler, trivy, psql, ...) which is only
+# needed to regenerate code, never to compile or run it.
+#
+# The container runs as a Vercel Function: stateless, ephemeral filesystem,
+# scales to zero. This project has no scheduler or background workers, so that
+# fits. It does mean migrations are NOT run on boot — several instances can
+# start at once and would race. Run `app db migrate` as a one-off instead, or
+# let Render's preDeployCommand own it.
+
+FROM golang:1.27.1-trixie AS builder
+
+WORKDIR /app
+
+# Cached separately from the source so dependency downloads survive code edits.
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+# Same ldflags the Makefile uses, minus the git metadata: Vercel builds from a
+# source archive, so `git rev-list` is not available here.
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags "-s -w -X 'github.com/idowuseyi/cloudtecko-backend-go/internal/config.ModuleName=github.com/idowuseyi/cloudtecko-backend-go'" \
+    -o /app/bin/app .
+
+FROM gcr.io/distroless/base-debian13:nonroot AS app
+
+COPY --from=builder /app/bin/app /app/
+COPY --from=builder /app/api/swagger.yml /app/api/
+COPY --from=builder /app/migrations /app/migrations/
+COPY --from=builder /app/web /app/web/
+
+WORKDIR /app
+
+ENV PROJECT_ROOT_DIR=/app \
+    # The filesystem is read-only apart from /tmp, and the liveness probe writes
+    # a touchfile into each configured path. The default (assets/mnt) is not
+    # writable here, so it is not copied into this image at all.
+    SERVER_MANAGEMENT_PROBE_WRITEABLE_PATHS_ABS=/tmp \
+    # Do not publish the full API specification.
+    SERVER_ECHO_ENABLE_PUBLIC_SWAGGER=false \
+    # Vercel Functions share a 1024 file-descriptor budget across ALL concurrent
+    # executions, so a large connection pool is actively harmful here.
+    DB_MAX_OPEN_CONNS=5 \
+    DB_MAX_IDLE_CONNS=1
+
+# Vercel injects PORT and the app binds to it; 8080 is only the documented default.
+EXPOSE 8080
+
+# No shell wrapper: internal/config reads Vercel's DATABASE_URL_UNPOOLED directly
+# when resolving the migration connection, so there is nothing to remap here.
+# The nonroot distroless variant already runs as uid 65532.
+ENTRYPOINT ["/app/app"]
+CMD ["server"]

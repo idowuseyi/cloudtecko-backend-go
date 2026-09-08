@@ -34,10 +34,11 @@ build: ##- Default 'make' target: sql, swagger, go-generate-handlers, go-format,
 	@$(MAKE) lint
 
 # useful to ensure that everything gets resetuped from scratch
-all: clean init ##- Runs all of our common make targets: clean, init, build and test.
+all: clean init ##- Runs all of our common make targets: clean, init, build, test and the security scans.
 	@$(MAKE) build
 	@$(MAKE) test
 	@$(MAKE) trivy
+	@$(MAKE) govulncheck
 
 info: info-db info-handlers info-go ##- Prints info about spec db, handlers, and go.mod updates, module-name and current go version.
 

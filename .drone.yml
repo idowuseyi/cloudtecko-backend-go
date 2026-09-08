@@ -197,6 +197,15 @@ pipeline:
     environment: *TEST_ENV
     <<: *WHEN_BUILD_EVENT
 
+  "govulncheck":
+    group: test
+    image: *IMAGE_BUILDER_ID
+    commands:
+      - cd $PROJECT_ROOT_DIR
+      - make govulncheck
+    environment: *TEST_ENV
+    <<: *WHEN_BUILD_EVENT
+
   "test-scripts (gsdev)":
     group: test
     image: *IMAGE_BUILDER_ID
@@ -249,7 +258,9 @@ pipeline:
       # https://github.com/drone-plugins/drone-docker/issues/193
       # https://jpetazzo.github.io/2015/09/03/do-not-use-docker-in-docker-for-ci/
       - (env | grep "^\S*=" | grep -v -e "DRONE=" -e "DRONE_" -e "CI_" -e "CI=" -e "HOME=" -e "HOSTNAME=" -e "SHELL=" -e "PWD=" -e "PATH=") > .hostenv
-      - cat .hostenv
+      # NOT `cat .hostenv`: it contains PGPASSWORD and
+      # SERVER_MANAGEMENT_SECRET, and build logs are widely readable.
+      - "wc -l < .hostenv | xargs -I{} echo 'wrote {} env vars to .hostenv'"
       - "docker run --env-file .hostenv $${IMAGE_TAG} help"
       - "docker run --env-file .hostenv $${IMAGE_TAG} -v"
       - "docker run --env-file .hostenv $${IMAGE_TAG} env"

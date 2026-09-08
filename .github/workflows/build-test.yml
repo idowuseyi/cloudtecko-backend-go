@@ -44,7 +44,8 @@ jobs:
       - name: docker build (target app)
         run: DOCKER_BUILDKIT=1 docker build --target app --file Dockerfile --tag cloudtecko-backend-go:app-${GITHUB_SHA} .
       - name: trivy scan
-        uses: aquasecurity/trivy-action@master
+        # Pinned: @master would silently change what runs in CI.
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: 'cloudtecko-backend-go:app-${{ github.sha }}'
           format: 'template'
@@ -63,7 +64,16 @@ jobs:
       - name: test
         run: docker exec builder make test
       - name: upload coverage to codecov
-        run: docker cp builder:/tmp/coverage.out ./coverage.out && bash <(curl -s https://codecov.io/bash)
+        # Was `bash <(curl -s https://codecov.io/bash)`: piping a remote,
+        # unpinned script straight into a shell that holds repo credentials.
+        run: docker cp builder:/tmp/coverage.out ./coverage.out
+      - uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.out
+          fail_ci_if_error: false
+      - name: govulncheck
+        # Installed in the image since forever, but no pipeline ever ran it.
+        run: docker exec builder make govulncheck
       - name: test-scripts (gsdev)
         run: docker exec builder make test-scripts
       - name: info
