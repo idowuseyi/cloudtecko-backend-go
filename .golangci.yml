@@ -1,0 +1,153 @@
+version: "2"
+run:
+  # also lint files within /scripts. Those have "//go:build scripts" set.
+  build-tags:
+    - scripts
+linters:
+  enable:
+    - revive
+    - testpackage
+    - gosec
+    - usetesting
+    - errorlint
+    - asasalint
+    - asciicheck
+    - bidichk
+    - canonicalheader
+    - containedctx
+    - copyloopvar
+    - decorder
+    - dogsled
+    - dupl
+    - dupword
+    - durationcheck
+    - errchkjson
+    - errname
+    - exptostd
+    - fatcontext
+    - forbidigo
+    - forcetypeassert
+    - funcorder
+    - gocheckcompilerdirectives
+    - gochecknoinits
+    - gochecksumtype
+    - goconst
+    - gocritic
+    - gocyclo
+    - godox
+    - goheader
+    - gomoddirectives
+    - gomodguard_v2
+    - goprintffuncname
+    - grouper
+    - iface
+    - importas
+    - inamedparam
+    - interfacebloat
+    - ireturn
+    - makezero
+    - mirror
+    - misspell
+    - mnd
+    - nakedret
+    - nestif
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - noctx
+    - nonamedreturns
+    - nosprintfhostport
+    - prealloc
+    - predeclared
+    - promlinter
+    - protogetter
+    - reassign
+    - recvcheck
+    - rowserrcheck
+    - sqlclosecheck
+    - tagalign
+    - testableexamples
+    - testifylint
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - usestdlibvars
+    - varnamelen
+    - wastedassign
+    - whitespace
+    - wrapcheck
+    - zerologlint
+  exclusions:
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      # gosec G101 flags our static test tokens (plain UUIDs) as "hardcoded
+      # credentials". They are fixtures for the test database, never secrets.
+      - linters:
+          - gosec
+        text: "G101"
+        path: (_test\.go|^internal/test/fixtures/)
+  settings:
+    goconst:
+      # Our table-driven tests name their cases with repeated literals
+      # ("InvalidUsername", "MissingPassword", ...). Extracting those into
+      # constants hurts readability of the test tables more than it helps.
+      ignore-tests: true
+    wrapcheck:
+      ignore-package-globs:
+      - "*/internal/*"
+    varnamelen:
+      ignore-names:
+        - tt
+        - t
+      ignore-decls:
+        - c echo.Context
+        - s *api.Server
+        - u *url.URL
+        - i int
+        - n int
+        - n int32
+        - tx boil.ContextExecutor
+        - exec boil.ContextExecutor
+        - db *sql.DB
+        - v runtime.Validatable
+        - r io.ReadCloser
+        - ok bool
+        - wg sync.WaitGroup
+        - d time.Time
+        - e *echo.Echo
+        - tx *sql.Tx
+        - re *regexp.Regexp
+        - to string
+        - f FixtureMap
+        - le *zerolog.Event
+    ireturn:
+      allow:
+        - anon
+        - error
+        - empty
+        - stdlib
+        - github.com/aarondl/sqlboiler/v4/queries/qm.QueryMod
+        - github.com/labstack/echo/v4.Context
+        - github.com/dropbox/godropbox/time2.Clock
+    godox:
+      keywords:
+        - "FIXME"
+    forbidigo:
+      forbid:
+        - pattern: "^(fmt\\.Print(|f|ln)|print|println)$"
+        - pattern: "boil\\.WithDebug"
+    mnd:
+      ignored-numbers:
+        - '0644'
+        - '0755'
+      ignored-files:
+        - internal/config/server_config.go
+        - fixtures.go
+    gocritic:
+      disabled-checks:
+        - regexpMust

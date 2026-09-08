@@ -1,0 +1,107 @@
+package push
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+
+	"allaboutapps.dev/aw/go-starter/internal/data/dto"
+	"allaboutapps.dev/aw/go-starter/internal/models"
+	"allaboutapps.dev/aw/go-starter/internal/util"
+)
+
+type ProviderType string
+
+const (
+	ProviderTypeFCM ProviderType = "fcm"
+	ProviderTypeAPN ProviderType = "apn"
+)
+
+type Service struct {
+	DB       *sql.DB
+	provider map[ProviderType]Provider
+}
+
+type ProviderSendResponse struct {
+	// token the message was sent to
+	Token string
+
+	// flag to indicate if the token is still valid
+	// not every error means that the token is invalid
+	Valid bool
+
+	// ogiginal error
+	Err error
+}
+
+type Provider interface {
+	Send(token string, title string, message string) ProviderSendResponse
+	SendMulticast(tokens []string, title, message string) []ProviderSendResponse
+	GetProviderType() ProviderType
+}
+
+func New(db *sql.DB) *Service {
+	return &Service{
+		DB:       db,
+		provider: make(map[ProviderType]Provider),
+	}
+}
+
+func (s *Service) RegisterProvider(p Provider) {
+	s.provider[p.GetProviderType()] = p
+}
+
+func (s *Service) ResetProviders() {
+	s.provider = make(map[ProviderType]Provider)
+}
+
+func (s *Service) GetProviderCount() int {
+	return len(s.provider)
+}
+
+func (s *Service) SendToUser(ctx context.Context, user *dto.User, title string, message string) error {
+	if s.GetProviderCount() < 1 {
+		return errors.New("no provider found")
+	}
+	log := util.LogFromContext(ctx)
+
+	for providerType, provider := range s.provider {
+		// get all registered tokens for provider
+		pushTokens, err := models.PushTokens(
+			models.PushTokenWhere.Provider.EQ(string(providerType)),
+			models.PushTokenWhere.UserID.EQ(user.ID),
+		).All(ctx, s.DB)
+		if err != nil {
+			return fmt.Errorf("failed to get push tokens: %w", err)
+		}
+
+		var tokens []string
+		for _, token := range pushTokens {
+			tokens = append(tokens, token.Token)
+		}
+
+		responseSlice := provider.SendMulticast(tokens, title, message)
+		tokenToDelete := make([]string, 0)
+		for _, res := range responseSlice {
+			if res.Err != nil && res.Valid {
+				log.Debug().Err(res.Err).Str("token", res.Token).Str("provider", string(provider.GetProviderType())).Msgf("Error while sending push message to provider with valid token.")
+			}
+
+			if !res.Valid {
+				tokenToDelete = append(tokenToDelete, res.Token)
+			}
+		}
+		// delete invalid tokens
+		_, err = models.PushTokens(
+			models.PushTokenWhere.Token.IN(tokenToDelete),
+			models.PushTokenWhere.UserID.EQ(user.ID),
+		).DeleteAll(ctx, s.DB)
+		if err != nil {
+			log.Debug().Err(err).Str("provider", string(provider.GetProviderType())).Msg("Could not delete invalid tokens for provider")
+			return err
+		}
+	}
+
+	return nil
+}
