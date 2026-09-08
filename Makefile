@@ -1,4 +1,24 @@
 ### -----------------------
+# --- Paths
+### -----------------------
+
+# Absolute path of the directory holding this Makefile.
+# The upstream template hardcoded /app everywhere, which only exists inside the
+# dev container. Deriving the path instead lets every target run on the host too.
+REPO_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
+
+# IntegreSQL is reachable as a compose service hostname inside the dev container,
+# but as localhost when the stack is started with `make dev-infra-up` on the host.
+INTEGRESQL_BASE_URL ?= $(or $(INTEGRESQL_CLIENT_BASE_URL),http://integresql:5000/api)
+
+# `gsdev` is a shell shim that only exists inside the dev image (Dockerfile:184).
+# Outside it, run the very same entrypoint through `go run` so scripts/ targets work.
+# PROJECT_ROOT_DIR is passed explicitly: the scripts-tagged build of
+# util.GetProjectRootDir() falls back to the hardcoded "/app" container path.
+# Inside the dev container REPO_DIR is /app, so this is a no-op there.
+GSDEV ?= PROJECT_ROOT_DIR=$(REPO_DIR) $(shell command -v gsdev 2> /dev/null || echo "go run -tags scripts $(REPO_DIR)/scripts/main.go")
+
+### -----------------------
 # --- Building
 ### -----------------------
 
@@ -24,7 +44,7 @@ info-db: ##- (opt) Prints info about spec db.
 
 info-handlers: ##- (opt) Prints info about handlers.
 	@echo "[handlers]" > tmp/.info-handlers
-	@gsdev handlers check --print-all >> tmp/.info-handlers
+	@$(GSDEV) handlers check --print-all >> tmp/.info-handlers
 	@echo "" >> tmp/.info-handlers
 	@cat tmp/.info-handlers
 
@@ -51,13 +71,13 @@ go-lint: ##- (opt) Runs golangci-lint.
 	golangci-lint run --timeout 5m
 
 go-generate-handlers: ##- (opt) Generates the internal/api/handlers/handlers.go binding.
-	gsdev handlers gen
+	$(GSDEV) handlers gen
 
 go-generate: sql ##- Runs go generate (depends on sql to ensure models exist).
 	@go generate ./...
 
 check-handlers: ##- (opt) Checks if implemented handlers match their spec (path).
-	gsdev handlers check
+	$(GSDEV) handlers check
 
 # https://golang.org/pkg/cmd/go/internal/generate/
 # To convey to humans and machine tools that code is generated,
@@ -80,7 +100,7 @@ check-script-dir: ##- (opt) Ensures all scripts/**/*.go files have the "//go:bui
 # note that these tests should not run verbose by default (e.g. use your IDE for this)
 # TODO: add test shuffling/seeding when landed in go v1.15 (https://github.com/golang/go/issues/28592)
 # tests by pkgname
-# ATTENTION: opting out of the global "SHELL = /app/rksh" (see bottom of this file).
+# ATTENTION: opting out of the global "SHELL = $(REPO_DIR)/rksh" (see bottom of this file).
 # .SHELLFLAGS MUST keep "-Eeuo pipefail" here: with .ONESHELL the whole recipe runs as a
 # single shell invocation, so a plain "-c" would report the exit status of the LAST line
 # only and silently swallow a failing "go-test-by-pkg" (i.e. green CI on red tests).
@@ -166,7 +186,7 @@ sql-drop-all: ##- Wizard to drop ALL databases: spec, development and tracked by
 	@echo "$$TO_DROP"
 	@echo -n "Are you sure? [y/N] " && read ans && [ $${ans:-N} = y ]
 	@echo "Resetting integresql..."
-	curl --fail -X DELETE http://integresql:5000/api/v1/admin/templates
+	curl --fail -X DELETE $(INTEGRESQL_BASE_URL)/v1/admin/templates
 	@echo "Drop databases..."
 	echo $$TO_DROP | psql -tz0 -d postgres
 	@echo "Done. Please run 'make sql-reset && make sql-spec-reset && make sql-spec-migrate' to reinitialize."
@@ -191,8 +211,8 @@ sql-boiler: ##- (opt) Runs sql-boiler introspects the spec db to generate intern
 sql-format: ##- (opt) Formats all *.sql files.
 	@echo "make sql-format"
 	@find ${PWD} -path "*/tmp/*" -prune -name ".*" -prune -o -type f -iname "*.sql" -print \
-		| grep --invert "/app/dumps/" \
-		| grep --invert "/app/test/" \
+		| grep --invert "$(REPO_DIR)/dumps/" \
+		| grep --invert "$(REPO_DIR)/test/" \
 		| xargs -i pg_format --inplace {}
 
 sql-check-files: sql-check-syntax sql-check-migrations-unnecessary-null ##- (opt) Check syntax and unnecessary use of NULL keyword.
@@ -202,8 +222,8 @@ sql-check-files: sql-check-syntax sql-check-migrations-unnecessary-null ##- (opt
 sql-check-syntax: ##- (opt) Checks syntax of all *.sql files.
 	@echo "make sql-check-syntax"
 	@find ${PWD} -path "*/tmp/*" -prune -name ".*" -prune -path ./dumps -prune -false -o -type f -iname "*.sql" -print \
-		| grep --invert "/app/dumps/" \
-		| grep --invert "/app/test/" \
+		| grep --invert "$(REPO_DIR)/dumps/" \
+		| grep --invert "$(REPO_DIR)/test/" \
 		| xargs -i sed '1s#^#DO $$SYNTAX_CHECK$$ BEGIN RETURN;#; $$aEND; $$SYNTAX_CHECK$$;' {} \
 		| psql -d postgres --quiet -v ON_ERROR_STOP=1
 
@@ -231,9 +251,9 @@ sql-check-structure-default-zero-values: ##- (opt) Ensures spec database objects
 	@echo "make sql-check-structure-default-zero-values"
 	@cat scripts/sql/default_zero_values.sql | psql -qtz0 --no-align -d "${PSQL_DBNAME}" -v ON_ERROR_STOP=1
 
-dumpfile := /app/dumps/development_$(shell date '+%Y-%m-%d-%H-%M-%S').sql
-sql-dump: ##- Dumps the development database to '/app/dumps/development_YYYY-MM-DD-hh-mm-ss.sql'.
-	@mkdir -p /app/dumps
+dumpfile := $(REPO_DIR)/dumps/development_$(shell date '+%Y-%m-%d-%H-%M-%S').sql
+sql-dump: ##- Dumps the development database to '<repo>/dumps/development_YYYY-MM-DD-hh-mm-ss.sql'.
+	@mkdir -p $(REPO_DIR)/dumps
 	@pg_dump development --format=p --clean --if-exists > $(dumpfile)
 	@echo "Dumped '$(dumpfile)'. Use 'cat $(dumpfile) | psql' to restore"
 
@@ -344,15 +364,15 @@ check-embedded-modules-go-not: ##- (opt) Checks embedded modules in compiled bin
 
 trivy-report: ##- Prints trivy report for all severities without failing
 	@echo "make trivy-report"
-	@trivy fs /app --exit-code 0 --quiet
+	@trivy fs $(REPO_DIR) --exit-code 0 --quiet
 
 trivy: ##- Runs trivy analysis and fails on HIGH, CRITICAL vulnerabilities.
 	@echo "make trivy"
-	@trivy fs /app --exit-code 1 --severity HIGH,CRITICAL --quiet
+	@trivy fs $(REPO_DIR) --exit-code 1 --severity HIGH,CRITICAL --quiet
 
 govulncheck: ##- Runs govulncheck.
 	@echo "make govulncheck"
-	@govulncheck /app/...
+	@govulncheck ./...
 
 ### -----------------------
 # --- Helpers
@@ -385,6 +405,31 @@ set-module-name: ##- Wizard to set a new go module-name.
 get-go-ldflags: ##- (opt) Prints used -ldflags as evaluated in Makefile used in make go-build
 	@echo $(LDFLAGS)
 
+### -----------------------
+# --- Running locally (no app container)
+### -----------------------
+
+# PROJECT_ROOT_DIR is mandatory off-Docker: util.GetProjectRootDir() defaults to the
+# directory of the executable, which is <repo>/bin after `make go-build`, so the app
+# would fail to find migrations/, web/templates, web/i18n and api/swagger.yml.
+run: go-build ##- Builds and runs the server on the host (reads .env.local).
+	@PROJECT_ROOT_DIR=$(REPO_DIR) $(REPO_DIR)/bin/app server
+
+run-migrate: go-build ##- Applies migrations from the host (reads .env.local).
+	@PROJECT_ROOT_DIR=$(REPO_DIR) $(REPO_DIR)/bin/app db migrate
+
+run-env: go-build ##- Prints the resolved config as the host would see it (secrets elided).
+	@PROJECT_ROOT_DIR=$(REPO_DIR) $(REPO_DIR)/bin/app env
+
+dev-infra-up: ##- Starts ONLY the backing services (postgres, integresql, mailhog) in Docker.
+	@echo "make dev-infra-up"
+	docker compose up -d postgres integresql mailhog
+	@echo "Backing services up. The app itself still runs on the host via 'make run'."
+
+dev-infra-down: ##- Stops the backing services started by dev-infra-up.
+	@echo "make dev-infra-down"
+	docker compose stop postgres integresql mailhog
+
 help: ##- Show common make targets.
 	@echo -e "usage: make \033[36m<target>\033[0m"
 	@echo "note: use 'make help-all' to see all make targets."
@@ -402,9 +447,12 @@ help-all: ##- Show all make targets.
 # http://make.mad-scientist.net/deferred-simple-variable-expansion/
 
 # go module name (as in go.mod)
+# Read straight from go.mod. The upstream template shelled out to `gsdev`, a shim
+# that only exists inside the Docker image (Dockerfile:184); on the host it fell
+# through to the literal string "unknown", which then silently poisoned LDFLAGS.
 GO_MODULE_NAME = $(eval GO_MODULE_NAME := $$(shell \
-	(mkdir -p tmp 2> /dev/null && cat tmp/.modulename 2> /dev/null) \
-	|| (gsdev modulename 2> /dev/null | tee tmp/.modulename) || echo "unknown" \
+	awk '$$$$1 == "module" { print $$$$2; exit }' $(REPO_DIR)/go.mod 2> /dev/null \
+	| grep . || echo "unknown" \
 ))$(GO_MODULE_NAME)
 
 # https://medium.com/the-go-journey/adding-version-information-to-go-binaries-e1b79878f6f2
@@ -443,5 +491,5 @@ LDFLAGS = $(eval LDFLAGS := "\
 # .SHELLFLAGS = -cEeuo pipefail
 
 # wrapped make time tracing shell, use it via MAKE_TRACE_TIME=true make <target>
-SHELL = /app/rksh
+SHELL = $(REPO_DIR)/rksh
 .SHELLFLAGS = $@
