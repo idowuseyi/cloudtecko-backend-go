@@ -45,7 +45,7 @@ jobs:
         run: DOCKER_BUILDKIT=1 docker build --target app --file Dockerfile --tag cloudtecko-backend-go:app-${GITHUB_SHA} .
       - name: trivy scan
         # Pinned: @master would silently change what runs in CI.
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'cloudtecko-backend-go:app-${{ github.sha }}'
           format: 'template'
