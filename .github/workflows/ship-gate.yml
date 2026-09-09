@@ -13,7 +13,7 @@ jobs:
   gate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Set up whatever toolchains your project needs so check-gate.sh can run
       # the real build/test/lint. Uncomment/adjust for your stack:
