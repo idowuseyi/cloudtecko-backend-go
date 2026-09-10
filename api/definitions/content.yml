@@ -1,0 +1,199 @@
+swagger: "2.0"
+info:
+  title: github.com/idowuseyi/cloudtecko-backend-go
+  version: 0.1.0
+paths: {}
+definitions:
+  GalleryItem:
+    description: |-
+      A single card in a content gallery. This is deliberately the shape the frontend's
+      `ResourceItem` type already declares, so both the events and the resources pages
+      render it through the same component without a client-side transform.
+      `status` is populated for events only, where it is derived from ticket-tier
+      capacity at read time; it is never stored and is absent for resources.
+    type: object
+    required:
+      - id
+      - category
+      - date
+      - title
+      - description
+      - image
+    properties:
+      id:
+        type: string
+        example: evt-aws-workshop-lagos
+      category:
+        type: string
+        example: Workshop
+      date:
+        type: string
+        format: date-time
+        example: "2026-09-14T09:00:00+01:00"
+      title:
+        type: string
+        example: "AWS Certification Workshop: Lagos Edition"
+      description:
+        type: string
+        example: Hands-on training covering Cloud Practitioner and Solutions Architect associate tracks.
+      image:
+        type: string
+        example: https://media.cloudadore.com/events/aws-workshop.jpg
+      href:
+        type: string
+        example: /events/aws-certification-workshop-lagos
+        x-nullable: true
+      status:
+        description: Events only. Derived from remaining capacity, never stored.
+        type: string
+        enum:
+          - Open
+          - Limited
+          - Sold Out
+        example: Open
+        x-nullable: true
+  GalleryResponse:
+    description: A page of gallery items plus the tab list the frontend renders above them.
+    type: object
+    required:
+      - items
+      - categories
+      - total
+      - page
+      - perPage
+    properties:
+      items:
+        type: array
+        items:
+          "$ref": "#/definitions/GalleryItem"
+      categories:
+        description: Distinct categories in this scope, for the filter tabs.
+        type: array
+        items:
+          type: string
+        example: ["Workshop", "Conference", "Meetup"]
+      total:
+        description: Total matching items across all pages.
+        type: integer
+        example: 42
+      page:
+        type: integer
+        example: 1
+      perPage:
+        type: integer
+        example: 6
+  EventDetail:
+    description: |-
+      A single event. Times are absolute instants plus the IANA zone the organiser
+      meant, so a client can render "9AM - 5PM WAT" correctly regardless of the
+      viewer's own timezone.
+    type: object
+    required:
+      - id
+      - slug
+      - title
+      - summary
+      - body
+      - category
+      - startAt
+      - endAt
+      - timezone
+      - isOnline
+      - isFeatured
+    properties:
+      id:
+        type: string
+        format: uuid4
+      slug:
+        type: string
+        example: aws-certification-workshop-lagos
+      title:
+        type: string
+      summary:
+        type: string
+      body:
+        type: string
+      category:
+        type: string
+      image:
+        type: string
+        x-nullable: true
+      startAt:
+        type: string
+        format: date-time
+      endAt:
+        type: string
+        format: date-time
+      timezone:
+        description: IANA timezone name.
+        type: string
+        example: Africa/Lagos
+      isOnline:
+        type: boolean
+      venueName:
+        type: string
+        x-nullable: true
+      venueAddress:
+        type: string
+        x-nullable: true
+      meetingURL:
+        type: string
+        x-nullable: true
+      isFeatured:
+        type: boolean
+      status:
+        type: string
+        enum:
+          - Open
+          - Limited
+          - Sold Out
+        x-nullable: true
+  ResourceDetail:
+    type: object
+    required:
+      - id
+      - slug
+      - title
+      - summary
+      - body
+      - kind
+      - category
+      - author
+      - readingTimeMinutes
+    properties:
+      id:
+        type: string
+        format: uuid4
+      slug:
+        type: string
+        example: serverless-security-protecting-your-functions
+      title:
+        type: string
+      summary:
+        type: string
+      body:
+        type: string
+      kind:
+        type: string
+        enum:
+          - article
+          - guide
+          - video
+          - download
+          - link
+      category:
+        type: string
+      image:
+        type: string
+        x-nullable: true
+      author:
+        type: string
+      contentURL:
+        type: string
+        x-nullable: true
+      readingTimeMinutes:
+        type: integer
+      publishedAt:
+        type: string
+        format: date-time
+        x-nullable: true

@@ -9,5 +9,6 @@ func New() *cobra.Command {
 	return command.NewSubcommandGroup("db",
 		newMigrate(),
 		newSeed(),
+		newGrantScope(),
 	)
 }

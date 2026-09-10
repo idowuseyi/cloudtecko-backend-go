@@ -232,9 +232,14 @@ sql-check-syntax: ##- (opt) Checks syntax of all *.sql files.
 		| xargs -i sed '1s#^#DO $$SYNTAX_CHECK$$ BEGIN RETURN;#; $$aEND; $$SYNTAX_CHECK$$;' {} \
 		| psql -d postgres --quiet -v ON_ERROR_STOP=1
 
+# Catches a REDUNDANT nullability declaration -- "col text NULL" -- since a column
+# is nullable by default. "IS NULL" and "NULLS FIRST/LAST" are predicates, not
+# declarations, and are excluded for that reason: without them every partial index
+# expressing "unique among live rows" is unwritable. Note "IS NOT NULL" was already
+# excluded incidentally, by the "NOT NULL" filter.
 sql-check-migrations-unnecessary-null: ##- (opt) Checks migrations/*.sql for unnecessary use of NULL keywords.
 	@echo "make sql-check-migrations-unnecessary-null"
-	@(grep -R "NULL" ./migrations/ | grep --invert "DEFAULT NULL" | grep --invert "NOT NULL" | grep --invert "WITH NULL" | grep --invert "NULL, " | grep --invert ", NULL" | grep --invert "RETURN NULL" | grep --invert "SET NULL") \
+	@(grep -R "NULL" ./migrations/ | grep --invert "DEFAULT NULL" | grep --invert "NOT NULL" | grep --invert "WITH NULL" | grep --invert "NULL, " | grep --invert ", NULL" | grep --invert "RETURN NULL" | grep --invert "SET NULL" | grep --invert "IS NULL" | grep --invert "NULLS ") \
 		&& exit 1 || exit 0
 
 sql-spec-reset: ##- (opt) Drop and creates our spec database.

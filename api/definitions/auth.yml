@@ -19,6 +19,7 @@ definitions:
     enum:
       - "app"
       - "cms"
+      - "admin"
   GetUserInfoResponse:
     type: object
     required:

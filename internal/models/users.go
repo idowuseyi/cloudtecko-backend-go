@@ -95,71 +95,6 @@ var UserTableColumns = struct {
 
 // Generated where
 
-type whereHelpernull_String struct{ field string }
-
-func (w whereHelpernull_String) EQ(x null.String) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, false, x)
-}
-func (w whereHelpernull_String) NEQ(x null.String) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, true, x)
-}
-func (w whereHelpernull_String) LT(x null.String) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpernull_String) LTE(x null.String) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpernull_String) GT(x null.String) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpernull_String) GTE(x null.String) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-func (w whereHelpernull_String) LIKE(x null.String) qm.QueryMod {
-	return qm.Where(w.field+" LIKE ?", x)
-}
-func (w whereHelpernull_String) NLIKE(x null.String) qm.QueryMod {
-	return qm.Where(w.field+" NOT LIKE ?", x)
-}
-func (w whereHelpernull_String) ILIKE(x null.String) qm.QueryMod {
-	return qm.Where(w.field+" ILIKE ?", x)
-}
-func (w whereHelpernull_String) NILIKE(x null.String) qm.QueryMod {
-	return qm.Where(w.field+" NOT ILIKE ?", x)
-}
-func (w whereHelpernull_String) SIMILAR(x null.String) qm.QueryMod {
-	return qm.Where(w.field+" SIMILAR TO ?", x)
-}
-func (w whereHelpernull_String) NSIMILAR(x null.String) qm.QueryMod {
-	return qm.Where(w.field+" NOT SIMILAR TO ?", x)
-}
-func (w whereHelpernull_String) IN(slice []string) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
-}
-func (w whereHelpernull_String) NIN(slice []string) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
-}
-
-func (w whereHelpernull_String) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
-func (w whereHelpernull_String) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
-
-type whereHelperbool struct{ field string }
-
-func (w whereHelperbool) EQ(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelperbool) NEQ(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
-func (w whereHelperbool) LT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelperbool) LTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
-func (w whereHelperbool) GT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelperbool) GTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
-
 type whereHelpertypes_StringArray struct{ field string }
 
 func (w whereHelpertypes_StringArray) EQ(x types.StringArray) qm.QueryMod {
@@ -179,29 +114,6 @@ func (w whereHelpertypes_StringArray) GT(x types.StringArray) qm.QueryMod {
 }
 func (w whereHelpertypes_StringArray) GTE(x types.StringArray) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-
-type whereHelperint struct{ field string }
-
-func (w whereHelperint) EQ(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelperint) NEQ(x int) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
-func (w whereHelperint) LT(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelperint) LTE(x int) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
-func (w whereHelperint) GT(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelperint) GTE(x int) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
-func (w whereHelperint) IN(slice []int) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
-}
-func (w whereHelperint) NIN(slice []int) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
 }
 
 var UserWhere = struct {
@@ -232,29 +144,32 @@ var UserWhere = struct {
 
 // UserRels is where relationship names are stored.
 var UserRels = struct {
-	AppUserProfile      string
-	AccessTokens        string
-	ConfirmationTokens  string
-	PasswordResetTokens string
-	PushTokens          string
-	RefreshTokens       string
+	AppUserProfile            string
+	AccessTokens              string
+	ConfirmationTokens        string
+	UploadedByUserMediaAssets string
+	PasswordResetTokens       string
+	PushTokens                string
+	RefreshTokens             string
 }{
-	AppUserProfile:      "AppUserProfile",
-	AccessTokens:        "AccessTokens",
-	ConfirmationTokens:  "ConfirmationTokens",
-	PasswordResetTokens: "PasswordResetTokens",
-	PushTokens:          "PushTokens",
-	RefreshTokens:       "RefreshTokens",
+	AppUserProfile:            "AppUserProfile",
+	AccessTokens:              "AccessTokens",
+	ConfirmationTokens:        "ConfirmationTokens",
+	UploadedByUserMediaAssets: "UploadedByUserMediaAssets",
+	PasswordResetTokens:       "PasswordResetTokens",
+	PushTokens:                "PushTokens",
+	RefreshTokens:             "RefreshTokens",
 }
 
 // userR is where relationships are stored.
 type userR struct {
-	AppUserProfile      *AppUserProfile         `boil:"AppUserProfile" json:"AppUserProfile" toml:"AppUserProfile" yaml:"AppUserProfile"`
-	AccessTokens        AccessTokenSlice        `boil:"AccessTokens" json:"AccessTokens" toml:"AccessTokens" yaml:"AccessTokens"`
-	ConfirmationTokens  ConfirmationTokenSlice  `boil:"ConfirmationTokens" json:"ConfirmationTokens" toml:"ConfirmationTokens" yaml:"ConfirmationTokens"`
-	PasswordResetTokens PasswordResetTokenSlice `boil:"PasswordResetTokens" json:"PasswordResetTokens" toml:"PasswordResetTokens" yaml:"PasswordResetTokens"`
-	PushTokens          PushTokenSlice          `boil:"PushTokens" json:"PushTokens" toml:"PushTokens" yaml:"PushTokens"`
-	RefreshTokens       RefreshTokenSlice       `boil:"RefreshTokens" json:"RefreshTokens" toml:"RefreshTokens" yaml:"RefreshTokens"`
+	AppUserProfile            *AppUserProfile         `boil:"AppUserProfile" json:"AppUserProfile" toml:"AppUserProfile" yaml:"AppUserProfile"`
+	AccessTokens              AccessTokenSlice        `boil:"AccessTokens" json:"AccessTokens" toml:"AccessTokens" yaml:"AccessTokens"`
+	ConfirmationTokens        ConfirmationTokenSlice  `boil:"ConfirmationTokens" json:"ConfirmationTokens" toml:"ConfirmationTokens" yaml:"ConfirmationTokens"`
+	UploadedByUserMediaAssets MediaAssetSlice         `boil:"UploadedByUserMediaAssets" json:"UploadedByUserMediaAssets" toml:"UploadedByUserMediaAssets" yaml:"UploadedByUserMediaAssets"`
+	PasswordResetTokens       PasswordResetTokenSlice `boil:"PasswordResetTokens" json:"PasswordResetTokens" toml:"PasswordResetTokens" yaml:"PasswordResetTokens"`
+	PushTokens                PushTokenSlice          `boil:"PushTokens" json:"PushTokens" toml:"PushTokens" yaml:"PushTokens"`
+	RefreshTokens             RefreshTokenSlice       `boil:"RefreshTokens" json:"RefreshTokens" toml:"RefreshTokens" yaml:"RefreshTokens"`
 }
 
 // NewStruct creates a new relationship struct
@@ -308,6 +223,22 @@ func (r *userR) GetConfirmationTokens() ConfirmationTokenSlice {
 	}
 
 	return r.ConfirmationTokens
+}
+
+func (o *User) GetUploadedByUserMediaAssets() MediaAssetSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetUploadedByUserMediaAssets()
+}
+
+func (r *userR) GetUploadedByUserMediaAssets() MediaAssetSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.UploadedByUserMediaAssets
 }
 
 func (o *User) GetPasswordResetTokens() PasswordResetTokenSlice {
@@ -497,6 +428,20 @@ func (o *User) ConfirmationTokens(mods ...qm.QueryMod) confirmationTokenQuery {
 	)
 
 	return ConfirmationTokens(queryMods...)
+}
+
+// UploadedByUserMediaAssets retrieves all the media_asset's MediaAssets with an executor via uploaded_by_user_id column.
+func (o *User) UploadedByUserMediaAssets(mods ...qm.QueryMod) mediaAssetQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"media_assets\".\"uploaded_by_user_id\"=?", o.ID),
+	)
+
+	return MediaAssets(queryMods...)
 }
 
 // PasswordResetTokens retrieves all the password_reset_token's PasswordResetTokens with an executor.
@@ -854,6 +799,112 @@ func (userL) LoadConfirmationTokens(ctx context.Context, e boil.ContextExecutor,
 					foreign.R = &confirmationTokenR{}
 				}
 				foreign.R.User = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadUploadedByUserMediaAssets allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (userL) LoadUploadedByUserMediaAssets(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
+	var slice []*User
+	var object *User
+
+	if singular {
+		var ok bool
+		object, ok = maybeUser.(*User)
+		if !ok {
+			object = new(User)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUser))
+			}
+		}
+	} else {
+		s, ok := maybeUser.(*[]*User)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUser))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &userR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &userR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`media_assets`),
+		qm.WhereIn(`media_assets.uploaded_by_user_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load media_assets")
+	}
+
+	var resultSlice []*MediaAsset
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice media_assets")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on media_assets")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for media_assets")
+	}
+
+	if singular {
+		object.R.UploadedByUserMediaAssets = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &mediaAssetR{}
+			}
+			foreign.R.UploadedByUser = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if queries.Equal(local.ID, foreign.UploadedByUserID) {
+				local.R.UploadedByUserMediaAssets = append(local.R.UploadedByUserMediaAssets, foreign)
+				if foreign.R == nil {
+					foreign.R = &mediaAssetR{}
+				}
+				foreign.R.UploadedByUser = local
 				break
 			}
 		}
@@ -1333,6 +1384,133 @@ func (o *User) AddConfirmationTokens(ctx context.Context, exec boil.ContextExecu
 			rel.R.User = o
 		}
 	}
+	return nil
+}
+
+// AddUploadedByUserMediaAssets adds the given related objects to the existing relationships
+// of the user, optionally inserting them as new records.
+// Appends related to o.R.UploadedByUserMediaAssets.
+// Sets related.R.UploadedByUser appropriately.
+func (o *User) AddUploadedByUserMediaAssets(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*MediaAsset) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			queries.Assign(&rel.UploadedByUserID, o.ID)
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"media_assets\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"uploaded_by_user_id"}),
+				strmangle.WhereClause("\"", "\"", 2, mediaAssetPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			queries.Assign(&rel.UploadedByUserID, o.ID)
+		}
+	}
+
+	if o.R == nil {
+		o.R = &userR{
+			UploadedByUserMediaAssets: related,
+		}
+	} else {
+		o.R.UploadedByUserMediaAssets = append(o.R.UploadedByUserMediaAssets, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &mediaAssetR{
+				UploadedByUser: o,
+			}
+		} else {
+			rel.R.UploadedByUser = o
+		}
+	}
+	return nil
+}
+
+// SetUploadedByUserMediaAssets removes all previously related items of the
+// user replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.UploadedByUser's UploadedByUserMediaAssets accordingly.
+// Replaces o.R.UploadedByUserMediaAssets with related.
+// Sets related.R.UploadedByUser's UploadedByUserMediaAssets accordingly.
+func (o *User) SetUploadedByUserMediaAssets(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*MediaAsset) error {
+	query := "update \"media_assets\" set \"uploaded_by_user_id\" = null where \"uploaded_by_user_id\" = $1"
+	values := []interface{}{o.ID}
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, query)
+		fmt.Fprintln(writer, values)
+	}
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+
+	if o.R != nil {
+		for _, rel := range o.R.UploadedByUserMediaAssets {
+			queries.SetScanner(&rel.UploadedByUserID, nil)
+			if rel.R == nil {
+				continue
+			}
+
+			rel.R.UploadedByUser = nil
+		}
+		o.R.UploadedByUserMediaAssets = nil
+	}
+
+	return o.AddUploadedByUserMediaAssets(ctx, exec, insert, related...)
+}
+
+// RemoveUploadedByUserMediaAssets relationships from objects passed in.
+// Removes related items from R.UploadedByUserMediaAssets (uses pointer comparison, removal does not keep order)
+// Sets related.R.UploadedByUser.
+func (o *User) RemoveUploadedByUserMediaAssets(ctx context.Context, exec boil.ContextExecutor, related ...*MediaAsset) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	for _, rel := range related {
+		queries.SetScanner(&rel.UploadedByUserID, nil)
+		if rel.R != nil {
+			rel.R.UploadedByUser = nil
+		}
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("uploaded_by_user_id")); err != nil {
+			return err
+		}
+	}
+	if o.R == nil {
+		return nil
+	}
+
+	for _, rel := range related {
+		for i, ri := range o.R.UploadedByUserMediaAssets {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.UploadedByUserMediaAssets)
+			if ln > 1 && i < ln-1 {
+				o.R.UploadedByUserMediaAssets[i] = o.R.UploadedByUserMediaAssets[ln-1]
+			}
+			o.R.UploadedByUserMediaAssets = o.R.UploadedByUserMediaAssets[:ln-1]
+			break
+		}
+	}
+
 	return nil
 }
 

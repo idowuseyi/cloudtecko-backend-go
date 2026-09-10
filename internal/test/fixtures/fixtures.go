@@ -39,6 +39,9 @@ const (
 	UserRequiresConfirmationConfirmationTokenPlain = "c9182e0b-4a46-4825-9f10-56f04a8b1665"
 )
 
+// fixtureTimezone is the IANA zone every fixture event is scheduled in.
+const fixtureTimezone = "Africa/Lagos"
+
 // Insertable represents a common interface for all model instances so they may be inserted via the Inserts() func
 type Insertable interface {
 	Insert(ctx context.Context, exec boil.ContextExecutor, columns boil.Columns) error
@@ -64,6 +67,22 @@ type FixtureMap struct {
 	UserRequiresConfirmation                  *models.User
 	UserRequiresConfirmationAppUserProfile    *models.AppUserProfile
 	UserRequiresConfirmationConfirmationToken *models.ConfirmationToken
+
+	// Content fixtures. FK order matters and is enforced by declaration order:
+	// categories and media assets must exist before the events and resources
+	// that reference them.
+	CategoryEventWorkshop    *models.Category
+	CategoryEventConference  *models.Category
+	CategoryResourceBlog     *models.Category
+	CategoryResourceTemplate *models.Category
+	MediaHeroReady           *models.MediaAsset
+	EventFeatured            *models.Event
+	EventPublished           *models.Event
+	EventDraft               *models.Event
+	EventArchived            *models.Event
+	ResourceServerless       *models.Resource
+	ResourceKubernetes       *models.Resource
+	ResourceDraft            *models.Resource
 }
 
 // Fixtures returns a function wrapping our fixtures, which tests are allowed to manipulate.
@@ -181,11 +200,150 @@ func Fixtures() FixtureMap {
 		Provider: models.ProviderTypeApn,
 	}
 
+	contentFixtures(&f, now)
+
 	return f
 }
 
 // Inserts defines the order in which the fixtures will be inserted
 // into the test database
+//
+//nolint:funlen // a fixture builder is a long literal by nature
+func contentFixtures(fix *FixtureMap, now time.Time) {
+	fix.CategoryEventWorkshop = &models.Category{
+		ID:    "b0a2f0de-0d2e-4a1e-9a3c-2f1b7c8d4e01",
+		Scope: models.CategoryScopeEvent,
+		Slug:  "workshop",
+		Name:  "Workshop",
+	}
+
+	fix.CategoryEventConference = &models.Category{
+		ID:        "b0a2f0de-0d2e-4a1e-9a3c-2f1b7c8d4e02",
+		Scope:     models.CategoryScopeEvent,
+		Slug:      "conference",
+		Name:      "Conference",
+		SortOrder: 1,
+	}
+
+	fix.CategoryResourceBlog = &models.Category{
+		ID:    "b0a2f0de-0d2e-4a1e-9a3c-2f1b7c8d4e03",
+		Scope: models.CategoryScopeResource,
+		Slug:  "blog",
+		Name:  "Blog",
+	}
+
+	fix.CategoryResourceTemplate = &models.Category{
+		ID:        "b0a2f0de-0d2e-4a1e-9a3c-2f1b7c8d4e04",
+		Scope:     models.CategoryScopeResource,
+		Slug:      "template",
+		Name:      "Template",
+		SortOrder: 1,
+	}
+
+	fix.MediaHeroReady = &models.MediaAsset{
+		ID:          "c1b3f1ef-1e3f-4b2f-8b4d-3a2c8d9e5f01",
+		ObjectKey:   "public/events/aws-workshop.jpg",
+		Bucket:      "cloudadore-media",
+		ContentType: "image/jpeg",
+		ByteSize:    204800,
+		Status:      models.MediaStatusReady,
+		PublicURL:   null.StringFrom("https://media.cloudadore.test/events/aws-workshop.jpg"),
+	}
+
+	fix.EventFeatured = &models.Event{
+		ID:           "d2c4f2f0-2f40-4c30-9c5e-4b3d9eaf6001",
+		Slug:         "aws-certification-workshop-lagos",
+		Title:        "AWS Certification Workshop: Lagos Edition",
+		Summary:      "Hands-on training covering Cloud Practitioner and Solutions Architect associate tracks.",
+		Body:         "A full day of labs.",
+		CategoryID:   fix.CategoryEventWorkshop.ID,
+		HeroMediaID:  null.StringFrom(fix.MediaHeroReady.ID),
+		StartAt:      now.Add(14 * 24 * time.Hour),
+		EndAt:        now.Add(14*24*time.Hour + 8*time.Hour),
+		Timezone:     fixtureTimezone,
+		VenueName:    null.StringFrom("Zone Tech Park"),
+		VenueAddress: null.StringFrom("Gbagada, Lagos"),
+		IsFeatured:   true,
+		PublishedAt:  null.TimeFrom(now.Add(-24 * time.Hour)),
+	}
+
+	fix.EventPublished = &models.Event{
+		ID:          "d2c4f2f0-2f40-4c30-9c5e-4b3d9eaf6002",
+		Slug:        "azure-cloud-summit-2026",
+		Title:       "Azure Cloud Summit 2026",
+		Summary:     "A virtual conference featuring Microsoft MVPs discussing enterprise-scale AI and DevOps.",
+		CategoryID:  fix.CategoryEventConference.ID,
+		StartAt:     now.Add(30 * 24 * time.Hour),
+		EndAt:       now.Add(30*24*time.Hour + 4*time.Hour),
+		Timezone:    fixtureTimezone,
+		IsOnline:    true,
+		MeetingURL:  null.StringFrom("https://meet.cloudadore.test/azure-summit"),
+		PublishedAt: null.TimeFrom(now.Add(-48 * time.Hour)),
+	}
+
+	// Never published: must not appear in any public listing or detail response.
+	fix.EventDraft = &models.Event{
+		ID:         "d2c4f2f0-2f40-4c30-9c5e-4b3d9eaf6003",
+		Slug:       "unpublished-draft-event",
+		Title:      "Unpublished Draft Event",
+		Summary:    "Should never be visible to the public.",
+		CategoryID: fix.CategoryEventWorkshop.ID,
+		StartAt:    now.Add(60 * 24 * time.Hour),
+		EndAt:      now.Add(60*24*time.Hour + 2*time.Hour),
+		Timezone:   fixtureTimezone,
+	}
+
+	// Published once, then retired: also must not appear.
+	fix.EventArchived = &models.Event{
+		ID:          "d2c4f2f0-2f40-4c30-9c5e-4b3d9eaf6004",
+		Slug:        "archived-past-event",
+		Title:       "Archived Past Event",
+		Summary:     "Retired after it happened.",
+		CategoryID:  fix.CategoryEventWorkshop.ID,
+		StartAt:     now.Add(-60 * 24 * time.Hour),
+		EndAt:       now.Add(-60*24*time.Hour + 2*time.Hour),
+		Timezone:    fixtureTimezone,
+		PublishedAt: null.TimeFrom(now.Add(-90 * 24 * time.Hour)),
+		ArchivedAt:  null.TimeFrom(now.Add(-30 * 24 * time.Hour)),
+	}
+
+	fix.ResourceServerless = &models.Resource{
+		ID:                 "e3d5f3f1-3f51-4d41-8d6f-5c4eafb07001",
+		Slug:               "serverless-security-protecting-your-functions",
+		Title:              "Serverless Security: Protecting Your Functions",
+		Summary:            "Deep dive into serverless functions and secure deployments for modern cloud applications.",
+		Body:               "Lambda hardening, IAM least privilege and secrets handling.",
+		Kind:               models.ResourceKindArticle,
+		CategoryID:         fix.CategoryResourceBlog.ID,
+		Author:             "Ada Obi",
+		ReadingTimeMinutes: 8,
+		PublishedAt:        null.TimeFrom(now.Add(-72 * time.Hour)),
+	}
+
+	fix.ResourceKubernetes = &models.Resource{
+		ID:                 "e3d5f3f1-3f51-4d41-8d6f-5c4eafb07002",
+		Slug:               "kubernetes-deployment-zero-to-production",
+		Title:              "Kubernetes Deployment Tutorial: Zero to Production",
+		Summary:            "Step-by-step guide to deploying your first Kubernetes application.",
+		Body:               "Mentions serverless once, in passing, so relevance ranking has something to separate.",
+		Kind:               models.ResourceKindVideo,
+		CategoryID:         fix.CategoryResourceTemplate.ID,
+		Author:             "Bola Ade",
+		ReadingTimeMinutes: 15,
+		PublishedAt:        null.TimeFrom(now.Add(-96 * time.Hour)),
+	}
+
+	fix.ResourceDraft = &models.Resource{
+		ID:         "e3d5f3f1-3f51-4d41-8d6f-5c4eafb07003",
+		Slug:       "unpublished-draft-resource",
+		Title:      "Unpublished Draft Resource",
+		Summary:    "Should never be visible to the public.",
+		Kind:       models.ResourceKindArticle,
+		CategoryID: fix.CategoryResourceBlog.ID,
+		Author:     "Nobody",
+	}
+}
+
 func Inserts() []Insertable {
 	fix := Fixtures()
 	insertableIfc := (*Insertable)(nil)

@@ -112,7 +112,23 @@ run_code_checks() {
   elif [ -f Cargo.toml ]; then
     ran=1; cargo test || { [ "$strict" = 1 ] && err "cargo test failed" || warn "cargo test failed"; }
   elif [ -f go.mod ]; then
-    ran=1; go test ./... || { [ "$strict" = 1 ] && err "go test failed" || warn "go test failed"; }
+    ran=1
+    # PROJECT-LOCAL: this repo's tests need IntegreSQL, which is only reachable
+    # from inside the compose network -- on the host, 29 of 31 packages fail with
+    # "lookup integresql: no such host". Running them here would report a red
+    # suite for an environment reason and block the Verify gate on a false
+    # negative, so when the dev container is up we run the real suite inside it.
+    # If it is NOT up we say so and fail rather than silently testing on the host,
+    # because a green host run would be the more dangerous outcome.
+    if docker compose ps --status running service 2>/dev/null | grep -q service; then
+      echo "running go test inside the dev container (IntegreSQL is not reachable from the host)"
+      docker compose exec -T service bash -c 'cd /app && go test ./...' \
+        || { [ "$strict" = 1 ] && err "go test failed (in dev container)" || warn "go test failed (in dev container)"; }
+    elif [ "$strict" = 1 ]; then
+      err "dev container not running -- start it with 'docker compose up -d postgres integresql service'; the host cannot reach IntegreSQL and a host-only run would be misleading"
+    else
+      warn "dev container not running; skipping tests (the host cannot reach IntegreSQL)"
+    fi
   elif [ -f pyproject.toml ] || [ -f requirements.txt ] || [ -f setup.py ]; then
     ran=1
     if command -v pytest >/dev/null 2>&1; then

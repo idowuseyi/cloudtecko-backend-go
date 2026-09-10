@@ -32,6 +32,9 @@ const (
 
 	// UserScopeCms captures enum value "cms"
 	UserScopeCms UserScope = "cms"
+
+	// UserScopeAdmin captures enum value "admin"
+	UserScopeAdmin UserScope = "admin"
 )
 
 // for schema
@@ -39,7 +42,7 @@ var userScopeEnum []any
 
 func init() {
 	var res []UserScope
-	if err := json.Unmarshal([]byte(`["app","cms"]`), &res); err != nil {
+	if err := json.Unmarshal([]byte(`["app","cms","admin"]`), &res); err != nil {
 		panic(err)
 	}
 	for _, v := range res {

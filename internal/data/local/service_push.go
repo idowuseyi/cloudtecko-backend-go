@@ -16,7 +16,21 @@ import (
 func (s *Service) UpdatePushToken(ctx context.Context, request dto.UpdatePushTokenRequest) error {
 	log := util.LogFromContext(ctx).With().Str("userID", request.User.ID).Logger()
 
-	err := db.WithTransaction(ctx, s.db, func(exec boil.ContextExecutor) error {
+	// Registering the new token and retiring the old one are deliberately TWO
+	// transactions, not one. A device that presents an unknown old token still
+	// has a valid new one, and refusing to store it would silently stop push
+	// delivery to that device -- so the new token is committed and the missing
+	// old one is reported afterwards. ErrNotFoundOldPushToken says exactly that
+	// ("The new token was saved.") and TestPutUpdatePushTokenWithOldTokenNotfound
+	// asserts it.
+	//
+	// This was previously expressed as a single WithTransaction whose insert ran
+	// on s.db instead of the transaction's executor, which produced the same
+	// outcome by escaping the rollback. Splitting it states the intent instead of
+	// depending on which connection a call happens to use -- and stops the file,
+	// which is the only domain-service example in the repo, from teaching that
+	// s.db inside a transaction closure is acceptable.
+	if err := db.WithTransaction(ctx, s.db, func(exec boil.ContextExecutor) error {
 		tokenExists, err := models.PushTokens(
 			models.PushTokenWhere.Token.EQ(request.Token),
 		).Exists(ctx, exec)
@@ -36,15 +50,22 @@ func (s *Service) UpdatePushToken(ctx context.Context, request dto.UpdatePushTok
 			Provider: request.Provider,
 		}
 
-		if err := newToken.Insert(ctx, s.db, boil.Infer()); err != nil {
+		if err := newToken.Insert(ctx, exec, boil.Infer()); err != nil {
 			log.Err(err).Msg("Failed to insert new token")
 			return err
 		}
 
-		if request.ExistingToken.IsZero() {
-			return nil
-		}
+		return nil
+	}); err != nil {
+		log.Debug().Err(err).Msg("Failed to register new push token")
+		return err
+	}
 
+	if request.ExistingToken.IsZero() {
+		return nil
+	}
+
+	if err := db.WithTransaction(ctx, s.db, func(exec boil.ContextExecutor) error {
 		existingToken, err := models.PushTokens(
 			models.PushTokenWhere.Token.EQ(request.ExistingToken.String),
 			models.PushTokenWhere.UserID.EQ(request.User.ID),
@@ -65,9 +86,8 @@ func (s *Service) UpdatePushToken(ctx context.Context, request dto.UpdatePushTok
 		}
 
 		return nil
-	})
-	if err != nil {
-		log.Debug().Err(err).Msg("Failed to update push token")
+	}); err != nil {
+		log.Debug().Err(err).Msg("Failed to retire old push token")
 		return err
 	}
 

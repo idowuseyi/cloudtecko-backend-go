@@ -590,11 +590,18 @@ func (s *Service) CompleteRegister(ctx context.Context, request dto.CompleteRegi
 
 	var result dto.LoginResult
 	err := db.WithTransaction(ctx, s.db, func(exec boil.ContextExecutor) error {
+		// exec, not s.db: reading on the pool instead of the transaction sees a
+		// snapshot taken outside it and takes no row lock, so two concurrent
+		// requests carrying the same token both find it live. FOR UPDATE then
+		// serialises them — the second blocks until the first commits and then
+		// finds the row deleted, rather than both activating the user and both
+		// being issued a session from one single-use token.
 		confirmationToken, err := models.ConfirmationTokens(
 			models.ConfirmationTokenWhere.TokenHash.EQ(hashing.HashToken(request.ConfirmationToken)),
 			models.ConfirmationTokenWhere.ValidUntil.GT(s.clock.Now()),
 			qm.Load(models.ConfirmationTokenRels.User),
-		).One(ctx, s.db)
+			qm.For("UPDATE OF confirmation_tokens"),
+		).One(ctx, exec)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				log.Debug().Err(err).Msg("Confirmation token not found")

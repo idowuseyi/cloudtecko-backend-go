@@ -808,6 +808,16 @@ func ({{ .ReceiverName }} *{{ $className }}Params) bind{{ .ID }}(rawData []strin
 
 // validate{{ .ID }} carries out validations for parameter {{ .ID }}
 func ({{ .ReceiverName }} *{{ $className }}Params) validate{{ .ID }}(formats strfmt.Registry) error {
+  {{- if and (not .Required) (not .IsArray) }}
+  // An optional parameter that was not supplied is not a validation failure.
+  // Validate() calls every validate<Param> unconditionally, while the validator
+  // body below dereferences the pointer -- so without this guard an absent
+  // optional parameter carrying ANY validation (maxLength, minimum, pattern,
+  // format) panics with a nil dereference and the endpoint returns 500.
+  if {{ .ValueExpression }} == nil {
+    return nil
+  }
+  {{- end }}
   {{ template "propertyparamvalidator" . }}
   return nil
 }

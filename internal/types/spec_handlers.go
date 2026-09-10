@@ -40,8 +40,13 @@ func (o *SwaggerSpec) initHandlerCache() {
 	o.Handlers["GET"]["/.well-known/assetlinks.json"] = true
 	o.Handlers["GET"]["/.well-known/apple-app-site-association"] = true
 	o.Handlers["GET"]["/api/v1/auth/register"] = true
+	o.Handlers["GET"]["/api/v1/events/{slug}"] = true
+	o.Handlers["GET"]["/api/v1/events"] = true
+	o.Handlers["GET"]["/api/v1/events/featured"] = true
 	o.Handlers["GET"]["/-/healthy"] = true
 	o.Handlers["GET"]["/-/ready"] = true
+	o.Handlers["GET"]["/api/v1/resources/{slug}"] = true
+	o.Handlers["GET"]["/api/v1/resources"] = true
 	o.Handlers["GET"]["/swagger.yml"] = true
 	o.Handlers["GET"]["/api/v1/auth/userinfo"] = true
 	o.Handlers["GET"]["/-/version"] = true

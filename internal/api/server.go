@@ -29,7 +29,11 @@ type Router struct {
 	Management *echo.Group
 	APIV1Auth  *echo.Group
 	APIV1Push  *echo.Group
-	WellKnown  *echo.Group
+	// APIV1Content serves the public, unauthenticated content surface (events,
+	// resources). It is cacheable and deliberately carries no auth middleware --
+	// AuthModeNone rather than AuthModeTry, since nothing here varies per user.
+	APIV1Content *echo.Group
+	WellKnown    *echo.Group
 }
 
 // Server is a central struct keeping all the dependencies.

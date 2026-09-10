@@ -373,6 +373,78 @@ paths:
                         $ref: '#/definitions/getUserInfoResponse'
             security:
                 - Bearer: []
+    /api/v1/events:
+        get:
+            description: |-
+                Lists published events, newest start date first, with optional category
+                filtering and pagination. Unpublished and archived events are never returned.
+            tags:
+                - content
+            summary: Lists published events
+            operationId: GetEventsRoute
+            parameters:
+                - type: string
+                  description: Category slug to filter by. Omit for all categories.
+                  name: category
+                  in: query
+                - minimum: 1
+                  type: integer
+                  default: 1
+                  description: 1-based page number.
+                  name: page
+                  in: query
+                - maximum: 100
+                  minimum: 1
+                  type: integer
+                  default: 6
+                  description: Items per page.
+                  name: perPage
+                  in: query
+            responses:
+                "200":
+                    description: A page of events
+                    schema:
+                        $ref: '#/definitions/galleryResponse'
+    /api/v1/events/featured:
+        get:
+            description: |-
+                Returns the single featured event. Exactly one published event may be
+                featured at a time, enforced by a partial unique index rather than by
+                convention.
+            tags:
+                - content
+            summary: Returns the featured event
+            operationId: GetFeaturedEventRoute
+            responses:
+                "200":
+                    description: The featured event
+                    schema:
+                        $ref: '#/definitions/eventDetail'
+                "404":
+                    description: PublicHTTPError, type `GENERIC` - no event is currently featured
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+    /api/v1/events/{slug}:
+        get:
+            description: Returns a single published event by its slug.
+            tags:
+                - content
+            summary: Returns an event by slug
+            operationId: GetEventRoute
+            parameters:
+                - type: string
+                  name: slug
+                  in: path
+                  required: true
+            responses:
+                "200":
+                    description: The event
+                    schema:
+                        $ref: '#/definitions/eventDetail'
+                "404":
+                    description: PublicHTTPError, type `GENERIC`
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
     /api/v1/push/token:
         put:
             description: |-
@@ -401,6 +473,65 @@ paths:
                         $ref: '#/definitions/publicHttpError'
             security:
                 - Bearer: []
+    /api/v1/resources:
+        get:
+            description: |-
+                Lists published resources with optional full-text search, category filtering
+                and pagination. When a search term is given, results are ordered by relevance,
+                weighted so a title match outranks a body mention; otherwise by publication
+                date. A search consisting only of punctuation returns everything rather than
+                failing.
+            tags:
+                - content
+            summary: Lists published resources
+            operationId: GetResourcesRoute
+            parameters:
+                - maxLength: 200
+                  type: string
+                  description: Full-text search term.
+                  name: q
+                  in: query
+                - type: string
+                  description: Category slug to filter by. Omit for all categories.
+                  name: category
+                  in: query
+                - minimum: 1
+                  type: integer
+                  default: 1
+                  name: page
+                  in: query
+                - maximum: 100
+                  minimum: 1
+                  type: integer
+                  default: 6
+                  name: perPage
+                  in: query
+            responses:
+                "200":
+                    description: A page of resources
+                    schema:
+                        $ref: '#/definitions/galleryResponse'
+    /api/v1/resources/{slug}:
+        get:
+            description: Returns a single published resource by its slug.
+            tags:
+                - content
+            summary: Returns a resource by slug
+            operationId: GetResourceRoute
+            parameters:
+                - type: string
+                  name: slug
+                  in: path
+                  required: true
+            responses:
+                "200":
+                    description: The resource
+                    schema:
+                        $ref: '#/definitions/resourceDetail'
+                "404":
+                    description: PublicHTTPError, type `GENERIC`
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
     /swagger.yml:
         get:
             description: |-
@@ -427,6 +558,153 @@ definitions:
                 maxLength: 500
                 minLength: 1
                 example: correct horse battery staple
+    eventDetail:
+        description: |-
+            A single event. Times are absolute instants plus the IANA zone the organiser
+            meant, so a client can render "9AM - 5PM WAT" correctly regardless of the
+            viewer's own timezone.
+        type: object
+        required:
+            - id
+            - slug
+            - title
+            - summary
+            - body
+            - category
+            - startAt
+            - endAt
+            - timezone
+            - isOnline
+            - isFeatured
+        properties:
+            body:
+                type: string
+            category:
+                type: string
+            endAt:
+                type: string
+                format: date-time
+            id:
+                type: string
+                format: uuid4
+            image:
+                type: string
+                x-nullable: true
+            isFeatured:
+                type: boolean
+            isOnline:
+                type: boolean
+            meetingURL:
+                type: string
+                x-nullable: true
+            slug:
+                type: string
+                example: aws-certification-workshop-lagos
+            startAt:
+                type: string
+                format: date-time
+            status:
+                type: string
+                enum:
+                    - Open
+                    - Limited
+                    - Sold Out
+                x-nullable: true
+            summary:
+                type: string
+            timezone:
+                description: IANA timezone name.
+                type: string
+                example: Africa/Lagos
+            title:
+                type: string
+            venueAddress:
+                type: string
+                x-nullable: true
+            venueName:
+                type: string
+                x-nullable: true
+    galleryItem:
+        description: |-
+            A single card in a content gallery. This is deliberately the shape the frontend's
+            `ResourceItem` type already declares, so both the events and the resources pages
+            render it through the same component without a client-side transform.
+            `status` is populated for events only, where it is derived from ticket-tier
+            capacity at read time; it is never stored and is absent for resources.
+        type: object
+        required:
+            - id
+            - category
+            - date
+            - title
+            - description
+            - image
+        properties:
+            category:
+                type: string
+                example: Workshop
+            date:
+                type: string
+                format: date-time
+                example: "2026-09-14T09:00:00+01:00"
+            description:
+                type: string
+                example: Hands-on training covering Cloud Practitioner and Solutions Architect associate tracks.
+            href:
+                type: string
+                x-nullable: true
+                example: /events/aws-certification-workshop-lagos
+            id:
+                type: string
+                example: evt-aws-workshop-lagos
+            image:
+                type: string
+                example: https://media.cloudadore.com/events/aws-workshop.jpg
+            status:
+                description: Events only. Derived from remaining capacity, never stored.
+                type: string
+                enum:
+                    - Open
+                    - Limited
+                    - Sold Out
+                x-nullable: true
+                example: Open
+            title:
+                type: string
+                example: 'AWS Certification Workshop: Lagos Edition'
+    galleryResponse:
+        description: A page of gallery items plus the tab list the frontend renders above them.
+        type: object
+        required:
+            - items
+            - categories
+            - total
+            - page
+            - perPage
+        properties:
+            categories:
+                description: Distinct categories in this scope, for the filter tabs.
+                type: array
+                items:
+                    type: string
+                example:
+                    - Workshop
+                    - Conference
+                    - Meetup
+            items:
+                type: array
+                items:
+                    $ref: '#/definitions/galleryItem'
+            page:
+                type: integer
+                example: 1
+            perPage:
+                type: integer
+                example: 6
+            total:
+                description: Total matching items across all pages.
+                type: integer
+                example: 42
     getUserInfoResponse:
         type: object
         required:
@@ -690,11 +968,61 @@ definitions:
                 description: Indicates whether the registration process requires email confirmation
                 type: boolean
                 example: true
+    resourceDetail:
+        type: object
+        required:
+            - id
+            - slug
+            - title
+            - summary
+            - body
+            - kind
+            - category
+            - author
+            - readingTimeMinutes
+        properties:
+            author:
+                type: string
+            body:
+                type: string
+            category:
+                type: string
+            contentURL:
+                type: string
+                x-nullable: true
+            id:
+                type: string
+                format: uuid4
+            image:
+                type: string
+                x-nullable: true
+            kind:
+                type: string
+                enum:
+                    - article
+                    - guide
+                    - video
+                    - download
+                    - link
+            publishedAt:
+                type: string
+                format: date-time
+                x-nullable: true
+            readingTimeMinutes:
+                type: integer
+            slug:
+                type: string
+                example: serverless-security-protecting-your-functions
+            summary:
+                type: string
+            title:
+                type: string
     userScope:
         type: string
         enum:
             - app
             - cms
+            - admin
 parameters:
     registrationTokenParam:
         type: string

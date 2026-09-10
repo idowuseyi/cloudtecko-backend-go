@@ -12,7 +12,6 @@
 -- stored. Requesting a reset now invalidates any earlier one, which is both the
 -- stronger option (exactly one live reset token per user) and what users expect
 -- from password reset elsewhere.
-
 -- +migrate Up
 -- password_reset_tokens ----------------------------------------------------
 ALTER TABLE password_reset_tokens
@@ -21,7 +20,7 @@ ALTER TABLE password_reset_tokens
 UPDATE
     password_reset_tokens
 SET
-    token_hash = sha256(convert_to(token::text, 'UTF8'));
+    token_hash = sha256 (convert_to(token::text, 'UTF8'));
 
 ALTER TABLE password_reset_tokens
     ALTER COLUMN token_hash SET NOT NULL;
@@ -42,7 +41,7 @@ ALTER TABLE confirmation_tokens
 UPDATE
     confirmation_tokens
 SET
-    token_hash = sha256(convert_to(token::text, 'UTF8'));
+    token_hash = sha256 (convert_to(token::text, 'UTF8'));
 
 ALTER TABLE confirmation_tokens
     ALTER COLUMN token_hash SET NOT NULL;
@@ -80,3 +79,4 @@ ALTER TABLE confirmation_tokens
 
 ALTER TABLE confirmation_tokens
     ADD CONSTRAINT confirmation_tokens_pkey PRIMARY KEY (token);
+

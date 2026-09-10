@@ -51,6 +51,34 @@ func makeCacheKey(cols boil.Columns, nzDefaults []string) string {
 	return str
 }
 
+// Enum values for CategoryScope
+const (
+	CategoryScopeEvent    string = "event"
+	CategoryScopeResource string = "resource"
+)
+
+func AllCategoryScope() []string {
+	return []string{
+		CategoryScopeEvent,
+		CategoryScopeResource,
+	}
+}
+
+// Enum values for MediaStatus
+const (
+	MediaStatusPending  string = "pending"
+	MediaStatusReady    string = "ready"
+	MediaStatusRejected string = "rejected"
+)
+
+func AllMediaStatus() []string {
+	return []string{
+		MediaStatusPending,
+		MediaStatusReady,
+		MediaStatusRejected,
+	}
+}
+
 // Enum values for ProviderType
 const (
 	ProviderTypeFCM string = "fcm"
@@ -61,5 +89,24 @@ func AllProviderType() []string {
 	return []string{
 		ProviderTypeFCM,
 		ProviderTypeApn,
+	}
+}
+
+// Enum values for ResourceKind
+const (
+	ResourceKindArticle  string = "article"
+	ResourceKindGuide    string = "guide"
+	ResourceKindVideo    string = "video"
+	ResourceKindDownload string = "download"
+	ResourceKindLink     string = "link"
+)
+
+func AllResourceKind() []string {
+	return []string{
+		ResourceKindArticle,
+		ResourceKindGuide,
+		ResourceKindVideo,
+		ResourceKindDownload,
+		ResourceKindLink,
 	}
 }

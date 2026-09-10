@@ -258,6 +258,9 @@ func Init(s *api.Server) error {
 
 		// Your other endpoints, typically secured by bearer auth, available at /api/v1/**
 		APIV1Push: s.Echo.Group("/api/v1/push", middleware.Auth(s)),
+
+		// Public content, available at /api/v1/** with no authentication.
+		APIV1Content: s.Echo.Group("/api/v1"),
 	}
 
 	// ---

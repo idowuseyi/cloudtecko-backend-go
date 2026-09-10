@@ -1,5 +1,21 @@
 wipe = true
 no-hooks = true
+
+# Generated model tests are disabled deliberately.
+#
+# They build rows with randomize.Struct, which cannot know about CHECK
+# constraints or partial unique indexes -- so a random start_at/end_at pair trips
+# events_time_order_check, and two randomly-featured rows trip
+# idx_events_single_featured. They are not finding schema bugs; they assert that
+# any random tuple is insertable, which is the exact opposite of what those
+# constraints exist to guarantee. The domain schema leans heavily on database
+# integrity (order totals, stock counters, exactly-one-subject payments), so this
+# only gets worse as it grows.
+#
+# What they covered was sqlboiler's own codegen, not this project's logic. Real
+# coverage lives in the handler and service tests, which run against a live
+# database via IntegreSQL.
+no-tests = true
 output = "internal/models"
 
 [psql]
@@ -7,4 +23,8 @@ output = "internal/models"
     # As those are supplied via the env, you cannot overwrite the here!
     # see https://github.com/volatiletech/sqlboiler/issues/678
     # see https://github.com/volatiletech/sqlboiler/pull/615
-    blacklist = ["migrations"]
+    # resources.search_tsv is a GENERATED ALWAYS column. Without blacklisting it
+    # sqlboiler emits a SearchTSV field, boil.Infer() includes it in every INSERT,
+    # and PostgreSQL rejects the write with
+    #   column "search_tsv" can only be updated to DEFAULT
+    blacklist = ["migrations", "resources.search_tsv"]

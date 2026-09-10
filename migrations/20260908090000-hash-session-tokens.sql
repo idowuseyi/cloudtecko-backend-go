@@ -12,7 +12,6 @@
 -- Refresh tokens additionally gain an expiry, a family id and a consumed marker,
 -- so a stolen refresh token is neither valid forever nor silently replayable
 -- (S-019).
-
 -- +migrate Up
 -- access_tokens ------------------------------------------------------------
 ALTER TABLE access_tokens
@@ -23,7 +22,7 @@ ALTER TABLE access_tokens
 UPDATE
     access_tokens
 SET
-    token_hash = sha256(convert_to(token::text, 'UTF8'));
+    token_hash = sha256 (convert_to(token::text, 'UTF8'));
 
 ALTER TABLE access_tokens
     ALTER COLUMN token_hash SET NOT NULL;
@@ -44,7 +43,7 @@ ALTER TABLE refresh_tokens
 UPDATE
     refresh_tokens
 SET
-    token_hash = sha256(convert_to(token::text, 'UTF8'));
+    token_hash = sha256 (convert_to(token::text, 'UTF8'));
 
 ALTER TABLE refresh_tokens
     ALTER COLUMN token_hash SET NOT NULL;
@@ -123,3 +122,4 @@ ALTER TABLE refresh_tokens
 
 ALTER TABLE refresh_tokens
     ADD CONSTRAINT refresh_tokens_pkey PRIMARY KEY (token);
+

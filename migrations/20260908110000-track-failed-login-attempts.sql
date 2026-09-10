@@ -10,7 +10,6 @@
 -- anyone who knows a username could keep that user permanently locked out.
 -- Bounding the window to minutes keeps the brute-force cost high while keeping
 -- the abuse cost low.
-
 -- +migrate Up
 ALTER TABLE users
     ADD COLUMN failed_login_attempts int NOT NULL DEFAULT 0;
@@ -24,3 +23,4 @@ ALTER TABLE users
 
 ALTER TABLE users
     DROP COLUMN last_failed_login_at;
+
