@@ -37,6 +37,12 @@ const (
 	UserDeactivatedRefreshToken1Plain = "b6e13a88-7b18-4f17-b819-71b196be2444"
 
 	UserRequiresConfirmationConfirmationTokenPlain = "c9182e0b-4a46-4825-9f10-56f04a8b1665"
+
+	// UserAdmin carries the admin scope; User1 carries only app. Every admin
+	// route is tested with BOTH, because the failure mode of a mis-specified
+	// Scopes slice is that an ordinary user silently gains admin -- which a
+	// happy-path test alone would never notice.
+	UserAdminAccessToken1Plain = "3f1a7c9d-5b2e-4a86-9c31-7d4e2f8a6b05"
 )
 
 // fixtureTimezone is the IANA zone every fixture event is scheduled in.
@@ -71,6 +77,10 @@ type FixtureMap struct {
 	// Content fixtures. FK order matters and is enforced by declaration order:
 	// categories and media assets must exist before the events and resources
 	// that reference them.
+	UserAdmin               *models.User
+	UserAdminAppUserProfile *models.AppUserProfile
+	UserAdminAccessToken1   *models.AccessToken
+
 	CategoryEventWorkshop    *models.Category
 	CategoryEventConference  *models.Category
 	CategoryResourceBlog     *models.Category
@@ -156,8 +166,21 @@ func Fixtures() FixtureMap {
 	}
 
 	f.UserRequiresConfirmationConfirmationToken = &models.ConfirmationToken{
-		TokenHash:  hashing.HashToken(UserRequiresConfirmationConfirmationTokenPlain),
-		ValidUntil: now.Add(time.Hour),
+		TokenHash: hashing.HashToken(UserRequiresConfirmationConfirmationTokenPlain),
+		// Ten years, matching the access and refresh token fixtures above, NOT the
+		// one hour that production confirmation tokens get.
+		//
+		// `now` is frozen when IntegreSQL BUILDS the template database, and that
+		// template is then reused until its hash changes (it covers migrations/,
+		// this file and test_database.go). A one-hour validity therefore expires
+		// inside the cached template, and every test using this token starts
+		// failing once the template is more than an hour old -- while passing for
+		// whoever just edited one of those files and forced a rebuild. That
+		// correlation makes it look like an unrelated change broke the test.
+		//
+		// A test that needs to exercise EXPIRY should insert its own short-lived
+		// token rather than relying on this shared one aging into the right state.
+		ValidUntil: now.Add(10 * 365 * 24 * time.Hour),
 		UserID:     f.UserRequiresConfirmation.ID,
 	}
 
@@ -210,6 +233,25 @@ func Fixtures() FixtureMap {
 //
 //nolint:funlen // a fixture builder is a long literal by nature
 func contentFixtures(fix *FixtureMap, now time.Time) {
+	fix.UserAdmin = &models.User{
+		ID:       "a7b8c9d0-1e2f-4a3b-8c4d-5e6f7a8b9c00",
+		IsActive: true,
+		Username: null.StringFrom("admin@example.com"),
+		Password: null.StringFrom(HashedTestUserPassword),
+		Scopes:   []string{auth.ScopeApp.String(), auth.ScopeAdmin.String()},
+	}
+
+	fix.UserAdminAppUserProfile = &models.AppUserProfile{
+		UserID:          fix.UserAdmin.ID,
+		LegalAcceptedAt: null.TimeFrom(now.Add(time.Minute * -10)),
+	}
+
+	fix.UserAdminAccessToken1 = &models.AccessToken{
+		TokenHash:  hashing.HashToken(UserAdminAccessToken1Plain),
+		ValidUntil: now.Add(10 * 365 * 24 * time.Hour),
+		UserID:     fix.UserAdmin.ID,
+	}
+
 	fix.CategoryEventWorkshop = &models.Category{
 		ID:    "b0a2f0de-0d2e-4a1e-9a3c-2f1b7c8d4e01",
 		Scope: models.CategoryScopeEvent,

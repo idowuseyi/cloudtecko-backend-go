@@ -197,3 +197,188 @@ definitions:
         type: string
         format: date-time
         x-nullable: true
+  Category:
+    type: object
+    required:
+      - id
+      - scope
+      - slug
+      - name
+      - sortOrder
+    properties:
+      id:
+        type: string
+        format: uuid4
+      scope:
+        type: string
+        enum:
+          - event
+          - resource
+      slug:
+        type: string
+        example: workshop
+      name:
+        type: string
+        example: Workshop
+      sortOrder:
+        type: integer
+  CategoryList:
+    type: object
+    required:
+      - items
+    properties:
+      items:
+        type: array
+        items:
+          "$ref": "#/definitions/Category"
+  PostCategoryPayload:
+    type: object
+    required:
+      - scope
+      - slug
+      - name
+    properties:
+      scope:
+        type: string
+        enum:
+          - event
+          - resource
+      slug:
+        type: string
+        minLength: 1
+        maxLength: 80
+        pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+        example: workshop
+      name:
+        type: string
+        minLength: 1
+        maxLength: 120
+      sortOrder:
+        type: integer
+        minimum: 0
+        default: 0
+  PostEventPayload:
+    description: |-
+      Create or update an event. `slug` is absent deliberately: it is derived from
+      the title on creation and is immutable afterwards, because a published slug
+      is a permanent public address that shared links and search results depend on.
+    type: object
+    required:
+      - title
+      - summary
+      - categorySlug
+      - startAt
+      - endAt
+      - timezone
+    properties:
+      title:
+        type: string
+        minLength: 1
+        maxLength: 200
+      summary:
+        type: string
+        minLength: 1
+        maxLength: 500
+      body:
+        type: string
+        maxLength: 20000
+      categorySlug:
+        type: string
+        maxLength: 80
+      heroMediaId:
+        type: string
+        format: uuid4
+        x-nullable: true
+      startAt:
+        type: string
+        format: date-time
+      endAt:
+        type: string
+        format: date-time
+      timezone:
+        description: IANA timezone name, e.g. Africa/Lagos.
+        type: string
+        minLength: 1
+        maxLength: 64
+      isOnline:
+        type: boolean
+        default: false
+      venueName:
+        type: string
+        maxLength: 200
+        x-nullable: true
+      venueAddress:
+        type: string
+        maxLength: 500
+        x-nullable: true
+      meetingUrl:
+        type: string
+        maxLength: 500
+        x-nullable: true
+  PostResourcePayload:
+    type: object
+    required:
+      - title
+      - summary
+      - kind
+      - categorySlug
+    properties:
+      title:
+        type: string
+        minLength: 1
+        maxLength: 200
+      summary:
+        type: string
+        minLength: 1
+        maxLength: 500
+      body:
+        type: string
+        maxLength: 50000
+      kind:
+        type: string
+        enum:
+          - article
+          - guide
+          - video
+          - download
+          - link
+      categorySlug:
+        type: string
+        maxLength: 80
+      heroMediaId:
+        type: string
+        format: uuid4
+        x-nullable: true
+      author:
+        type: string
+        maxLength: 120
+      contentUrl:
+        type: string
+        maxLength: 500
+        x-nullable: true
+      readingTimeMinutes:
+        type: integer
+        minimum: 0
+        maximum: 1000
+        default: 0
+  PublishPayload:
+    type: object
+    required:
+      - published
+    properties:
+      published:
+        type: boolean
+  ArchivePayload:
+    type: object
+    required:
+      - archived
+    properties:
+      archived:
+        type: boolean
+  FeaturePayload:
+    type: object
+    required:
+      - featured
+    properties:
+      featured:
+        type: boolean

@@ -202,3 +202,76 @@ func (r ContentListRequest) Offset() int {
 
 	return int((r.Page - 1) * r.PerPage)
 }
+
+// --- Admin write shapes -----------------------------------------------------
+
+// EventWriteRequest is the admin create/update payload for an event.
+// Slug is absent by design: it is derived from Title on create and is immutable
+// afterwards, because changing a published slug breaks every shared link and
+// every search result already pointing at it.
+type EventWriteRequest struct {
+	Title        string
+	Summary      string
+	Body         string
+	CategorySlug string
+	HeroMediaID  null.String
+	StartAt      time.Time
+	EndAt        time.Time
+	Timezone     string
+	IsOnline     bool
+	VenueName    null.String
+	VenueAddress null.String
+	MeetingURL   null.String
+}
+
+// ResourceWriteRequest is the admin create/update payload for a resource.
+type ResourceWriteRequest struct {
+	Title              string
+	Summary            string
+	Body               string
+	Kind               string
+	CategorySlug       string
+	HeroMediaID        null.String
+	Author             string
+	ContentURL         null.String
+	ReadingTimeMinutes int
+}
+
+// CategoryWriteRequest is the admin create/update payload for a category.
+type CategoryWriteRequest struct {
+	Scope     string
+	Slug      string
+	Name      string
+	SortOrder int
+}
+
+// Category is a taxonomy entry as returned to admins.
+type Category struct {
+	ID        string
+	Scope     string
+	Slug      string
+	Name      string
+	SortOrder int
+}
+
+func (c Category) ToTypes() *types.Category {
+	return &types.Category{
+		ID:        conv.Pointer(strfmt.UUID4(c.ID)),
+		Scope:     conv.Pointer(c.Scope),
+		Slug:      conv.Pointer(c.Slug),
+		Name:      conv.Pointer(c.Name),
+		SortOrder: conv.Pointer(int64(c.SortOrder)),
+	}
+}
+
+// CategoryList wraps categories for the admin listing response.
+type CategoryList []Category
+
+func (l CategoryList) ToTypes() *types.CategoryList {
+	items := make([]*types.Category, len(l))
+	for i := range l {
+		items[i] = l[i].ToTypes()
+	}
+
+	return &types.CategoryList{Items: items}
+}

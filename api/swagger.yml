@@ -80,6 +80,492 @@ paths:
             responses:
                 "200":
                     description: Android Digital Asset Links
+    /api/v1/admin/categories:
+        get:
+            description: Lists every category across both scopes.
+            tags:
+                - admin
+            summary: Lists categories
+            operationId: GetAdminCategoriesRoute
+            responses:
+                "200":
+                    description: The categories
+                    schema:
+                        $ref: '#/definitions/categoryList'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+        post:
+            description: Creates a category in the given scope.
+            tags:
+                - admin
+            summary: Creates a category
+            operationId: PostAdminCategoryRoute
+            parameters:
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/postCategoryPayload'
+            responses:
+                "201":
+                    description: The created category
+                    schema:
+                        $ref: '#/definitions/category'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "409":
+                    description: PublicHTTPError - the slug is taken in this scope
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+    /api/v1/admin/categories/{id}:
+        delete:
+            description: Deletes a category. Refused while content still references it.
+            tags:
+                - admin
+            summary: Deletes a category
+            operationId: DeleteAdminCategoryRoute
+            parameters:
+                - type: string
+                  format: uuid4
+                  name: id
+                  in: path
+                  required: true
+            responses:
+                "204":
+                    description: Deleted
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "409":
+                    description: PublicHTTPError - the category is still in use
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+    /api/v1/admin/events:
+        post:
+            description: Creates an UNPUBLISHED event. Publishing is a separate, explicit step so a half-written draft can never reach the site.
+            tags:
+                - admin
+            summary: Creates an event
+            operationId: PostAdminEventRoute
+            parameters:
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/postEventPayload'
+            responses:
+                "201":
+                    description: The created event
+                    schema:
+                        $ref: '#/definitions/eventDetail'
+                "400":
+                    description: PublicHTTPError - end time precedes start time
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError - the category does not exist
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "409":
+                    description: PublicHTTPError - the slug is taken
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+    /api/v1/admin/events/{id}:
+        put:
+            description: Updates an event in place. The slug is NOT recomputed from a changed title, because a published slug is a permanent public address.
+            tags:
+                - admin
+            summary: Updates an event
+            operationId: PutAdminEventRoute
+            parameters:
+                - type: string
+                  format: uuid4
+                  name: id
+                  in: path
+                  required: true
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/postEventPayload'
+            responses:
+                "200":
+                    description: The updated event
+                    schema:
+                        $ref: '#/definitions/eventDetail'
+                "400":
+                    description: PublicHTTPError - end time precedes start time
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+        delete:
+            description: Hard-deletes an event. Only unpublished drafts may be deleted; archive anything the public has seen.
+            tags:
+                - admin
+            summary: Deletes a draft event
+            operationId: DeleteAdminEventRoute
+            parameters:
+                - type: string
+                  format: uuid4
+                  name: id
+                  in: path
+                  required: true
+            responses:
+                "204":
+                    description: Deleted
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "409":
+                    description: PublicHTTPError - the event is published; archive it instead
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+    /api/v1/admin/events/{id}/archive:
+        post:
+            description: Archiving retires an event from public listings while retaining it.
+            tags:
+                - admin
+            summary: Archives or restores an event
+            operationId: PostAdminEventArchiveRoute
+            parameters:
+                - type: string
+                  format: uuid4
+                  name: id
+                  in: path
+                  required: true
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/archivePayload'
+            responses:
+                "200":
+                    description: The event
+                    schema:
+                        $ref: '#/definitions/eventDetail'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+    /api/v1/admin/events/{id}/feature:
+        post:
+            description: Promotes an event to the single featured slot, demoting the incumbent in the same transaction. Exactly one published event may be featured, enforced by a partial unique index.
+            tags:
+                - admin
+            summary: Sets the featured event
+            operationId: PostAdminEventFeatureRoute
+            parameters:
+                - type: string
+                  format: uuid4
+                  name: id
+                  in: path
+                  required: true
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/featurePayload'
+            responses:
+                "200":
+                    description: The event
+                    schema:
+                        $ref: '#/definitions/eventDetail'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "409":
+                    description: PublicHTTPError - an unpublished event cannot be featured
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+    /api/v1/admin/events/{id}/publish:
+        post:
+            description: Unpublishing also clears the featured flag, since the featured-uniqueness index only covers published rows.
+            tags:
+                - admin
+            summary: Publishes or unpublishes an event
+            operationId: PostAdminEventPublishRoute
+            parameters:
+                - type: string
+                  format: uuid4
+                  name: id
+                  in: path
+                  required: true
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/publishPayload'
+            responses:
+                "200":
+                    description: The event
+                    schema:
+                        $ref: '#/definitions/eventDetail'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+    /api/v1/admin/resources:
+        post:
+            description: Creates an UNPUBLISHED resource.
+            tags:
+                - admin
+            summary: Creates a resource
+            operationId: PostAdminResourceRoute
+            parameters:
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/postResourcePayload'
+            responses:
+                "201":
+                    description: The created resource
+                    schema:
+                        $ref: '#/definitions/resourceDetail'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError - the category does not exist
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "409":
+                    description: PublicHTTPError - the slug is taken
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+    /api/v1/admin/resources/{id}:
+        put:
+            description: Updates a resource in place. The slug is immutable.
+            tags:
+                - admin
+            summary: Updates a resource
+            operationId: PutAdminResourceRoute
+            parameters:
+                - type: string
+                  format: uuid4
+                  name: id
+                  in: path
+                  required: true
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/postResourcePayload'
+            responses:
+                "200":
+                    description: The updated resource
+                    schema:
+                        $ref: '#/definitions/resourceDetail'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+        delete:
+            description: Hard-deletes a resource. Only unpublished drafts may be deleted.
+            tags:
+                - admin
+            summary: Deletes a draft resource
+            operationId: DeleteAdminResourceRoute
+            parameters:
+                - type: string
+                  format: uuid4
+                  name: id
+                  in: path
+                  required: true
+            responses:
+                "204":
+                    description: Deleted
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "409":
+                    description: PublicHTTPError - the resource is published; archive it instead
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+    /api/v1/admin/resources/{id}/archive:
+        post:
+            description: Toggles archival.
+            tags:
+                - admin
+            summary: Archives or restores a resource
+            operationId: PostAdminResourceArchiveRoute
+            parameters:
+                - type: string
+                  format: uuid4
+                  name: id
+                  in: path
+                  required: true
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/archivePayload'
+            responses:
+                "200":
+                    description: The resource
+                    schema:
+                        $ref: '#/definitions/resourceDetail'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+    /api/v1/admin/resources/{id}/publish:
+        post:
+            description: Toggles publication.
+            tags:
+                - admin
+            summary: Publishes or unpublishes a resource
+            operationId: PostAdminResourcePublishRoute
+            parameters:
+                - type: string
+                  format: uuid4
+                  name: id
+                  in: path
+                  required: true
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/publishPayload'
+            responses:
+                "200":
+                    description: The resource
+                    schema:
+                        $ref: '#/definitions/resourceDetail'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
     /api/v1/auth/account:
         delete:
             description: Completely delete the user account. This action is irreversible and therefore requires additional password authentication.
@@ -547,6 +1033,47 @@ paths:
                 "200":
                     description: OK
 definitions:
+    archivePayload:
+        type: object
+        required:
+            - archived
+        properties:
+            archived:
+                type: boolean
+    category:
+        type: object
+        required:
+            - id
+            - scope
+            - slug
+            - name
+            - sortOrder
+        properties:
+            id:
+                type: string
+                format: uuid4
+            name:
+                type: string
+                example: Workshop
+            scope:
+                type: string
+                enum:
+                    - event
+                    - resource
+            slug:
+                type: string
+                example: workshop
+            sortOrder:
+                type: integer
+    categoryList:
+        type: object
+        required:
+            - items
+        properties:
+            items:
+                type: array
+                items:
+                    $ref: '#/definitions/category'
     deleteUserAccountPayload:
         type: object
         required:
@@ -624,6 +1151,13 @@ definitions:
             venueName:
                 type: string
                 x-nullable: true
+    featurePayload:
+        type: object
+        required:
+            - featured
+        properties:
+            featured:
+                type: boolean
     galleryItem:
         description: |-
             A single card in a content gallery. This is deliberately the shape the frontend's
@@ -753,6 +1287,32 @@ definitions:
         enum:
             - asc
             - desc
+    postCategoryPayload:
+        type: object
+        required:
+            - scope
+            - slug
+            - name
+        properties:
+            name:
+                type: string
+                maxLength: 120
+                minLength: 1
+            scope:
+                type: string
+                enum:
+                    - event
+                    - resource
+            slug:
+                type: string
+                maxLength: 80
+                minLength: 1
+                pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+                example: workshop
+            sortOrder:
+                type: integer
+                default: 0
+                minimum: 0
     postChangePasswordPayload:
         type: object
         required:
@@ -771,6 +1331,64 @@ definitions:
                 maxLength: 500
                 minLength: 15
                 example: correct horse battery staple
+    postEventPayload:
+        description: |-
+            Create or update an event. `slug` is absent deliberately: it is derived from
+            the title on creation and is immutable afterwards, because a published slug
+            is a permanent public address that shared links and search results depend on.
+        type: object
+        required:
+            - title
+            - summary
+            - categorySlug
+            - startAt
+            - endAt
+            - timezone
+        properties:
+            body:
+                type: string
+                maxLength: 20000
+            categorySlug:
+                type: string
+                maxLength: 80
+            endAt:
+                type: string
+                format: date-time
+            heroMediaId:
+                type: string
+                format: uuid4
+                x-nullable: true
+            isOnline:
+                type: boolean
+                default: false
+            meetingUrl:
+                type: string
+                maxLength: 500
+                x-nullable: true
+            startAt:
+                type: string
+                format: date-time
+            summary:
+                type: string
+                maxLength: 500
+                minLength: 1
+            timezone:
+                description: IANA timezone name, e.g. Africa/Lagos.
+                type: string
+                maxLength: 64
+                minLength: 1
+            title:
+                type: string
+                maxLength: 200
+                minLength: 1
+            venueAddress:
+                type: string
+                maxLength: 500
+                x-nullable: true
+            venueName:
+                type: string
+                maxLength: 200
+                x-nullable: true
     postForgotPasswordCompletePayload:
         type: object
         required:
@@ -883,6 +1501,52 @@ definitions:
                 maxLength: 255
                 minLength: 1
                 example: user@example.com
+    postResourcePayload:
+        type: object
+        required:
+            - title
+            - summary
+            - kind
+            - categorySlug
+        properties:
+            author:
+                type: string
+                maxLength: 120
+            body:
+                type: string
+                maxLength: 50000
+            categorySlug:
+                type: string
+                maxLength: 80
+            contentUrl:
+                type: string
+                maxLength: 500
+                x-nullable: true
+            heroMediaId:
+                type: string
+                format: uuid4
+                x-nullable: true
+            kind:
+                type: string
+                enum:
+                    - article
+                    - guide
+                    - video
+                    - download
+                    - link
+            readingTimeMinutes:
+                type: integer
+                default: 0
+                maximum: 1000
+                minimum: 0
+            summary:
+                type: string
+                maxLength: 500
+                minLength: 1
+            title:
+                type: string
+                maxLength: 200
+                minLength: 1
     publicHttpError:
         type: object
         required:
@@ -937,6 +1601,13 @@ definitions:
                 type: array
                 items:
                     $ref: '#/definitions/httpValidationErrorDetail'
+    publishPayload:
+        type: object
+        required:
+            - published
+        properties:
+            published:
+                type: boolean
     putUpdatePushTokenPayload:
         type: object
         required:

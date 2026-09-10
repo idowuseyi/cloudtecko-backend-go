@@ -15,6 +15,7 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/constants"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/middleware"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/router/templates"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/auth"
 	"github.com/labstack/echo-contrib/echoprometheus"
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
@@ -261,6 +262,19 @@ func Init(s *api.Server) error {
 
 		// Public content, available at /api/v1/** with no authentication.
 		APIV1Content: s.Echo.Group("/api/v1"),
+
+		// Admin surface at /api/v1/admin/**.
+		//
+		// Scopes lists "admin" and NOTHING ELSE. CheckUserScopes is OR, not AND:
+		// adding auth.ScopeApp here would make every authenticated user an admin,
+		// since every user carries the app scope. An empty Scopes slice is worse
+		// still -- it allows everyone. This is the single most dangerous line in
+		// the router.
+		APIV1Admin: s.Echo.Group("/api/v1/admin", middleware.AuthWithConfig(middleware.AuthConfig{
+			S:      s,
+			Mode:   middleware.AuthModeRequired,
+			Scopes: []string{auth.ScopeAdmin.String()},
+		})),
 	}
 
 	// ---

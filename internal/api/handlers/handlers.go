@@ -3,6 +3,7 @@ package handlers
 
 import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/admin"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/auth"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/common"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/content"
@@ -14,6 +15,20 @@ import (
 func AttachAllRoutes(s *api.Server) {
 	// attach our routes
 	s.Router.Routes = []*echo.Route{
+		admin.DeleteAdminCategoryRoute(s),
+		admin.DeleteAdminEventRoute(s),
+		admin.DeleteAdminResourceRoute(s),
+		admin.GetAdminCategoriesRoute(s),
+		admin.PostAdminCategoryRoute(s),
+		admin.PostAdminEventArchiveRoute(s),
+		admin.PostAdminEventFeatureRoute(s),
+		admin.PostAdminEventPublishRoute(s),
+		admin.PostAdminEventRoute(s),
+		admin.PostAdminResourceArchiveRoute(s),
+		admin.PostAdminResourcePublishRoute(s),
+		admin.PostAdminResourceRoute(s),
+		admin.PutAdminEventRoute(s),
+		admin.PutAdminResourceRoute(s),
 		auth.DeleteUserAccountRoute(s),
 		auth.GetCompleteRegisterRoute(s),
 		auth.GetUserInfoRoute(s),

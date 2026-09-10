@@ -1,0 +1,505 @@
+swagger: "2.0"
+info:
+  title: github.com/idowuseyi/cloudtecko-backend-go
+  version: 0.1.0
+paths:
+  /api/v1/admin/categories:
+    get:
+      security:
+        - Bearer: []
+      description: |-
+        Lists every category across both scopes.
+      tags:
+        - admin
+      summary: Lists categories
+      operationId: GetAdminCategoriesRoute
+      responses:
+        "200":
+          description: The categories
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/CategoryList"
+        "401":
+          description: PublicHTTPError - not authenticated
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "403":
+          description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+    post:
+      security:
+        - Bearer: []
+      description: |-
+        Creates a category in the given scope.
+      tags:
+        - admin
+      summary: Creates a category
+      operationId: PostAdminCategoryRoute
+      parameters:
+        - name: Payload
+          in: body
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/PostCategoryPayload"
+      responses:
+        "201":
+          description: The created category
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/Category"
+        "409":
+          description: PublicHTTPError - the slug is taken in this scope
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "401":
+          description: PublicHTTPError - not authenticated
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "403":
+          description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+  /api/v1/admin/categories/{id}:
+    delete:
+      security:
+        - Bearer: []
+      description: |-
+        Deletes a category. Refused while content still references it.
+      tags:
+        - admin
+      summary: Deletes a category
+      operationId: DeleteAdminCategoryRoute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid4
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: PublicHTTPError
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "409":
+          description: PublicHTTPError - the category is still in use
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "401":
+          description: PublicHTTPError - not authenticated
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "403":
+          description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+  /api/v1/admin/events:
+    post:
+      security:
+        - Bearer: []
+      description: |-
+        Creates an UNPUBLISHED event. Publishing is a separate, explicit step so a half-written draft can never reach the site.
+      tags:
+        - admin
+      summary: Creates an event
+      operationId: PostAdminEventRoute
+      parameters:
+        - name: Payload
+          in: body
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/PostEventPayload"
+      responses:
+        "201":
+          description: The created event
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/EventDetail"
+        "400":
+          description: PublicHTTPError - end time precedes start time
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "404":
+          description: PublicHTTPError - the category does not exist
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "409":
+          description: PublicHTTPError - the slug is taken
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "401":
+          description: PublicHTTPError - not authenticated
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "403":
+          description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+  /api/v1/admin/events/{id}:
+    put:
+      security:
+        - Bearer: []
+      description: |-
+        Updates an event in place. The slug is NOT recomputed from a changed title, because a published slug is a permanent public address.
+      tags:
+        - admin
+      summary: Updates an event
+      operationId: PutAdminEventRoute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid4
+        - name: Payload
+          in: body
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/PostEventPayload"
+      responses:
+        "200":
+          description: The updated event
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/EventDetail"
+        "400":
+          description: PublicHTTPError - end time precedes start time
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "404":
+          description: PublicHTTPError
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "401":
+          description: PublicHTTPError - not authenticated
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "403":
+          description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+    delete:
+      security:
+        - Bearer: []
+      description: |-
+        Hard-deletes an event. Only unpublished drafts may be deleted; archive anything the public has seen.
+      tags:
+        - admin
+      summary: Deletes a draft event
+      operationId: DeleteAdminEventRoute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid4
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: PublicHTTPError
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "409":
+          description: PublicHTTPError - the event is published; archive it instead
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "401":
+          description: PublicHTTPError - not authenticated
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "403":
+          description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+  /api/v1/admin/events/{id}/publish:
+    post:
+      security:
+        - Bearer: []
+      description: |-
+        Unpublishing also clears the featured flag, since the featured-uniqueness index only covers published rows.
+      tags:
+        - admin
+      summary: Publishes or unpublishes an event
+      operationId: PostAdminEventPublishRoute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid4
+        - name: Payload
+          in: body
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/PublishPayload"
+      responses:
+        "200":
+          description: The event
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/EventDetail"
+        "404":
+          description: PublicHTTPError
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "401":
+          description: PublicHTTPError - not authenticated
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "403":
+          description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+  /api/v1/admin/events/{id}/archive:
+    post:
+      security:
+        - Bearer: []
+      description: |-
+        Archiving retires an event from public listings while retaining it.
+      tags:
+        - admin
+      summary: Archives or restores an event
+      operationId: PostAdminEventArchiveRoute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid4
+        - name: Payload
+          in: body
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/ArchivePayload"
+      responses:
+        "200":
+          description: The event
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/EventDetail"
+        "404":
+          description: PublicHTTPError
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "401":
+          description: PublicHTTPError - not authenticated
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "403":
+          description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+  /api/v1/admin/events/{id}/feature:
+    post:
+      security:
+        - Bearer: []
+      description: |-
+        Promotes an event to the single featured slot, demoting the incumbent in the same transaction. Exactly one published event may be featured, enforced by a partial unique index.
+      tags:
+        - admin
+      summary: Sets the featured event
+      operationId: PostAdminEventFeatureRoute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid4
+        - name: Payload
+          in: body
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/FeaturePayload"
+      responses:
+        "200":
+          description: The event
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/EventDetail"
+        "404":
+          description: PublicHTTPError
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "409":
+          description: PublicHTTPError - an unpublished event cannot be featured
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "401":
+          description: PublicHTTPError - not authenticated
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "403":
+          description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+  /api/v1/admin/resources:
+    post:
+      security:
+        - Bearer: []
+      description: |-
+        Creates an UNPUBLISHED resource.
+      tags:
+        - admin
+      summary: Creates a resource
+      operationId: PostAdminResourceRoute
+      parameters:
+        - name: Payload
+          in: body
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/PostResourcePayload"
+      responses:
+        "201":
+          description: The created resource
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/ResourceDetail"
+        "404":
+          description: PublicHTTPError - the category does not exist
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "409":
+          description: PublicHTTPError - the slug is taken
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "401":
+          description: PublicHTTPError - not authenticated
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "403":
+          description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+  /api/v1/admin/resources/{id}:
+    put:
+      security:
+        - Bearer: []
+      description: |-
+        Updates a resource in place. The slug is immutable.
+      tags:
+        - admin
+      summary: Updates a resource
+      operationId: PutAdminResourceRoute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid4
+        - name: Payload
+          in: body
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/PostResourcePayload"
+      responses:
+        "200":
+          description: The updated resource
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/ResourceDetail"
+        "404":
+          description: PublicHTTPError
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "401":
+          description: PublicHTTPError - not authenticated
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "403":
+          description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+    delete:
+      security:
+        - Bearer: []
+      description: |-
+        Hard-deletes a resource. Only unpublished drafts may be deleted.
+      tags:
+        - admin
+      summary: Deletes a draft resource
+      operationId: DeleteAdminResourceRoute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid4
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: PublicHTTPError
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "409":
+          description: PublicHTTPError - the resource is published; archive it instead
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "401":
+          description: PublicHTTPError - not authenticated
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "403":
+          description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+  /api/v1/admin/resources/{id}/publish:
+    post:
+      security:
+        - Bearer: []
+      description: |-
+        Toggles publication.
+      tags:
+        - admin
+      summary: Publishes or unpublishes a resource
+      operationId: PostAdminResourcePublishRoute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid4
+        - name: Payload
+          in: body
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/PublishPayload"
+      responses:
+        "200":
+          description: The resource
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/ResourceDetail"
+        "404":
+          description: PublicHTTPError
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "401":
+          description: PublicHTTPError - not authenticated
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "403":
+          description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+  /api/v1/admin/resources/{id}/archive:
+    post:
+      security:
+        - Bearer: []
+      description: |-
+        Toggles archival.
+      tags:
+        - admin
+      summary: Archives or restores a resource
+      operationId: PostAdminResourceArchiveRoute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid4
+        - name: Payload
+          in: body
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/ArchivePayload"
+      responses:
+        "200":
+          description: The resource
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/ResourceDetail"
+        "404":
+          description: PublicHTTPError
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "401":
+          description: PublicHTTPError - not authenticated
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "403":
+          description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"

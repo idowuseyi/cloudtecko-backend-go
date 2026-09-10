@@ -36,7 +36,11 @@ func (o *SwaggerSpec) initHandlerCache() {
 	o.Handlers["HEAD"] = make(map[string]bool)
 	o.Handlers["PATCH"] = make(map[string]bool)
 
+	o.Handlers["DELETE"]["/api/v1/admin/categories/{id}"] = true
+	o.Handlers["DELETE"]["/api/v1/admin/events/{id}"] = true
+	o.Handlers["DELETE"]["/api/v1/admin/resources/{id}"] = true
 	o.Handlers["DELETE"]["/api/v1/auth/account"] = true
+	o.Handlers["GET"]["/api/v1/admin/categories"] = true
 	o.Handlers["GET"]["/.well-known/assetlinks.json"] = true
 	o.Handlers["GET"]["/.well-known/apple-app-site-association"] = true
 	o.Handlers["GET"]["/api/v1/auth/register"] = true
@@ -50,6 +54,14 @@ func (o *SwaggerSpec) initHandlerCache() {
 	o.Handlers["GET"]["/swagger.yml"] = true
 	o.Handlers["GET"]["/api/v1/auth/userinfo"] = true
 	o.Handlers["GET"]["/-/version"] = true
+	o.Handlers["POST"]["/api/v1/admin/categories"] = true
+	o.Handlers["POST"]["/api/v1/admin/events/{id}/archive"] = true
+	o.Handlers["POST"]["/api/v1/admin/events/{id}/feature"] = true
+	o.Handlers["POST"]["/api/v1/admin/events/{id}/publish"] = true
+	o.Handlers["POST"]["/api/v1/admin/events"] = true
+	o.Handlers["POST"]["/api/v1/admin/resources/{id}/archive"] = true
+	o.Handlers["POST"]["/api/v1/admin/resources/{id}/publish"] = true
+	o.Handlers["POST"]["/api/v1/admin/resources"] = true
 	o.Handlers["POST"]["/api/v1/auth/change-password"] = true
 	o.Handlers["POST"]["/api/v1/auth/register/{registrationToken}"] = true
 	o.Handlers["POST"]["/api/v1/auth/forgot-password/complete"] = true
@@ -58,5 +70,7 @@ func (o *SwaggerSpec) initHandlerCache() {
 	o.Handlers["POST"]["/api/v1/auth/logout"] = true
 	o.Handlers["POST"]["/api/v1/auth/refresh"] = true
 	o.Handlers["POST"]["/api/v1/auth/register"] = true
+	o.Handlers["PUT"]["/api/v1/admin/events/{id}"] = true
+	o.Handlers["PUT"]["/api/v1/admin/resources/{id}"] = true
 	o.Handlers["PUT"]["/api/v1/push/token"] = true
 }

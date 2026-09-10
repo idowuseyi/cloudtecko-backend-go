@@ -9,7 +9,9 @@ import (
 	"testing"
 
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/test/fixtures"
 	pUtil "github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -223,7 +225,21 @@ func TestWithTestDatabaseEmpty(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			require.Equal(t, 4, usrCount)
+			// Derive the expectation from the fixture set rather than hardcoding a
+			// literal. The point of this assertion is that ApplyTestFixtures put
+			// every fixture user into an empty database -- not that there happen to
+			// be N of them. A literal here breaks on every fixture addition, which
+			// reads as "my unrelated change broke the test suite".
+			wantUsers := 0
+
+			for _, insertable := range fixtures.Inserts() {
+				if _, isUser := insertable.(*models.User); isUser {
+					wantUsers++
+				}
+			}
+
+			require.Positive(t, wantUsers, "the fixture set must contain at least one user")
+			require.Equal(t, wantUsers, usrCount)
 		})
 	})
 }

@@ -33,7 +33,10 @@ type Router struct {
 	// resources). It is cacheable and deliberately carries no auth middleware --
 	// AuthModeNone rather than AuthModeTry, since nothing here varies per user.
 	APIV1Content *echo.Group
-	WellKnown    *echo.Group
+	// APIV1Admin serves the authoring and operations surface. It requires the
+	// admin scope ALONE -- see the note at its construction in router.Init.
+	APIV1Admin *echo.Group
+	WellKnown  *echo.Group
 }
 
 // Server is a central struct keeping all the dependencies.
