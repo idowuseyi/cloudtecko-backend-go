@@ -90,6 +90,11 @@ type UpdatePasswordRequest struct {
 type RegisterResult struct {
 	RequiresConfirmation bool
 	ConfirmationToken    null.String
+
+	// AccountAlreadyExists tells the HANDLER which email to send. It must never
+	// reach the response body: the point of S-020's fix is that the HTTP reply is
+	// identical either way, and only the mailbox owner learns the difference.
+	AccountAlreadyExists bool
 }
 
 type LoginResult struct {

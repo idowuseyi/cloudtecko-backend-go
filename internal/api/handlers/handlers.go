@@ -6,6 +6,7 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/admin"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/auth"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/common"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/community"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/content"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/push"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/wellknown"
@@ -18,7 +19,10 @@ func AttachAllRoutes(s *api.Server) {
 		admin.DeleteAdminCategoryRoute(s),
 		admin.DeleteAdminEventRoute(s),
 		admin.DeleteAdminResourceRoute(s),
+		admin.GetAdminApplicationsRoute(s),
 		admin.GetAdminCategoriesRoute(s),
+		admin.PostAdminApplicationApproveRoute(s),
+		admin.PostAdminApplicationRejectRoute(s),
 		admin.PostAdminCategoryRoute(s),
 		admin.PostAdminEventArchiveRoute(s),
 		admin.PostAdminEventFeatureRoute(s),
@@ -46,6 +50,10 @@ func AttachAllRoutes(s *api.Server) {
 		common.GetReadyRoute(s),
 		common.GetSwaggerRoute(s),
 		common.GetVersionRoute(s),
+		community.GetFAQsRoute(s),
+		community.PostAcceptInvitationRoute(s),
+		community.PostContactMessageRoute(s),
+		community.PostMembershipApplicationRoute(s),
 		content.GetEventRoute(s),
 		content.GetEventsRoute(s),
 		content.GetFeaturedEventRoute(s),

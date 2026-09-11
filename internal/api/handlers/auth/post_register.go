@@ -37,7 +37,24 @@ func postRegisterHandler(s *api.Server) echo.HandlerFunc {
 			return err
 		}
 
-		if !result.RequiresConfirmation {
+		// S-020: an address that already has an account must produce the SAME
+		// response as a fresh registration -- same status, same body. The only
+		// signal goes by email, to the mailbox owner rather than to whoever made
+		// the request. Note this falls through to the shared 202 below rather than
+		// returning its own, precisely so the two cannot drift apart.
+		//
+		// Caveat: this fully closes the oracle only when registration requires
+		// confirmation. With confirmation off, a genuinely new registration is
+		// answered with a session (below), which an existing address cannot be
+		// given -- and that difference is itself the signal. router.Init logs a
+		// warning at startup in that configuration.
+		if result.AccountAlreadyExists {
+			if err := s.Mailer.SendAccountExists(ctx, username.String()); err != nil {
+				log.Err(err).Msg("Failed to send account exists notice")
+			}
+		}
+
+		if !result.AccountAlreadyExists && !result.RequiresConfirmation {
 			loginResult, err := s.Auth.Login(ctx, dto.LoginRequest{
 				Username: username,
 				Password: conv.Value(body.Password),

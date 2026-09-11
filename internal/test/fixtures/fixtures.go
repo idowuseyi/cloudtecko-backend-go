@@ -43,10 +43,19 @@ const (
 	// Scopes slice is that an ordinary user silently gains admin -- which a
 	// happy-path test alone would never notice.
 	UserAdminAccessToken1Plain = "3f1a7c9d-5b2e-4a86-9c31-7d4e2f8a6b05"
+
+	// MembershipInvitationTokenPlain is the plaintext of an APPROVED application's
+	// invitation. Only its hash reaches the database, exactly as for every other
+	// credential-bearing token here.
+	MembershipInvitationTokenPlain = "9c4e1d72-6b3f-4a58-8e27-1f5d3b8a4c96"
 )
 
 // fixtureTimezone is the IANA zone every fixture event is scheduled in.
 const fixtureTimezone = "Africa/Lagos"
+
+// fixtureNotPublicSummary marks every fixture that must never appear in a public
+// response, so a test asserting visibility can be read at a glance.
+const fixtureNotPublicSummary = "Should never be visible to the public."
 
 // Insertable represents a common interface for all model instances so they may be inserted via the Inserts() func
 type Insertable interface {
@@ -93,6 +102,13 @@ type FixtureMap struct {
 	ResourceServerless       *models.Resource
 	ResourceKubernetes       *models.Resource
 	ResourceDraft            *models.Resource
+
+	FAQPublished          *models.Faq
+	FAQDraft              *models.Faq
+	ApplicationPending    *models.MembershipApplication
+	ApplicationApproved   *models.MembershipApplication
+	ApplicationRejected   *models.MembershipApplication
+	ContactMessageHandled *models.ContactMessage
 }
 
 // Fixtures returns a function wrapping our fixtures, which tests are allowed to manipulate.
@@ -328,7 +344,7 @@ func contentFixtures(fix *FixtureMap, now time.Time) {
 		ID:         "d2c4f2f0-2f40-4c30-9c5e-4b3d9eaf6003",
 		Slug:       "unpublished-draft-event",
 		Title:      "Unpublished Draft Event",
-		Summary:    "Should never be visible to the public.",
+		Summary:    fixtureNotPublicSummary,
 		CategoryID: fix.CategoryEventWorkshop.ID,
 		StartAt:    now.Add(60 * 24 * time.Hour),
 		EndAt:      now.Add(60*24*time.Hour + 2*time.Hour),
@@ -375,11 +391,67 @@ func contentFixtures(fix *FixtureMap, now time.Time) {
 		PublishedAt:        null.TimeFrom(now.Add(-96 * time.Hour)),
 	}
 
+	fix.FAQPublished = &models.Faq{
+		ID:          "f4e6a4a2-4a62-4e52-9e70-6d5fbac18001",
+		Question:    "How do I join Cloudadore Club?",
+		Answer:      "Apply through the waitlist; approved applicants receive an email invitation.",
+		Category:    "membership",
+		PublishedAt: null.TimeFrom(now.Add(-24 * time.Hour)),
+	}
+
+	fix.FAQDraft = &models.Faq{
+		ID:       "f4e6a4a2-4a62-4e52-9e70-6d5fbac18002",
+		Question: "Unpublished question",
+		Answer:   fixtureNotPublicSummary,
+		Category: "membership",
+	}
+
+	fix.ApplicationPending = &models.MembershipApplication{
+		ID:         "a5f7b5b3-5b73-4f63-8f81-7e60cbd29001",
+		Email:      "pending-applicant@example.com",
+		FullName:   "Pending Applicant",
+		Motivation: "I would like to learn about cloud infrastructure.",
+		Status:     models.ApplicationStatusPending,
+		PurgeAfter: now.Add(2 * 365 * 24 * time.Hour),
+	}
+
+	fix.ApplicationApproved = &models.MembershipApplication{
+		ID:       "a5f7b5b3-5b73-4f63-8f81-7e60cbd29002",
+		Email:    "approved-applicant@example.com",
+		FullName: "Approved Applicant",
+		Status:   models.ApplicationStatusApproved,
+		// Ten years, for the same reason the access and refresh token fixtures
+		// use it: `now` freezes when IntegreSQL builds its cached template, so a
+		// short validity would expire inside the template and fail for everyone
+		// whose template is older than that window.
+		InvitationTokenHash:  null.BytesFrom(hashing.HashToken(MembershipInvitationTokenPlain)),
+		InvitationValidUntil: null.TimeFrom(now.Add(10 * 365 * 24 * time.Hour)),
+		PurgeAfter:           now.Add(2 * 365 * 24 * time.Hour),
+	}
+
+	fix.ApplicationRejected = &models.MembershipApplication{
+		ID:         "a5f7b5b3-5b73-4f63-8f81-7e60cbd29003",
+		Email:      "rejected-applicant@example.com",
+		FullName:   "Rejected Applicant",
+		Status:     models.ApplicationStatusRejected,
+		PurgeAfter: now.Add(2 * 365 * 24 * time.Hour),
+	}
+
+	fix.ContactMessageHandled = &models.ContactMessage{
+		ID:         "c6a8c6c4-6c84-4a74-9a92-8f71dce30001",
+		Name:       "Prior Sender",
+		Email:      "prior-sender@example.com",
+		Subject:    models.ContactSubjectGeneral,
+		Message:    "An earlier enquiry.",
+		Status:     models.ContactMessageStatusRead,
+		PurgeAfter: now.Add(365 * 24 * time.Hour),
+	}
+
 	fix.ResourceDraft = &models.Resource{
 		ID:         "e3d5f3f1-3f51-4d41-8d6f-5c4eafb07003",
 		Slug:       "unpublished-draft-resource",
 		Title:      "Unpublished Draft Resource",
-		Summary:    "Should never be visible to the public.",
+		Summary:    fixtureNotPublicSummary,
 		Kind:       models.ResourceKindArticle,
 		CategoryID: fix.CategoryResourceBlog.ID,
 		Author:     "Nobody",

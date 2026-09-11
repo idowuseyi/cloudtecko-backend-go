@@ -50,6 +50,19 @@ container: `make build` green (0 lint issues) and 23/23 test packages passing.
 | `internal/config/server_config.go` | `Storage` config section |
 | `internal/api/{server,providers,wire}.go` | storage wired through DI |
 
+**Phase 3 — contact, FAQs, membership**
+
+| File | Change |
+|---|---|
+| `migrations/20260911090000-create-contact-and-membership.sql` | `contact_messages`, `faqs`, `membership_applications` + 3 enums |
+| `internal/data/local/service_community.go` | contact intake + throttle, FAQ reads, applications, retention sweep |
+| `internal/auth/service_membership.go` | approve (mints hashed invitation), accept (creates the account) |
+| `internal/api/handlers/community/*.go` | 4 public handlers + tests |
+| `internal/api/handlers/admin/*application*.go` | list / approve / reject |
+| `internal/mailer/mailer.go` + `web/templates/email/` | invitation + account-exists emails |
+| `cmd/db/purge_expired.go` | `app db purge-expired` |
+| `internal/api/server.go`, `wire.go` | `MembershipService` split out of `AuthService` |
+
 ## Key Decisions
 
 **A nil-dereference panic in generated code was fixed at the template, not the call site.**
@@ -98,6 +111,24 @@ genuinely *is* `image/svg+xml`, so no MIME check can catch it.
 messages, so matching on message text would have hidden it permanently. `IsForeignKeyViolation`
 covers both, with a test pinning the distinction.
 
+**S-020 is closed, with a stated limit.** `/register` no longer answers 409 for a taken
+address; it returns the byte-identical response a fresh registration gets, and the notice goes
+by email to the mailbox owner. This only fully closes the oracle when registration requires
+confirmation: with confirmation off a new address is answered with a **session**, which an
+existing address cannot be given, and that difference is itself the signal. The server logs a
+warning at startup in that configuration, `render.yaml` sets confirmation on, and
+`TestPostRegisterDisclosesWhenConfirmationDisabled` pins the residual gap so it cannot be
+quietly forgotten.
+
+**Approval creates no account.** Only the SHA-256 of the invitation token is stored. The user
+row is created at *acceptance*, with a password the applicant chooses. Verified live: after
+approving a clean address, `users` still holds zero rows for it. The invitation link is
+deliberately **not** logged when mail sending is disabled, unlike the password-reset link —
+a reset link touches an existing account, an invite link creates one on an approval-gated site.
+
+**The contact throttle is silent.** Answering "you submitted too recently" would confirm that an
+address has used the form, so a throttled submission returns the same 202 as an accepted one.
+
 ## Deviations from Design
 
 1. **`internal/data/local/service_push.go` was not a bug.** `01-brief.md`, `02-plan.md` and
@@ -119,7 +150,11 @@ covers both, with a test pinning the distinction.
    transitive modules it brings. Its MVS resolution also bumped several unrelated shared
    dependencies (cobra, BurntSushi/toml, afero, fatih/color); `go mod tidy` alone produces no
    such bumps, so they are genuinely minio's, not pre-existing drift.
-7. **`render.yaml` needed no change** — `SERVER_ECHO_CORS_ALLOW_ORIGINS` already exists as a
+8. **`AuthService` was split.** Adding the two membership methods pushed it to 12 methods and
+   `interfacebloat` flagged it. Rather than suppress, `MembershipService` is now a separate seam
+   on `api.Server`, still implemented by `*auth.Service` and bound in wire — turning an approved
+   application into an account is a different responsibility from signing an existing user in.
+9. **`render.yaml` needed no change** — `SERVER_ECHO_CORS_ALLOW_ORIGINS` already exists as a
    prompted variable. It must still be **set at deploy time**: empty leaves CORS off entirely
    with no wildcard fallback, and the frontend then receives nothing.
 

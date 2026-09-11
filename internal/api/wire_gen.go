@@ -52,7 +52,7 @@ func InitNewServer(server config.Server) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	apiServer := newServerWithComponents(server, db, mailer, service, i18nService, clock, authService, localService, metricsService, storage)
+	apiServer := newServerWithComponents(server, db, mailer, service, i18nService, clock, authService, authService, localService, metricsService, storage)
 	return apiServer, nil
 }
 
@@ -82,7 +82,7 @@ func InitNewServerWithDB(server config.Server, db *sql.DB, t ...*testing.T) (*Se
 	if err != nil {
 		return nil, err
 	}
-	apiServer := newServerWithComponents(server, db, mailer, service, i18nService, clock, authService, localService, metricsService, storage)
+	apiServer := newServerWithComponents(server, db, mailer, service, i18nService, clock, authService, authService, localService, metricsService, storage)
 	return apiServer, nil
 }
 
@@ -99,5 +99,5 @@ var serviceSet = wire.NewSet(
 )
 
 var authServiceSet = wire.NewSet(
-	NewAuthService, wire.Bind(new(AuthService), new(*auth.Service)),
+	NewAuthService, wire.Bind(new(AuthService), new(*auth.Service)), wire.Bind(new(MembershipService), new(*auth.Service)),
 )

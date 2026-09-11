@@ -109,6 +109,26 @@ type AuthServer struct {
 	// LoginFailureWindow is both how long the throttle lasts and how long a
 	// failure counts toward the total.
 	LoginFailureWindow time.Duration
+
+	// InvitationTokenValidity bounds how long an approved applicant has to accept.
+	// Longer than a confirmation token because a human admin's approval may land
+	// while the applicant is away, but still finite: an unaccepted invitation is
+	// a standing capability to create an account.
+	InvitationTokenValidity time.Duration
+}
+
+// Community configures the contact form and the membership waitlist.
+type Community struct {
+	// ContactThrottle is the per-email window inside which a second submission is
+	// silently dropped. Silently, because saying "you submitted too recently"
+	// would confirm that an address has used the form.
+	ContactThrottle time.Duration
+
+	// ContactRetention and ApplicationRetention set purge_after on insert. Both
+	// tables hold names, email addresses and free text, which are personal data
+	// under the NDPA 2023, so the schema refuses a row without an expiry.
+	ContactRetention     time.Duration
+	ApplicationRetention time.Duration
 }
 
 type PathsServer struct {
@@ -130,6 +150,11 @@ type ManagementServer struct {
 type FrontendServer struct {
 	BaseURL               string
 	PasswordResetEndpoint string
+	// MembershipInvitationEndpoint is the frontend page that collects a password
+	// from an approved applicant. The invitation link must point at the frontend
+	// rather than the API, because accepting requires choosing a password and a
+	// bare API endpoint has nowhere to type one.
+	MembershipInvitationEndpoint string
 }
 
 type LoggerServer struct {
@@ -168,6 +193,7 @@ type Server struct {
 	FCMConfig         provider.FCMConfig
 	I18n              I18n
 	Storage           Storage
+	Community         Community
 }
 
 // Storage configures the object store behind the media pipeline.
@@ -355,8 +381,9 @@ func DefaultServiceConfigFromEnv() Server {
 			TLSConfig:  nil,
 		},
 		Frontend: FrontendServer{
-			BaseURL:               util.GetEnv("SERVER_FRONTEND_BASE_URL", "http://localhost:3000"),
-			PasswordResetEndpoint: util.GetEnv("SERVER_FRONTEND_PASSWORD_RESET_ENDPOINT", "/set-new-password"),
+			BaseURL:                      util.GetEnv("SERVER_FRONTEND_BASE_URL", "http://localhost:3000"),
+			PasswordResetEndpoint:        util.GetEnv("SERVER_FRONTEND_PASSWORD_RESET_ENDPOINT", "/set-new-password"),
+			MembershipInvitationEndpoint: util.GetEnv("SERVER_FRONTEND_MEMBERSHIP_INVITATION_ENDPOINT", "/membership/accept"),
 		},
 		Logger: LoggerServer{
 			Level:              util.LogLevelFromString(util.GetEnv("SERVER_LOGGER_LEVEL", zerolog.DebugLevel.String())),
@@ -402,6 +429,11 @@ func DefaultServiceConfigFromEnv() Server {
 			}, ","),
 			QuarantinePrefix: util.GetEnv("SERVER_STORAGE_QUARANTINE_PREFIX", "quarantine"),
 			PublicPrefix:     util.GetEnv("SERVER_STORAGE_PUBLIC_PREFIX", "public"),
+		},
+		Community: Community{
+			ContactThrottle:      time.Second * time.Duration(util.GetEnvAsInt("SERVER_COMMUNITY_CONTACT_THROTTLE_SECONDS", 300)),
+			ContactRetention:     time.Second * time.Duration(util.GetEnvAsInt("SERVER_COMMUNITY_CONTACT_RETENTION_SECONDS", 365*24*60*60)),
+			ApplicationRetention: time.Second * time.Duration(util.GetEnvAsInt("SERVER_COMMUNITY_APPLICATION_RETENTION_SECONDS", 2*365*24*60*60)),
 		},
 	}
 }

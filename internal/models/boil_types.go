@@ -64,6 +64,40 @@ func AllCategoryScope() []string {
 	}
 }
 
+// Enum values for ContactSubject
+const (
+	ContactSubjectGeneral     string = "general"
+	ContactSubjectSupport     string = "support"
+	ContactSubjectPartnership string = "partnership"
+)
+
+func AllContactSubject() []string {
+	return []string{
+		ContactSubjectGeneral,
+		ContactSubjectSupport,
+		ContactSubjectPartnership,
+	}
+}
+
+// Enum values for ContactMessageStatus
+const (
+	ContactMessageStatusNew      string = "new"
+	ContactMessageStatusRead     string = "read"
+	ContactMessageStatusReplied  string = "replied"
+	ContactMessageStatusSpam     string = "spam"
+	ContactMessageStatusArchived string = "archived"
+)
+
+func AllContactMessageStatus() []string {
+	return []string{
+		ContactMessageStatusNew,
+		ContactMessageStatusRead,
+		ContactMessageStatusReplied,
+		ContactMessageStatusSpam,
+		ContactMessageStatusArchived,
+	}
+}
+
 // Enum values for MediaStatus
 const (
 	MediaStatusPending  string = "pending"
@@ -76,6 +110,27 @@ func AllMediaStatus() []string {
 		MediaStatusPending,
 		MediaStatusReady,
 		MediaStatusRejected,
+	}
+}
+
+// Enum values for ApplicationStatus
+const (
+	ApplicationStatusPending   string = "pending"
+	ApplicationStatusApproved  string = "approved"
+	ApplicationStatusRejected  string = "rejected"
+	ApplicationStatusWithdrawn string = "withdrawn"
+	ApplicationStatusAccepted  string = "accepted"
+	ApplicationStatusExpired   string = "expired"
+)
+
+func AllApplicationStatus() []string {
+	return []string{
+		ApplicationStatusPending,
+		ApplicationStatusApproved,
+		ApplicationStatusRejected,
+		ApplicationStatusWithdrawn,
+		ApplicationStatusAccepted,
+		ApplicationStatusExpired,
 	}
 }
 

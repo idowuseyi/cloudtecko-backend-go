@@ -1,0 +1,145 @@
+swagger: "2.0"
+info:
+  title: github.com/idowuseyi/cloudtecko-backend-go
+  version: 0.1.0
+paths: {}
+definitions:
+  PostContactMessagePayload:
+    type: object
+    required:
+      - name
+      - email
+      - subject
+      - message
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 200
+      email:
+        type: string
+        format: email
+        maxLength: 255
+      subject:
+        type: string
+        enum:
+          - general
+          - support
+          - partnership
+      message:
+        type: string
+        minLength: 1
+        maxLength: 5000
+  FAQ:
+    type: object
+    required:
+      - id
+      - question
+      - answer
+      - category
+    properties:
+      id:
+        type: string
+        format: uuid4
+      question:
+        type: string
+      answer:
+        type: string
+      category:
+        type: string
+  FAQList:
+    type: object
+    required:
+      - items
+    properties:
+      items:
+        type: array
+        items:
+          "$ref": "#/definitions/FAQ"
+  PostMembershipApplicationPayload:
+    type: object
+    required:
+      - email
+      - fullName
+    properties:
+      email:
+        type: string
+        format: email
+        maxLength: 255
+      fullName:
+        type: string
+        minLength: 1
+        maxLength: 200
+      motivation:
+        type: string
+        maxLength: 2000
+      organisation:
+        type: string
+        maxLength: 200
+  MembershipApplication:
+    type: object
+    required:
+      - id
+      - email
+      - fullName
+      - motivation
+      - status
+      - createdAt
+    properties:
+      id:
+        type: string
+        format: uuid4
+      email:
+        type: string
+        format: email
+      fullName:
+        type: string
+      motivation:
+        type: string
+      organisation:
+        type: string
+        x-nullable: true
+      status:
+        type: string
+        enum:
+          - pending
+          - approved
+          - rejected
+          - withdrawn
+          - accepted
+          - expired
+      reviewNote:
+        type: string
+        x-nullable: true
+      createdAt:
+        type: string
+        format: date-time
+  MembershipApplicationList:
+    type: object
+    required:
+      - items
+    properties:
+      items:
+        type: array
+        items:
+          "$ref": "#/definitions/MembershipApplication"
+  PostApplicationReviewPayload:
+    type: object
+    properties:
+      note:
+        type: string
+        maxLength: 1000
+  PostAcceptInvitationPayload:
+    description: |-
+      Accepts an invitation by choosing a password. The account is created HERE,
+      not at approval time, so an unaccepted invitation leaves no orphan account
+      and the link alone grants nothing.
+    type: object
+    required:
+      - password
+    properties:
+      password:
+        type: string
+        minLength: 15
+        maxLength: 512
+        example: a-sufficiently-long-passphrase

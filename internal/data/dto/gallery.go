@@ -323,3 +323,103 @@ func (m Media) ToTypes() *types.Media {
 		PublicURL:   m.PublicURL.Ptr(),
 	}
 }
+
+// --- Community --------------------------------------------------------------
+
+type ContactMessageRequest struct {
+	Name      string
+	Email     string
+	Subject   string
+	Message   string
+	SourceIP  string
+	UserAgent string
+}
+
+type FAQ struct {
+	ID       string
+	Question string
+	Answer   string
+	Category string
+}
+
+type FAQList []FAQ
+
+func (l FAQList) ToTypes() *types.FAQList {
+	items := make([]*types.FAQ, len(l))
+	for i := range l {
+		items[i] = &types.FAQ{
+			ID:       conv.Pointer(strfmt.UUID4(l[i].ID)),
+			Question: conv.Pointer(l[i].Question),
+			Answer:   conv.Pointer(l[i].Answer),
+			Category: conv.Pointer(l[i].Category),
+		}
+	}
+
+	return &types.FAQList{Items: items}
+}
+
+type MembershipApplicationRequest struct {
+	Email        string
+	FullName     string
+	Motivation   string
+	Organisation string
+}
+
+type MembershipApplication struct {
+	ID           string
+	Email        string
+	FullName     string
+	Motivation   string
+	Organisation null.String
+	Status       string
+	ReviewNote   null.String
+	CreatedAt    time.Time
+}
+
+func (a MembershipApplication) ToTypes() *types.MembershipApplication {
+	return &types.MembershipApplication{
+		ID:           conv.Pointer(strfmt.UUID4(a.ID)),
+		Email:        conv.Pointer(strfmt.Email(a.Email)),
+		FullName:     conv.Pointer(a.FullName),
+		Motivation:   conv.Pointer(a.Motivation),
+		Organisation: a.Organisation.Ptr(),
+		Status:       conv.Pointer(a.Status),
+		ReviewNote:   a.ReviewNote.Ptr(),
+		CreatedAt:    conv.Pointer(strfmt.DateTime(a.CreatedAt)),
+	}
+}
+
+type MembershipApplicationList []MembershipApplication
+
+func (l MembershipApplicationList) ToTypes() *types.MembershipApplicationList {
+	items := make([]*types.MembershipApplication, len(l))
+	for i := range l {
+		items[i] = l[i].ToTypes()
+	}
+
+	return &types.MembershipApplicationList{Items: items}
+}
+
+type ApproveMembershipRequest struct {
+	ApplicationID string
+	ReviewerID    string
+	Note          string
+}
+
+// ApproveMembershipResult carries the PLAINTEXT invitation token, which exists
+// only in memory on its way into the invitation email. Only its hash is stored.
+type ApproveMembershipResult struct {
+	Application     MembershipApplication
+	InvitationToken string
+}
+
+type AcceptMembershipRequest struct {
+	InvitationToken string
+	Password        string
+}
+
+// PurgeResult reports what the retention sweep removed.
+type PurgeResult struct {
+	ContactMessages        int64
+	MembershipApplications int64
+}

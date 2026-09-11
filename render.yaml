@@ -59,6 +59,12 @@ services:
       - key: SERVER_ECHO_CORS_ALLOW_ORIGINS
         sync: false
 
+      # Closes S-020: with confirmation off, /register answers a NEW address with
+      # a session and an EXISTING one without, which discloses whether an address
+      # has an account. Requiring confirmation collapses both to one response.
+      - key: SERVER_AUTH_REGISTRATION_REQUIRES_CONFIRMATION
+        value: "true"
+
       - key: SERVER_ECHO_BASE_URL
         sync: false
       - key: SERVER_FRONTEND_BASE_URL

@@ -268,18 +268,39 @@ func TestPostRegisterSuccessLowercaseTrimWhitespaces(t *testing.T) {
 }
 
 func TestPostRegisterAlreadyExists(t *testing.T) {
-	test.WithTestServer(t, func(s *api.Server) {
+	// S-020: registering an address that already has an account must not be
+	// distinguishable from registering a new one.
+	//
+	// Run with confirmation REQUIRED, because that is the only configuration in
+	// which the property can hold: with confirmation disabled a new registration
+	// is answered with a session, which an existing address cannot be given, and
+	// that difference is itself the oracle. router.Init warns about exactly this
+	// at startup, and TestPostRegisterDisclosesWhenConfirmationDisabled below
+	// pins the limitation so it cannot be forgotten.
+	config := config.DefaultServiceConfigFromEnv()
+	config.Auth.RegistrationRequiresConfirmation = true
+
+	test.WithTestServerConfigurable(t, config, func(s *api.Server) {
 		ctx := t.Context()
 
 		fix := fixtures.Fixtures()
-		payload := test.GenericPayload{
+
+		existing := test.PerformRequest(t, s, "POST", "/api/v1/auth/register", test.GenericPayload{
 			"username": fix.User1.Username,
 			"password": fixtures.PlainTestUserPassword,
-		}
+		}, nil)
+		require.Equal(t, http.StatusAccepted, existing.Result().StatusCode)
 
-		res := test.PerformRequest(t, s, "POST", "/api/v1/auth/register", payload, nil)
-		test.RequireHTTPError(t, res, httperrors.ErrConflictUserAlreadyExists)
+		fresh := test.PerformRequest(t, s, "POST", "/api/v1/auth/register", test.GenericPayload{
+			"username": "definitely-new-address@example.com",
+			"password": fixtures.PlainTestUserPassword,
+		}, nil)
+		require.Equal(t, http.StatusAccepted, fresh.Result().StatusCode)
 
+		assert.Equal(t, fresh.Body.String(), existing.Body.String(),
+			"the response for an existing address must be byte-identical to a new one")
+
+		// The existing account is untouched: no extra profile, no new tokens.
 		user, err := models.Users(
 			models.UserWhere.Username.EQ(fix.User1.Username),
 			qm.Load(models.UserRels.AppUserProfile),
@@ -292,6 +313,36 @@ func TestPostRegisterAlreadyExists(t *testing.T) {
 		assert.NotNil(t, user.R.AppUserProfile)
 		assert.Len(t, user.R.AccessTokens, 1)
 		assert.Len(t, user.R.RefreshTokens, 1)
+	})
+}
+
+// Pins the known limitation rather than leaving it implicit: with confirmation
+// disabled, /register DOES disclose, because a new address gets a session and an
+// existing one cannot. If this test ever starts failing, the oracle has been
+// closed in that configuration too and the caveat can be deleted -- including
+// the startup warning in router.Init.
+func TestPostRegisterDisclosesWhenConfirmationDisabled(t *testing.T) {
+	config := config.DefaultServiceConfigFromEnv()
+	config.Auth.RegistrationRequiresConfirmation = false
+
+	test.WithTestServerConfigurable(t, config, func(s *api.Server) {
+		fix := fixtures.Fixtures()
+
+		existing := test.PerformRequest(t, s, "POST", "/api/v1/auth/register", test.GenericPayload{
+			"username": fix.User1.Username,
+			"password": fixtures.PlainTestUserPassword,
+		}, nil)
+
+		fresh := test.PerformRequest(t, s, "POST", "/api/v1/auth/register", test.GenericPayload{
+			"username": "another-new-address@example.com",
+			"password": fixtures.PlainTestUserPassword,
+		}, nil)
+
+		assert.Equal(t, http.StatusAccepted, existing.Result().StatusCode)
+		assert.Equal(t, http.StatusOK, fresh.Result().StatusCode,
+			"a new registration is answered with a session when confirmation is off")
+		assert.NotEqual(t, existing.Result().StatusCode, fresh.Result().StatusCode,
+			"this difference IS the residual oracle; set SERVER_AUTH_REGISTRATION_REQUIRES_CONFIRMATION=true to close it")
 	})
 }
 

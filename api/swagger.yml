@@ -80,6 +80,124 @@ paths:
             responses:
                 "200":
                     description: Android Digital Asset Links
+    /api/v1/admin/applications:
+        get:
+            description: Lists membership applications for review.
+            tags:
+                - admin
+            summary: Lists membership applications
+            operationId: GetAdminApplicationsRoute
+            parameters:
+                - enum:
+                    - pending
+                    - approved
+                    - rejected
+                    - withdrawn
+                    - accepted
+                    - expired
+                  type: string
+                  name: status
+                  in: query
+            responses:
+                "200":
+                    description: The applications
+                    schema:
+                        $ref: '#/definitions/membershipApplicationList'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+    /api/v1/admin/applications/{id}/approve:
+        post:
+            description: |-
+                Approves an application and mints a single-use invitation.
+
+                No user account is created here. Only the HASH of the invitation token is
+                stored; the applicant becomes a user by accepting the invitation with a
+                password of their choosing.
+            tags:
+                - admin
+            summary: Approves a membership application
+            operationId: PostAdminApplicationApproveRoute
+            parameters:
+                - type: string
+                  format: uuid4
+                  name: id
+                  in: path
+                  required: true
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/postApplicationReviewPayload'
+            responses:
+                "200":
+                    description: The approved application
+                    schema:
+                        $ref: '#/definitions/membershipApplication'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError - no such application
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "409":
+                    description: PublicHTTPError - the application has already been reviewed
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+    /api/v1/admin/applications/{id}/reject:
+        post:
+            description: Rejects an application. No account is created or touched.
+            tags:
+                - admin
+            summary: Rejects a membership application
+            operationId: PostAdminApplicationRejectRoute
+            parameters:
+                - type: string
+                  format: uuid4
+                  name: id
+                  in: path
+                  required: true
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/postApplicationReviewPayload'
+            responses:
+                "200":
+                    description: The rejected application
+                    schema:
+                        $ref: '#/definitions/membershipApplication'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError - no such application
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "409":
+                    description: PublicHTTPError - the application has already been reviewed
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
     /api/v1/admin/categories:
         get:
             description: Lists every category across both scopes.
@@ -936,6 +1054,30 @@ paths:
                         $ref: '#/definitions/getUserInfoResponse'
             security:
                 - Bearer: []
+    /api/v1/contact-messages:
+        post:
+            description: |-
+                Submits the contact form.
+
+                Always returns 202, whether the message was stored or silently dropped by
+                the per-sender throttle. Reporting "you submitted too recently" would
+                confirm that an address has used the form.
+            tags:
+                - community
+            summary: Submits a contact message
+            operationId: PostContactMessageRoute
+            parameters:
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/postContactMessagePayload'
+            responses:
+                "202":
+                    description: Accepted
+                "400":
+                    description: PublicHTTPError - validation failed
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
     /api/v1/events:
         get:
             description: |-
@@ -1006,6 +1148,88 @@ paths:
                         $ref: '#/definitions/eventDetail'
                 "404":
                     description: PublicHTTPError, type `GENERIC`
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+    /api/v1/faqs:
+        get:
+            description: Lists published FAQs, optionally narrowed to one category.
+            tags:
+                - community
+            summary: Lists published FAQs
+            operationId: GetFAQsRoute
+            parameters:
+                - maxLength: 80
+                  type: string
+                  name: category
+                  in: query
+            responses:
+                "200":
+                    description: The FAQs
+                    schema:
+                        $ref: '#/definitions/fAQList'
+    /api/v1/membership/applications:
+        post:
+            description: |-
+                Applies to join the community.
+
+                Always returns 202 -- for a new application, a duplicate, and a previously
+                rejected address alike. The EMAIL that follows differs; the RESPONSE never
+                does. Anything else would turn this endpoint into a membership-list
+                oracle.
+            tags:
+                - community
+            summary: Applies to join the community
+            operationId: PostMembershipApplicationRoute
+            parameters:
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/postMembershipApplicationPayload'
+            responses:
+                "202":
+                    description: Accepted
+                "400":
+                    description: PublicHTTPError - validation failed
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+    /api/v1/membership/invitations/{token}/accept:
+        post:
+            description: |-
+                Accepts an invitation by choosing a password, creating the account and
+                returning a session.
+
+                A not-found, not-approved and expired invitation are reported
+                identically, so the endpoint cannot be used to discover which invitations
+                exist.
+            tags:
+                - community
+            summary: Accepts a membership invitation
+            operationId: PostAcceptInvitationRoute
+            parameters:
+                - type: string
+                  format: uuid4
+                  name: token
+                  in: path
+                  required: true
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/postAcceptInvitationPayload'
+            responses:
+                "200":
+                    description: The new session
+                    schema:
+                        $ref: '#/definitions/postLoginResponse'
+                "400":
+                    description: PublicHTTPError - the password does not meet the policy
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError - the invitation is not valid
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "409":
+                    description: PublicHTTPError - an account already exists for that address
                     schema:
                         $ref: '#/definitions/publicHttpError'
     /api/v1/push/token:
@@ -1228,6 +1452,32 @@ definitions:
             venueName:
                 type: string
                 x-nullable: true
+    fAQ:
+        type: object
+        required:
+            - id
+            - question
+            - answer
+            - category
+        properties:
+            answer:
+                type: string
+            category:
+                type: string
+            id:
+                type: string
+                format: uuid4
+            question:
+                type: string
+    fAQList:
+        type: object
+        required:
+            - items
+        properties:
+            items:
+                type: array
+                items:
+                    $ref: '#/definitions/fAQ'
     featurePayload:
         type: object
         required:
@@ -1401,11 +1651,78 @@ definitions:
             uploadUrl:
                 description: PUT the file bytes here. Treat as a short-lived secret.
                 type: string
+    membershipApplication:
+        type: object
+        required:
+            - id
+            - email
+            - fullName
+            - motivation
+            - status
+            - createdAt
+        properties:
+            createdAt:
+                type: string
+                format: date-time
+            email:
+                type: string
+                format: email
+            fullName:
+                type: string
+            id:
+                type: string
+                format: uuid4
+            motivation:
+                type: string
+            organisation:
+                type: string
+                x-nullable: true
+            reviewNote:
+                type: string
+                x-nullable: true
+            status:
+                type: string
+                enum:
+                    - pending
+                    - approved
+                    - rejected
+                    - withdrawn
+                    - accepted
+                    - expired
+    membershipApplicationList:
+        type: object
+        required:
+            - items
+        properties:
+            items:
+                type: array
+                items:
+                    $ref: '#/definitions/membershipApplication'
     orderDir:
         type: string
         enum:
             - asc
             - desc
+    postAcceptInvitationPayload:
+        description: |-
+            Accepts an invitation by choosing a password. The account is created HERE,
+            not at approval time, so an unaccepted invitation leaves no orphan account
+            and the link alone grants nothing.
+        type: object
+        required:
+            - password
+        properties:
+            password:
+                type: string
+                maxLength: 512
+                minLength: 15
+                example: a-sufficiently-long-passphrase
+    postApplicationReviewPayload:
+        type: object
+        properties:
+            note:
+                type: string
+                maxLength: 1000
     postCategoryPayload:
         type: object
         required:
@@ -1450,6 +1767,32 @@ definitions:
                 maxLength: 500
                 minLength: 15
                 example: correct horse battery staple
+    postContactMessagePayload:
+        type: object
+        required:
+            - name
+            - email
+            - subject
+            - message
+        properties:
+            email:
+                type: string
+                format: email
+                maxLength: 255
+            message:
+                type: string
+                maxLength: 5000
+                minLength: 1
+            name:
+                type: string
+                maxLength: 200
+                minLength: 1
+            subject:
+                type: string
+                enum:
+                    - general
+                    - support
+                    - partnership
     postEventPayload:
         description: |-
             Create or update an event. `slug` is absent deliberately: it is derived from
@@ -1616,6 +1959,26 @@ definitions:
                 maxLength: 255
                 minLength: 1
                 example: hero.jpg
+    postMembershipApplicationPayload:
+        type: object
+        required:
+            - email
+            - fullName
+        properties:
+            email:
+                type: string
+                format: email
+                maxLength: 255
+            fullName:
+                type: string
+                maxLength: 200
+                minLength: 1
+            motivation:
+                type: string
+                maxLength: 2000
+            organisation:
+                type: string
+                maxLength: 200
     postRefreshPayload:
         type: object
         required:

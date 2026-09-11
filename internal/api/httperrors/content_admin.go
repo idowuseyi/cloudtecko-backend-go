@@ -20,4 +20,11 @@ var (
 	// ErrBadRequestUnsupportedMediaType is returned for a DETECTED type outside
 	// the allow-list, not merely a declared one.
 	ErrBadRequestUnsupportedMediaType = NewHTTPError(http.StatusBadRequest, types.PublicHTTPErrorTypeGeneric, "That file type is not allowed.")
+
+	ErrNotFoundApplication           = NewHTTPError(http.StatusNotFound, types.PublicHTTPErrorTypeGeneric, "The application does not exist.")
+	ErrConflictApplicationNotPending = NewHTTPError(http.StatusConflict, types.PublicHTTPErrorTypeGeneric, "The application has already been reviewed.")
+
+	// ErrNotFoundInvitationInvalid covers not-found, not-approved and expired
+	// alike: distinguishing them would tell a caller which invitations exist.
+	ErrNotFoundInvitationInvalid = NewHTTPError(http.StatusNotFound, types.PublicHTTPErrorTypeGeneric, "That invitation is not valid.")
 )

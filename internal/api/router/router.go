@@ -26,6 +26,31 @@ import (
 	"net/http/pprof"
 )
 
+// sensitiveBodyPaths are request paths whose bodies must never reach the logs.
+//
+// /api/v1/auth carries credentials. The community endpoints carry a password on
+// invitation acceptance, and names, email addresses and free text everywhere
+// else -- personal data that would otherwise be copied verbatim into the log
+// aggregator whenever SERVER_LOGGER_LOG_REQUEST_BODY is on. The admin media and
+// commerce surfaces are listed for the same reason.
+var sensitiveBodyPaths = []string{
+	"/api/v1/auth",
+	"/api/v1/contact-messages",
+	"/api/v1/membership",
+	"/api/v1/admin/applications",
+	"/webhooks",
+}
+
+func hasSensitiveBody(path string) bool {
+	for _, prefix := range sensitiveBodyPaths {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func Init(s *api.Server) error {
 	s.Echo = echo.New()
 
@@ -123,16 +148,14 @@ func Init(s *api.Server) error {
 			LogResponseHeader: s.Config.Logger.LogResponseHeader,
 			LogCaller:         s.Config.Logger.LogCaller,
 			RequestBodyLogSkipper: func(req *http.Request) bool {
-				// We skip all body logging for auth endpoints as these might contain credentials
-				if strings.HasPrefix(req.URL.Path, "/api/v1/auth") {
+				if hasSensitiveBody(req.URL.Path) {
 					return true
 				}
 
 				return middleware.DefaultRequestBodyLogSkipper(req)
 			},
 			ResponseBodyLogSkipper: func(req *http.Request, res *echo.Response) bool {
-				// We skip all body logging for auth endpoints as these might contain credentials
-				if strings.HasPrefix(req.URL.Path, "/api/v1/auth") {
+				if hasSensitiveBody(req.URL.Path) {
 					return true
 				}
 
@@ -202,6 +225,10 @@ func Init(s *api.Server) error {
 	// directly, set a trusted-proxy IPExtractor or the header is spoofable.
 	authMiddlewares := []echo.MiddlewareFunc{}
 
+	if !s.Config.Auth.RegistrationRequiresConfirmation {
+		log.Warn().Msg("Registration does not require email confirmation: /api/v1/auth/register answers a NEW address with a session and an EXISTING one without, which discloses whether an address has an account (S-020). Set SERVER_AUTH_REGISTRATION_REQUIRES_CONFIRMATION=true to close it.")
+	}
+
 	if s.Config.Echo.EnableRateLimitMiddleware {
 		authMiddlewares = append(authMiddlewares, echoMiddleware.RateLimiterWithConfig(echoMiddleware.RateLimiterConfig{
 			Store: echoMiddleware.NewRateLimiterMemoryStoreWithConfig(echoMiddleware.RateLimiterMemoryStoreConfig{
@@ -262,6 +289,11 @@ func Init(s *api.Server) error {
 
 		// Public content, available at /api/v1/** with no authentication.
 		APIV1Content: s.Echo.Group("/api/v1"),
+
+		// Public writes at /api/v1/**: unauthenticated but rate-limited, and with
+		// request-body logging suppressed -- these payloads carry names, email
+		// addresses, free text and, on the invitation-accept route, a password.
+		APIV1Community: s.Echo.Group("/api/v1", authMiddlewares...),
 
 		// Admin surface at /api/v1/admin/**.
 		//

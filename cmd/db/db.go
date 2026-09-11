@@ -10,5 +10,6 @@ func New() *cobra.Command {
 		newMigrate(),
 		newSeed(),
 		newGrantScope(),
+		newPurgeExpired(),
 	)
 }

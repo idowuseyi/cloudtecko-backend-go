@@ -4,27 +4,33 @@
 package models
 
 var TableNames = struct {
-	AccessTokens        string
-	AppUserProfiles     string
-	Categories          string
-	ConfirmationTokens  string
-	Events              string
-	MediaAssets         string
-	PasswordResetTokens string
-	PushTokens          string
-	RefreshTokens       string
-	Resources           string
-	Users               string
+	AccessTokens           string
+	AppUserProfiles        string
+	Categories             string
+	ConfirmationTokens     string
+	ContactMessages        string
+	Events                 string
+	Faqs                   string
+	MediaAssets            string
+	MembershipApplications string
+	PasswordResetTokens    string
+	PushTokens             string
+	RefreshTokens          string
+	Resources              string
+	Users                  string
 }{
-	AccessTokens:        "access_tokens",
-	AppUserProfiles:     "app_user_profiles",
-	Categories:          "categories",
-	ConfirmationTokens:  "confirmation_tokens",
-	Events:              "events",
-	MediaAssets:         "media_assets",
-	PasswordResetTokens: "password_reset_tokens",
-	PushTokens:          "push_tokens",
-	RefreshTokens:       "refresh_tokens",
-	Resources:           "resources",
-	Users:               "users",
+	AccessTokens:           "access_tokens",
+	AppUserProfiles:        "app_user_profiles",
+	Categories:             "categories",
+	ConfirmationTokens:     "confirmation_tokens",
+	ContactMessages:        "contact_messages",
+	Events:                 "events",
+	Faqs:                   "faqs",
+	MediaAssets:            "media_assets",
+	MembershipApplications: "membership_applications",
+	PasswordResetTokens:    "password_reset_tokens",
+	PushTokens:             "push_tokens",
+	RefreshTokens:          "refresh_tokens",
+	Resources:              "resources",
+	Users:                  "users",
 }

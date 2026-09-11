@@ -31,6 +31,7 @@ var serviceSet = wire.NewSet(
 var authServiceSet = wire.NewSet(
 	NewAuthService,
 	wire.Bind(new(AuthService), new(*auth.Service)),
+	wire.Bind(new(MembershipService), new(*auth.Service)),
 )
 
 // InitNewServer returns a new Server instance.

@@ -37,7 +37,12 @@ type Router struct {
 	// APIV1Admin serves the authoring and operations surface. It requires the
 	// admin scope ALONE -- see the note at its construction in router.Init.
 	APIV1Admin *echo.Group
-	WellKnown  *echo.Group
+	// APIV1Community serves the public WRITE surface (contact form, waitlist,
+	// invitation acceptance). It is unauthenticated but rate-limited: these are
+	// the only endpoints where an anonymous caller creates rows and triggers
+	// email, which is both a spam vector and a cost.
+	APIV1Community *echo.Group
+	WellKnown      *echo.Group
 }
 
 // Server is a central struct keeping all the dependencies.
@@ -55,16 +60,22 @@ type Server struct {
 	Echo   *echo.Echo `wire:"-"`
 	Router *Router    `wire:"-"`
 
-	Config  config.Server
-	DB      *sql.DB
-	Mailer  *mailer.Mailer
-	Push    *push.Service
-	I18n    *i18n.Service
-	Clock   time2.Clock
-	Auth    AuthService
-	Local   *local.Service
-	Metrics *metrics.Service
-	Storage storage.Storage
+	Config config.Server
+	DB     *sql.DB
+	Mailer *mailer.Mailer
+	Push   *push.Service
+	I18n   *i18n.Service
+	Clock  time2.Clock
+	Auth   AuthService
+	// Membership is a separate seam from AuthService even though *auth.Service
+	// implements both. Turning an approved application into an account is a
+	// distinct responsibility from signing an existing user in, and folding it
+	// into AuthService pushed that interface past the point where a reader can
+	// hold it in their head.
+	Membership MembershipService
+	Local      *local.Service
+	Metrics    *metrics.Service
+	Storage    storage.Storage
 }
 
 // newServerWithComponents is used by wire to initialize the server components.
@@ -78,22 +89,30 @@ func newServerWithComponents(
 	i18n *i18n.Service,
 	clock time2.Clock,
 	auth AuthService,
+	membership MembershipService,
 	local *local.Service,
 	metrics *metrics.Service,
 	store storage.Storage,
 ) *Server {
 	return &Server{
-		Config:  cfg,
-		DB:      db,
-		Mailer:  mail,
-		Push:    pusher,
-		I18n:    i18n,
-		Clock:   clock,
-		Auth:    auth,
-		Local:   local,
-		Metrics: metrics,
-		Storage: store,
+		Config:     cfg,
+		DB:         db,
+		Mailer:     mail,
+		Push:       pusher,
+		I18n:       i18n,
+		Clock:      clock,
+		Auth:       auth,
+		Membership: membership,
+		Local:      local,
+		Metrics:    metrics,
+		Storage:    store,
 	}
+}
+
+// MembershipService turns reviewed waitlist applications into accounts.
+type MembershipService interface {
+	ApproveMembershipApplication(ctx context.Context, request dto.ApproveMembershipRequest) (dto.ApproveMembershipResult, error)
+	AcceptMembershipInvitation(ctx context.Context, request dto.AcceptMembershipRequest) (dto.LoginResult, error)
 }
 
 type AuthService interface {

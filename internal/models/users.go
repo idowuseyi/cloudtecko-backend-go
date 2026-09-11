@@ -144,32 +144,41 @@ var UserWhere = struct {
 
 // UserRels is where relationship names are stored.
 var UserRels = struct {
-	AppUserProfile            string
-	AccessTokens              string
-	ConfirmationTokens        string
-	UploadedByUserMediaAssets string
-	PasswordResetTokens       string
-	PushTokens                string
-	RefreshTokens             string
+	AppUserProfile                       string
+	AccessTokens                         string
+	ConfirmationTokens                   string
+	HandledByUserContactMessages         string
+	UploadedByUserMediaAssets            string
+	AcceptedUserMembershipApplications   string
+	ReviewedByUserMembershipApplications string
+	PasswordResetTokens                  string
+	PushTokens                           string
+	RefreshTokens                        string
 }{
-	AppUserProfile:            "AppUserProfile",
-	AccessTokens:              "AccessTokens",
-	ConfirmationTokens:        "ConfirmationTokens",
-	UploadedByUserMediaAssets: "UploadedByUserMediaAssets",
-	PasswordResetTokens:       "PasswordResetTokens",
-	PushTokens:                "PushTokens",
-	RefreshTokens:             "RefreshTokens",
+	AppUserProfile:                       "AppUserProfile",
+	AccessTokens:                         "AccessTokens",
+	ConfirmationTokens:                   "ConfirmationTokens",
+	HandledByUserContactMessages:         "HandledByUserContactMessages",
+	UploadedByUserMediaAssets:            "UploadedByUserMediaAssets",
+	AcceptedUserMembershipApplications:   "AcceptedUserMembershipApplications",
+	ReviewedByUserMembershipApplications: "ReviewedByUserMembershipApplications",
+	PasswordResetTokens:                  "PasswordResetTokens",
+	PushTokens:                           "PushTokens",
+	RefreshTokens:                        "RefreshTokens",
 }
 
 // userR is where relationships are stored.
 type userR struct {
-	AppUserProfile            *AppUserProfile         `boil:"AppUserProfile" json:"AppUserProfile" toml:"AppUserProfile" yaml:"AppUserProfile"`
-	AccessTokens              AccessTokenSlice        `boil:"AccessTokens" json:"AccessTokens" toml:"AccessTokens" yaml:"AccessTokens"`
-	ConfirmationTokens        ConfirmationTokenSlice  `boil:"ConfirmationTokens" json:"ConfirmationTokens" toml:"ConfirmationTokens" yaml:"ConfirmationTokens"`
-	UploadedByUserMediaAssets MediaAssetSlice         `boil:"UploadedByUserMediaAssets" json:"UploadedByUserMediaAssets" toml:"UploadedByUserMediaAssets" yaml:"UploadedByUserMediaAssets"`
-	PasswordResetTokens       PasswordResetTokenSlice `boil:"PasswordResetTokens" json:"PasswordResetTokens" toml:"PasswordResetTokens" yaml:"PasswordResetTokens"`
-	PushTokens                PushTokenSlice          `boil:"PushTokens" json:"PushTokens" toml:"PushTokens" yaml:"PushTokens"`
-	RefreshTokens             RefreshTokenSlice       `boil:"RefreshTokens" json:"RefreshTokens" toml:"RefreshTokens" yaml:"RefreshTokens"`
+	AppUserProfile                       *AppUserProfile            `boil:"AppUserProfile" json:"AppUserProfile" toml:"AppUserProfile" yaml:"AppUserProfile"`
+	AccessTokens                         AccessTokenSlice           `boil:"AccessTokens" json:"AccessTokens" toml:"AccessTokens" yaml:"AccessTokens"`
+	ConfirmationTokens                   ConfirmationTokenSlice     `boil:"ConfirmationTokens" json:"ConfirmationTokens" toml:"ConfirmationTokens" yaml:"ConfirmationTokens"`
+	HandledByUserContactMessages         ContactMessageSlice        `boil:"HandledByUserContactMessages" json:"HandledByUserContactMessages" toml:"HandledByUserContactMessages" yaml:"HandledByUserContactMessages"`
+	UploadedByUserMediaAssets            MediaAssetSlice            `boil:"UploadedByUserMediaAssets" json:"UploadedByUserMediaAssets" toml:"UploadedByUserMediaAssets" yaml:"UploadedByUserMediaAssets"`
+	AcceptedUserMembershipApplications   MembershipApplicationSlice `boil:"AcceptedUserMembershipApplications" json:"AcceptedUserMembershipApplications" toml:"AcceptedUserMembershipApplications" yaml:"AcceptedUserMembershipApplications"`
+	ReviewedByUserMembershipApplications MembershipApplicationSlice `boil:"ReviewedByUserMembershipApplications" json:"ReviewedByUserMembershipApplications" toml:"ReviewedByUserMembershipApplications" yaml:"ReviewedByUserMembershipApplications"`
+	PasswordResetTokens                  PasswordResetTokenSlice    `boil:"PasswordResetTokens" json:"PasswordResetTokens" toml:"PasswordResetTokens" yaml:"PasswordResetTokens"`
+	PushTokens                           PushTokenSlice             `boil:"PushTokens" json:"PushTokens" toml:"PushTokens" yaml:"PushTokens"`
+	RefreshTokens                        RefreshTokenSlice          `boil:"RefreshTokens" json:"RefreshTokens" toml:"RefreshTokens" yaml:"RefreshTokens"`
 }
 
 // NewStruct creates a new relationship struct
@@ -225,6 +234,22 @@ func (r *userR) GetConfirmationTokens() ConfirmationTokenSlice {
 	return r.ConfirmationTokens
 }
 
+func (o *User) GetHandledByUserContactMessages() ContactMessageSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetHandledByUserContactMessages()
+}
+
+func (r *userR) GetHandledByUserContactMessages() ContactMessageSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.HandledByUserContactMessages
+}
+
 func (o *User) GetUploadedByUserMediaAssets() MediaAssetSlice {
 	if o == nil {
 		return nil
@@ -239,6 +264,38 @@ func (r *userR) GetUploadedByUserMediaAssets() MediaAssetSlice {
 	}
 
 	return r.UploadedByUserMediaAssets
+}
+
+func (o *User) GetAcceptedUserMembershipApplications() MembershipApplicationSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetAcceptedUserMembershipApplications()
+}
+
+func (r *userR) GetAcceptedUserMembershipApplications() MembershipApplicationSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.AcceptedUserMembershipApplications
+}
+
+func (o *User) GetReviewedByUserMembershipApplications() MembershipApplicationSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetReviewedByUserMembershipApplications()
+}
+
+func (r *userR) GetReviewedByUserMembershipApplications() MembershipApplicationSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.ReviewedByUserMembershipApplications
 }
 
 func (o *User) GetPasswordResetTokens() PasswordResetTokenSlice {
@@ -430,6 +487,20 @@ func (o *User) ConfirmationTokens(mods ...qm.QueryMod) confirmationTokenQuery {
 	return ConfirmationTokens(queryMods...)
 }
 
+// HandledByUserContactMessages retrieves all the contact_message's ContactMessages with an executor via handled_by_user_id column.
+func (o *User) HandledByUserContactMessages(mods ...qm.QueryMod) contactMessageQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"contact_messages\".\"handled_by_user_id\"=?", o.ID),
+	)
+
+	return ContactMessages(queryMods...)
+}
+
 // UploadedByUserMediaAssets retrieves all the media_asset's MediaAssets with an executor via uploaded_by_user_id column.
 func (o *User) UploadedByUserMediaAssets(mods ...qm.QueryMod) mediaAssetQuery {
 	var queryMods []qm.QueryMod
@@ -442,6 +513,34 @@ func (o *User) UploadedByUserMediaAssets(mods ...qm.QueryMod) mediaAssetQuery {
 	)
 
 	return MediaAssets(queryMods...)
+}
+
+// AcceptedUserMembershipApplications retrieves all the membership_application's MembershipApplications with an executor via accepted_user_id column.
+func (o *User) AcceptedUserMembershipApplications(mods ...qm.QueryMod) membershipApplicationQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"membership_applications\".\"accepted_user_id\"=?", o.ID),
+	)
+
+	return MembershipApplications(queryMods...)
+}
+
+// ReviewedByUserMembershipApplications retrieves all the membership_application's MembershipApplications with an executor via reviewed_by_user_id column.
+func (o *User) ReviewedByUserMembershipApplications(mods ...qm.QueryMod) membershipApplicationQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"membership_applications\".\"reviewed_by_user_id\"=?", o.ID),
+	)
+
+	return MembershipApplications(queryMods...)
 }
 
 // PasswordResetTokens retrieves all the password_reset_token's PasswordResetTokens with an executor.
@@ -807,6 +906,112 @@ func (userL) LoadConfirmationTokens(ctx context.Context, e boil.ContextExecutor,
 	return nil
 }
 
+// LoadHandledByUserContactMessages allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (userL) LoadHandledByUserContactMessages(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
+	var slice []*User
+	var object *User
+
+	if singular {
+		var ok bool
+		object, ok = maybeUser.(*User)
+		if !ok {
+			object = new(User)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUser))
+			}
+		}
+	} else {
+		s, ok := maybeUser.(*[]*User)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUser))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &userR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &userR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`contact_messages`),
+		qm.WhereIn(`contact_messages.handled_by_user_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load contact_messages")
+	}
+
+	var resultSlice []*ContactMessage
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice contact_messages")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on contact_messages")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for contact_messages")
+	}
+
+	if singular {
+		object.R.HandledByUserContactMessages = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &contactMessageR{}
+			}
+			foreign.R.HandledByUser = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if queries.Equal(local.ID, foreign.HandledByUserID) {
+				local.R.HandledByUserContactMessages = append(local.R.HandledByUserContactMessages, foreign)
+				if foreign.R == nil {
+					foreign.R = &contactMessageR{}
+				}
+				foreign.R.HandledByUser = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
 // LoadUploadedByUserMediaAssets allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
 func (userL) LoadUploadedByUserMediaAssets(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
@@ -905,6 +1110,218 @@ func (userL) LoadUploadedByUserMediaAssets(ctx context.Context, e boil.ContextEx
 					foreign.R = &mediaAssetR{}
 				}
 				foreign.R.UploadedByUser = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadAcceptedUserMembershipApplications allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (userL) LoadAcceptedUserMembershipApplications(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
+	var slice []*User
+	var object *User
+
+	if singular {
+		var ok bool
+		object, ok = maybeUser.(*User)
+		if !ok {
+			object = new(User)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUser))
+			}
+		}
+	} else {
+		s, ok := maybeUser.(*[]*User)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUser))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &userR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &userR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`membership_applications`),
+		qm.WhereIn(`membership_applications.accepted_user_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load membership_applications")
+	}
+
+	var resultSlice []*MembershipApplication
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice membership_applications")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on membership_applications")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for membership_applications")
+	}
+
+	if singular {
+		object.R.AcceptedUserMembershipApplications = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &membershipApplicationR{}
+			}
+			foreign.R.AcceptedUser = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if queries.Equal(local.ID, foreign.AcceptedUserID) {
+				local.R.AcceptedUserMembershipApplications = append(local.R.AcceptedUserMembershipApplications, foreign)
+				if foreign.R == nil {
+					foreign.R = &membershipApplicationR{}
+				}
+				foreign.R.AcceptedUser = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadReviewedByUserMembershipApplications allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (userL) LoadReviewedByUserMembershipApplications(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
+	var slice []*User
+	var object *User
+
+	if singular {
+		var ok bool
+		object, ok = maybeUser.(*User)
+		if !ok {
+			object = new(User)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUser))
+			}
+		}
+	} else {
+		s, ok := maybeUser.(*[]*User)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUser))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &userR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &userR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`membership_applications`),
+		qm.WhereIn(`membership_applications.reviewed_by_user_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load membership_applications")
+	}
+
+	var resultSlice []*MembershipApplication
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice membership_applications")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on membership_applications")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for membership_applications")
+	}
+
+	if singular {
+		object.R.ReviewedByUserMembershipApplications = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &membershipApplicationR{}
+			}
+			foreign.R.ReviewedByUser = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if queries.Equal(local.ID, foreign.ReviewedByUserID) {
+				local.R.ReviewedByUserMembershipApplications = append(local.R.ReviewedByUserMembershipApplications, foreign)
+				if foreign.R == nil {
+					foreign.R = &membershipApplicationR{}
+				}
+				foreign.R.ReviewedByUser = local
 				break
 			}
 		}
@@ -1387,6 +1804,133 @@ func (o *User) AddConfirmationTokens(ctx context.Context, exec boil.ContextExecu
 	return nil
 }
 
+// AddHandledByUserContactMessages adds the given related objects to the existing relationships
+// of the user, optionally inserting them as new records.
+// Appends related to o.R.HandledByUserContactMessages.
+// Sets related.R.HandledByUser appropriately.
+func (o *User) AddHandledByUserContactMessages(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*ContactMessage) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			queries.Assign(&rel.HandledByUserID, o.ID)
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"contact_messages\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"handled_by_user_id"}),
+				strmangle.WhereClause("\"", "\"", 2, contactMessagePrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			queries.Assign(&rel.HandledByUserID, o.ID)
+		}
+	}
+
+	if o.R == nil {
+		o.R = &userR{
+			HandledByUserContactMessages: related,
+		}
+	} else {
+		o.R.HandledByUserContactMessages = append(o.R.HandledByUserContactMessages, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &contactMessageR{
+				HandledByUser: o,
+			}
+		} else {
+			rel.R.HandledByUser = o
+		}
+	}
+	return nil
+}
+
+// SetHandledByUserContactMessages removes all previously related items of the
+// user replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.HandledByUser's HandledByUserContactMessages accordingly.
+// Replaces o.R.HandledByUserContactMessages with related.
+// Sets related.R.HandledByUser's HandledByUserContactMessages accordingly.
+func (o *User) SetHandledByUserContactMessages(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*ContactMessage) error {
+	query := "update \"contact_messages\" set \"handled_by_user_id\" = null where \"handled_by_user_id\" = $1"
+	values := []interface{}{o.ID}
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, query)
+		fmt.Fprintln(writer, values)
+	}
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+
+	if o.R != nil {
+		for _, rel := range o.R.HandledByUserContactMessages {
+			queries.SetScanner(&rel.HandledByUserID, nil)
+			if rel.R == nil {
+				continue
+			}
+
+			rel.R.HandledByUser = nil
+		}
+		o.R.HandledByUserContactMessages = nil
+	}
+
+	return o.AddHandledByUserContactMessages(ctx, exec, insert, related...)
+}
+
+// RemoveHandledByUserContactMessages relationships from objects passed in.
+// Removes related items from R.HandledByUserContactMessages (uses pointer comparison, removal does not keep order)
+// Sets related.R.HandledByUser.
+func (o *User) RemoveHandledByUserContactMessages(ctx context.Context, exec boil.ContextExecutor, related ...*ContactMessage) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	for _, rel := range related {
+		queries.SetScanner(&rel.HandledByUserID, nil)
+		if rel.R != nil {
+			rel.R.HandledByUser = nil
+		}
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("handled_by_user_id")); err != nil {
+			return err
+		}
+	}
+	if o.R == nil {
+		return nil
+	}
+
+	for _, rel := range related {
+		for i, ri := range o.R.HandledByUserContactMessages {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.HandledByUserContactMessages)
+			if ln > 1 && i < ln-1 {
+				o.R.HandledByUserContactMessages[i] = o.R.HandledByUserContactMessages[ln-1]
+			}
+			o.R.HandledByUserContactMessages = o.R.HandledByUserContactMessages[:ln-1]
+			break
+		}
+	}
+
+	return nil
+}
+
 // AddUploadedByUserMediaAssets adds the given related objects to the existing relationships
 // of the user, optionally inserting them as new records.
 // Appends related to o.R.UploadedByUserMediaAssets.
@@ -1507,6 +2051,260 @@ func (o *User) RemoveUploadedByUserMediaAssets(ctx context.Context, exec boil.Co
 				o.R.UploadedByUserMediaAssets[i] = o.R.UploadedByUserMediaAssets[ln-1]
 			}
 			o.R.UploadedByUserMediaAssets = o.R.UploadedByUserMediaAssets[:ln-1]
+			break
+		}
+	}
+
+	return nil
+}
+
+// AddAcceptedUserMembershipApplications adds the given related objects to the existing relationships
+// of the user, optionally inserting them as new records.
+// Appends related to o.R.AcceptedUserMembershipApplications.
+// Sets related.R.AcceptedUser appropriately.
+func (o *User) AddAcceptedUserMembershipApplications(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*MembershipApplication) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			queries.Assign(&rel.AcceptedUserID, o.ID)
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"membership_applications\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"accepted_user_id"}),
+				strmangle.WhereClause("\"", "\"", 2, membershipApplicationPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			queries.Assign(&rel.AcceptedUserID, o.ID)
+		}
+	}
+
+	if o.R == nil {
+		o.R = &userR{
+			AcceptedUserMembershipApplications: related,
+		}
+	} else {
+		o.R.AcceptedUserMembershipApplications = append(o.R.AcceptedUserMembershipApplications, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &membershipApplicationR{
+				AcceptedUser: o,
+			}
+		} else {
+			rel.R.AcceptedUser = o
+		}
+	}
+	return nil
+}
+
+// SetAcceptedUserMembershipApplications removes all previously related items of the
+// user replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.AcceptedUser's AcceptedUserMembershipApplications accordingly.
+// Replaces o.R.AcceptedUserMembershipApplications with related.
+// Sets related.R.AcceptedUser's AcceptedUserMembershipApplications accordingly.
+func (o *User) SetAcceptedUserMembershipApplications(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*MembershipApplication) error {
+	query := "update \"membership_applications\" set \"accepted_user_id\" = null where \"accepted_user_id\" = $1"
+	values := []interface{}{o.ID}
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, query)
+		fmt.Fprintln(writer, values)
+	}
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+
+	if o.R != nil {
+		for _, rel := range o.R.AcceptedUserMembershipApplications {
+			queries.SetScanner(&rel.AcceptedUserID, nil)
+			if rel.R == nil {
+				continue
+			}
+
+			rel.R.AcceptedUser = nil
+		}
+		o.R.AcceptedUserMembershipApplications = nil
+	}
+
+	return o.AddAcceptedUserMembershipApplications(ctx, exec, insert, related...)
+}
+
+// RemoveAcceptedUserMembershipApplications relationships from objects passed in.
+// Removes related items from R.AcceptedUserMembershipApplications (uses pointer comparison, removal does not keep order)
+// Sets related.R.AcceptedUser.
+func (o *User) RemoveAcceptedUserMembershipApplications(ctx context.Context, exec boil.ContextExecutor, related ...*MembershipApplication) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	for _, rel := range related {
+		queries.SetScanner(&rel.AcceptedUserID, nil)
+		if rel.R != nil {
+			rel.R.AcceptedUser = nil
+		}
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("accepted_user_id")); err != nil {
+			return err
+		}
+	}
+	if o.R == nil {
+		return nil
+	}
+
+	for _, rel := range related {
+		for i, ri := range o.R.AcceptedUserMembershipApplications {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.AcceptedUserMembershipApplications)
+			if ln > 1 && i < ln-1 {
+				o.R.AcceptedUserMembershipApplications[i] = o.R.AcceptedUserMembershipApplications[ln-1]
+			}
+			o.R.AcceptedUserMembershipApplications = o.R.AcceptedUserMembershipApplications[:ln-1]
+			break
+		}
+	}
+
+	return nil
+}
+
+// AddReviewedByUserMembershipApplications adds the given related objects to the existing relationships
+// of the user, optionally inserting them as new records.
+// Appends related to o.R.ReviewedByUserMembershipApplications.
+// Sets related.R.ReviewedByUser appropriately.
+func (o *User) AddReviewedByUserMembershipApplications(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*MembershipApplication) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			queries.Assign(&rel.ReviewedByUserID, o.ID)
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"membership_applications\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"reviewed_by_user_id"}),
+				strmangle.WhereClause("\"", "\"", 2, membershipApplicationPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			queries.Assign(&rel.ReviewedByUserID, o.ID)
+		}
+	}
+
+	if o.R == nil {
+		o.R = &userR{
+			ReviewedByUserMembershipApplications: related,
+		}
+	} else {
+		o.R.ReviewedByUserMembershipApplications = append(o.R.ReviewedByUserMembershipApplications, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &membershipApplicationR{
+				ReviewedByUser: o,
+			}
+		} else {
+			rel.R.ReviewedByUser = o
+		}
+	}
+	return nil
+}
+
+// SetReviewedByUserMembershipApplications removes all previously related items of the
+// user replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.ReviewedByUser's ReviewedByUserMembershipApplications accordingly.
+// Replaces o.R.ReviewedByUserMembershipApplications with related.
+// Sets related.R.ReviewedByUser's ReviewedByUserMembershipApplications accordingly.
+func (o *User) SetReviewedByUserMembershipApplications(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*MembershipApplication) error {
+	query := "update \"membership_applications\" set \"reviewed_by_user_id\" = null where \"reviewed_by_user_id\" = $1"
+	values := []interface{}{o.ID}
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, query)
+		fmt.Fprintln(writer, values)
+	}
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+
+	if o.R != nil {
+		for _, rel := range o.R.ReviewedByUserMembershipApplications {
+			queries.SetScanner(&rel.ReviewedByUserID, nil)
+			if rel.R == nil {
+				continue
+			}
+
+			rel.R.ReviewedByUser = nil
+		}
+		o.R.ReviewedByUserMembershipApplications = nil
+	}
+
+	return o.AddReviewedByUserMembershipApplications(ctx, exec, insert, related...)
+}
+
+// RemoveReviewedByUserMembershipApplications relationships from objects passed in.
+// Removes related items from R.ReviewedByUserMembershipApplications (uses pointer comparison, removal does not keep order)
+// Sets related.R.ReviewedByUser.
+func (o *User) RemoveReviewedByUserMembershipApplications(ctx context.Context, exec boil.ContextExecutor, related ...*MembershipApplication) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	for _, rel := range related {
+		queries.SetScanner(&rel.ReviewedByUserID, nil)
+		if rel.R != nil {
+			rel.R.ReviewedByUser = nil
+		}
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("reviewed_by_user_id")); err != nil {
+			return err
+		}
+	}
+	if o.R == nil {
+		return nil
+	}
+
+	for _, rel := range related {
+		for i, ri := range o.R.ReviewedByUserMembershipApplications {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.ReviewedByUserMembershipApplications)
+			if ln > 1 && i < ln-1 {
+				o.R.ReviewedByUserMembershipApplications[i] = o.R.ReviewedByUserMembershipApplications[ln-1]
+			}
+			o.R.ReviewedByUserMembershipApplications = o.R.ReviewedByUserMembershipApplications[:ln-1]
 			break
 		}
 	}

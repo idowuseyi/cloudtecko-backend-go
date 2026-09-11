@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <body style="font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; line-height: 1.6; color: #1a1a1a;">
+    <p>Hi {{ .fullName }},</p>
+
+    <p>
+      Your application to join the Cloudadore community has been approved.
+      Follow the link below to choose a password and activate your account.
+    </p>
+
+    <p>
+      <a href="{{ .invitationLink }}"
+         style="display: inline-block; background: #08568A; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
+        Accept your invitation
+      </a>
+    </p>
+
+    <p style="color: #555; font-size: 14px;">
+      This link can be used once and expires on {{ .expiresAt }}. If it has
+      expired, apply again and we will send a fresh invitation.
+    </p>
+
+    <p style="color: #555; font-size: 14px;">
+      If you did not apply to join Cloudadore, you can ignore this email — no
+      account has been created, and none will be unless this link is used.
+    </p>
+
+    <p>— The Cloudadore team</p>
+  </body>
+</html>

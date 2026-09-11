@@ -758,8 +758,23 @@ func (s *Service) resendConfirmation(ctx context.Context, user *models.User) (dt
 	log := util.LogFromContext(ctx).With().Str("username", user.Username.String).Logger()
 
 	if !user.RequiresConfirmation {
-		log.Debug().Msg("User with given username already exists")
-		return dto.RegisterResult{}, httperrors.ErrConflictUserAlreadyExists
+		// S-020: returning a 409 here made /register an account-enumeration
+		// oracle -- anyone could test whether an address had signed up. The
+		// response is now the same one a brand-new registration produces, and the
+		// difference is delivered by email to the MAILBOX OWNER instead of to the
+		// person making the request.
+		//
+		// Caveat worth knowing: this only fully closes the oracle when
+		// RegistrationRequiresConfirmation is true. With confirmation disabled a
+		// genuinely new registration is answered with a session, which an existing
+		// address cannot be given, and that difference is itself the signal. The
+		// server logs a warning at startup in that configuration.
+		log.Debug().Msg("Registration attempted for an address that already has an account")
+
+		return dto.RegisterResult{
+			RequiresConfirmation: true,
+			AccountAlreadyExists: true,
+		}, nil
 	}
 
 	confirmationTokenInDebounceTimeExists, err := user.ConfirmationTokens(
