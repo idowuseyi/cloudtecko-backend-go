@@ -59,6 +59,8 @@ func (o *SwaggerSpec) initHandlerCache() {
 	o.Handlers["POST"]["/api/v1/admin/events/{id}/feature"] = true
 	o.Handlers["POST"]["/api/v1/admin/events/{id}/publish"] = true
 	o.Handlers["POST"]["/api/v1/admin/events"] = true
+	o.Handlers["POST"]["/api/v1/admin/media/{id}/complete"] = true
+	o.Handlers["POST"]["/api/v1/admin/media/presign"] = true
 	o.Handlers["POST"]["/api/v1/admin/resources/{id}/archive"] = true
 	o.Handlers["POST"]["/api/v1/admin/resources/{id}/publish"] = true
 	o.Handlers["POST"]["/api/v1/admin/resources"] = true

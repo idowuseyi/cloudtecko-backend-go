@@ -19,6 +19,7 @@ import (
 var serviceSet = wire.NewSet(
 	newServerWithComponents,
 	NewPush,
+	NewStorage,
 	NewMailer,
 	NewI18N,
 	authServiceSet,

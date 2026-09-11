@@ -37,6 +37,19 @@ container: `make build` green (0 lint issues) and 23/23 test packages passing.
 | `internal/test/fixtures/fixtures.go` | 12 content fixtures, in FK order |
 | `internal/data/fixtures/fixtures.go` | 19 seed rows mirroring the frontend's hardcoded arrays |
 
+**Phase 2 — admin authoring and media**
+
+| File | Change |
+|---|---|
+| `internal/api/handlers/admin/*.go` | 16 handlers (14 content + 2 media) + 3 test files |
+| `internal/data/local/service_content_admin*.go` | event/resource/category write services |
+| `internal/data/local/service_media.go` | presign, verify-on-complete, reject-and-delete |
+| `internal/storage/` | `Storage` interface + `s3/` (minio-go) + `mock/` |
+| `internal/util/slug/` | slug derivation, reserved words, collision suffixes |
+| `internal/util/db/errors.go` | SQLSTATE classification (unique / FK / restrict / check) |
+| `internal/config/server_config.go` | `Storage` config section |
+| `internal/api/{server,providers,wire}.go` | storage wired through DI |
+
 ## Key Decisions
 
 **A nil-dereference panic in generated code was fixed at the template, not the call site.**
@@ -72,6 +85,19 @@ the second featured row is refused with 23505.
 Ticketing arrives in Phase 6; until then callers pass 0/0, which reads Open — correct for an
 event that does not sell tickets. A test asserts resources carry no status at all.
 
+**Media verification happens after the upload, because nothing else can.**
+A presigned PUT signs method, bucket, key and expiry -- it cannot bind Content-Type or size,
+and the client chooses the bytes. So `PresignPut` deliberately takes **no** contentType
+parameter: accepting one would promise an enforcement no S3-compatible store can provide and
+invite callers to skip the checks that do work. Completion HEADs the object for its true size,
+sniffs the leading 3KB for its true type, rejects anything outside the allow-list, deletes the
+offending object, and only then promotes quarantine -> public. SVG is excluded outright: it
+genuinely *is* `image/svg+xml`, so no MIME check can catch it.
+
+**`ON DELETE RESTRICT` raises SQLSTATE 23001, not 23503.** Two distinct codes with identical
+messages, so matching on message text would have hidden it permanently. `IsForeignKeyViolation`
+covers both, with a test pinning the distinction.
+
 ## Deviations from Design
 
 1. **`internal/data/local/service_push.go` was not a bug.** `01-brief.md`, `02-plan.md` and
@@ -86,7 +112,14 @@ event that does not sell tickets. A test asserts resources carry no status at al
 3. **`api/templates/server/parameter.gotmpl` was modified.** Not anticipated by the design; see
    Key Decisions.
 4. **Generated model tests removed.** Not anticipated; see Key Decisions.
-5. **`render.yaml` needed no change** — `SERVER_ECHO_CORS_ALLOW_ORIGINS` already exists as a
+5. **`Storage.GetRange` was cut** in the design review and replaced by `Get` returning a
+   reader, which the caller wraps in `io.LimitReader` for sniffing -- one method instead of two.
+6. **A new dependency was added: `minio-go v7.3.0`.** Hand-rolling AWS SigV4 request signing is
+   security-sensitive code that should not be written by hand, which outweighed the ~7
+   transitive modules it brings. Its MVS resolution also bumped several unrelated shared
+   dependencies (cobra, BurntSushi/toml, afero, fatih/color); `go mod tidy` alone produces no
+   such bumps, so they are genuinely minio's, not pre-existing drift.
+7. **`render.yaml` needed no change** — `SERVER_ECHO_CORS_ALLOW_ORIGINS` already exists as a
    prompted variable. It must still be **set at deploy time**: empty leaves CORS off entirely
    with no wildcard fallback, and the frontend then receives nothing.
 

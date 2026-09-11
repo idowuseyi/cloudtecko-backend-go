@@ -24,6 +24,8 @@ func AttachAllRoutes(s *api.Server) {
 		admin.PostAdminEventFeatureRoute(s),
 		admin.PostAdminEventPublishRoute(s),
 		admin.PostAdminEventRoute(s),
+		admin.PostAdminMediaCompleteRoute(s),
+		admin.PostAdminMediaPresignRoute(s),
 		admin.PostAdminResourceArchiveRoute(s),
 		admin.PostAdminResourcePublishRoute(s),
 		admin.PostAdminResourceRoute(s),

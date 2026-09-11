@@ -15,6 +15,7 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/mailer"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/metrics"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/push"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/storage"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
@@ -63,6 +64,7 @@ type Server struct {
 	Auth    AuthService
 	Local   *local.Service
 	Metrics *metrics.Service
+	Storage storage.Storage
 }
 
 // newServerWithComponents is used by wire to initialize the server components.
@@ -78,6 +80,7 @@ func newServerWithComponents(
 	auth AuthService,
 	local *local.Service,
 	metrics *metrics.Service,
+	store storage.Storage,
 ) *Server {
 	return &Server{
 		Config:  cfg,
@@ -89,6 +92,7 @@ func newServerWithComponents(
 		Auth:    auth,
 		Local:   local,
 		Metrics: metrics,
+		Storage: store,
 	}
 }
 

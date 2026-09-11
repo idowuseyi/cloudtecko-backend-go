@@ -503,3 +503,80 @@ paths:
           description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
           schema:
             "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+  /api/v1/admin/media/presign:
+    post:
+      security:
+        - Bearer: []
+      description: |-
+        Reserves a media asset and returns a short-lived URL to PUT the bytes to.
+        The object lands in a quarantine prefix and is NOT public until completion
+        verifies it.
+      tags:
+        - admin
+      summary: Requests a presigned upload URL
+      operationId: PostAdminMediaPresignRoute
+      parameters:
+        - name: Payload
+          in: body
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/PostMediaPresignPayload"
+      responses:
+        "201":
+          description: The upload capability
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/MediaPresignResponse"
+        "400":
+          description: PublicHTTPError - the declared type or size is not allowed
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "401":
+          description: PublicHTTPError - not authenticated
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "403":
+          description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+  /api/v1/admin/media/{id}/complete:
+    post:
+      security:
+        - Bearer: []
+      description: |-
+        Verifies an uploaded object and promotes it.
+
+        The server reads the object's TRUE size and sniffs its leading bytes to
+        determine the real content type, then promotes it from quarantine to the
+        public prefix. An object whose real type is outside the allow-list is
+        rejected and deleted, whatever it declared or however it was named.
+        Completing twice is safe and returns the asset as it stands.
+      tags:
+        - admin
+      summary: Verifies and publishes an uploaded file
+      operationId: PostAdminMediaCompleteRoute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid4
+      responses:
+        "200":
+          description: The verified asset
+          schema:
+            "$ref": "../definitions/content.yml#/definitions/Media"
+        "400":
+          description: PublicHTTPError - nothing was uploaded, it is too large, or its real type is not allowed
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "404":
+          description: PublicHTTPError - no such media asset
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "401":
+          description: PublicHTTPError - not authenticated
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "403":
+          description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"

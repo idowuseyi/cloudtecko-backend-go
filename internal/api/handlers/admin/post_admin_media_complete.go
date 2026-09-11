@@ -1,0 +1,32 @@
+package admin
+
+import (
+	"net/http"
+
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/types/admin"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
+	"github.com/labstack/echo/v4"
+)
+
+func PostAdminMediaCompleteRoute(s *api.Server) *echo.Route {
+	return s.Router.APIV1Admin.POST("/media/:id/complete", postAdminMediaCompleteHandler(s))
+}
+
+func postAdminMediaCompleteHandler(s *api.Server) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.Request().Context()
+
+		params := admin.NewPostAdminMediaCompleteRouteParams()
+		if err := util.BindAndValidatePathAndQueryParams(c, &params); err != nil {
+			return err
+		}
+
+		result, err := s.Local.CompleteMediaUpload(ctx, params.ID.String())
+		if err != nil {
+			return err
+		}
+
+		return util.ValidateAndReturn(c, http.StatusOK, result.ToTypes())
+	}
+}

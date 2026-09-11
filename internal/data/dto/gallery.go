@@ -275,3 +275,51 @@ func (l CategoryList) ToTypes() *types.CategoryList {
 
 	return &types.CategoryList{Items: items}
 }
+
+// --- Media ------------------------------------------------------------------
+
+// MediaPresignRequest is what an admin declares BEFORE uploading. Every field is
+// a claim: a presigned PUT cannot constrain the bytes the client actually sends,
+// so these are used for an early courtesy rejection and for reporting promised
+// versus actual at completion -- never as the security control.
+type MediaPresignRequest struct {
+	Filename         string
+	ContentType      string
+	ByteSize         int64
+	UploadedByUserID string
+}
+
+// MediaPresign is the upload capability handed back to the client.
+type MediaPresign struct {
+	ID        string
+	UploadURL string
+	ObjectKey string
+	ExpiresAt time.Time
+}
+
+func (m MediaPresign) ToTypes() *types.MediaPresignResponse {
+	return &types.MediaPresignResponse{
+		ID:        conv.Pointer(strfmt.UUID4(m.ID)),
+		UploadURL: conv.Pointer(m.UploadURL),
+		ExpiresAt: conv.Pointer(strfmt.DateTime(m.ExpiresAt)),
+	}
+}
+
+// Media is a stored asset as reported after verification.
+type Media struct {
+	ID          string
+	Status      string
+	ContentType string
+	ByteSize    int64
+	PublicURL   null.String
+}
+
+func (m Media) ToTypes() *types.Media {
+	return &types.Media{
+		ID:          conv.Pointer(strfmt.UUID4(m.ID)),
+		Status:      conv.Pointer(m.Status),
+		ContentType: conv.Pointer(m.ContentType),
+		ByteSize:    conv.Pointer(m.ByteSize),
+		PublicURL:   m.PublicURL.Ptr(),
+	}
+}

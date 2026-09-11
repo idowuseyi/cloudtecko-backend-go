@@ -390,6 +390,83 @@ paths:
                         $ref: '#/definitions/publicHttpError'
             security:
                 - Bearer: []
+    /api/v1/admin/media/presign:
+        post:
+            description: |-
+                Reserves a media asset and returns a short-lived URL to PUT the bytes to.
+                The object lands in a quarantine prefix and is NOT public until completion
+                verifies it.
+            tags:
+                - admin
+            summary: Requests a presigned upload URL
+            operationId: PostAdminMediaPresignRoute
+            parameters:
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/postMediaPresignPayload'
+            responses:
+                "201":
+                    description: The upload capability
+                    schema:
+                        $ref: '#/definitions/mediaPresignResponse'
+                "400":
+                    description: PublicHTTPError - the declared type or size is not allowed
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+    /api/v1/admin/media/{id}/complete:
+        post:
+            description: |-
+                Verifies an uploaded object and promotes it.
+
+                The server reads the object's TRUE size and sniffs its leading bytes to
+                determine the real content type, then promotes it from quarantine to the
+                public prefix. An object whose real type is outside the allow-list is
+                rejected and deleted, whatever it declared or however it was named.
+                Completing twice is safe and returns the asset as it stands.
+            tags:
+                - admin
+            summary: Verifies and publishes an uploaded file
+            operationId: PostAdminMediaCompleteRoute
+            parameters:
+                - type: string
+                  format: uuid4
+                  name: id
+                  in: path
+                  required: true
+            responses:
+                "200":
+                    description: The verified asset
+                    schema:
+                        $ref: '#/definitions/media'
+                "400":
+                    description: PublicHTTPError - nothing was uploaded, it is too large, or its real type is not allowed
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError - no such media asset
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
     /api/v1/admin/resources:
         post:
             description: Creates an UNPUBLISHED resource.
@@ -1282,6 +1359,48 @@ definitions:
             key:
                 description: Key of field failing validation
                 type: string
+    media:
+        type: object
+        required:
+            - id
+            - status
+            - contentType
+            - byteSize
+        properties:
+            byteSize:
+                description: The actual stored size, read back from the object store.
+                type: integer
+            contentType:
+                description: The DETECTED content type, which may differ from the declared one.
+                type: string
+            id:
+                type: string
+                format: uuid4
+            publicUrl:
+                type: string
+                x-nullable: true
+            status:
+                type: string
+                enum:
+                    - pending
+                    - ready
+                    - rejected
+    mediaPresignResponse:
+        type: object
+        required:
+            - id
+            - uploadUrl
+            - expiresAt
+        properties:
+            expiresAt:
+                type: string
+                format: date-time
+            id:
+                type: string
+                format: uuid4
+            uploadUrl:
+                description: PUT the file bytes here. Treat as a short-lived secret.
+                type: string
     orderDir:
         type: string
         enum:
@@ -1472,6 +1591,31 @@ definitions:
                 type: string
                 format: uuid4
                 example: 700ebed3-40f7-4211-bc83-a89b22b9875e
+    postMediaPresignPayload:
+        description: |-
+            Declares an intended upload. Every field here is a CLAIM: a presigned PUT
+            cannot constrain what the client actually sends, so these are used only for
+            an early rejection and for reporting promised-versus-actual. The binding
+            checks run at completion, against the stored object.
+        type: object
+        required:
+            - filename
+            - contentType
+            - byteSize
+        properties:
+            byteSize:
+                type: integer
+                minimum: 1
+                example: 204800
+            contentType:
+                type: string
+                maxLength: 128
+                example: image/jpeg
+            filename:
+                type: string
+                maxLength: 255
+                minLength: 1
+                example: hero.jpg
     postRefreshPayload:
         type: object
         required:

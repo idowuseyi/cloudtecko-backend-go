@@ -13,4 +13,11 @@ var (
 	ErrConflictDeletePublished    = NewHTTPError(http.StatusConflict, types.PublicHTTPErrorTypeGeneric, "A published event cannot be deleted; archive it instead.")
 	ErrBadRequestEventTimeOrder   = NewHTTPError(http.StatusBadRequest, types.PublicHTTPErrorTypeGeneric, "The event end time must not precede its start time.")
 	ErrConflictCategoryInUse      = NewHTTPError(http.StatusConflict, types.PublicHTTPErrorTypeGeneric, "The category is still referenced by content.")
+	ErrNotFoundMedia              = NewHTTPError(http.StatusNotFound, types.PublicHTTPErrorTypeGeneric, "The media asset does not exist.")
+	ErrBadRequestUploadTooLarge   = NewHTTPError(http.StatusBadRequest, types.PublicHTTPErrorTypeGeneric, "The upload exceeds the maximum allowed size.")
+	ErrBadRequestUploadMissing    = NewHTTPError(http.StatusBadRequest, types.PublicHTTPErrorTypeGeneric, "No uploaded object was found for this media asset.")
+
+	// ErrBadRequestUnsupportedMediaType is returned for a DETECTED type outside
+	// the allow-list, not merely a declared one.
+	ErrBadRequestUnsupportedMediaType = NewHTTPError(http.StatusBadRequest, types.PublicHTTPErrorTypeGeneric, "That file type is not allowed.")
 )

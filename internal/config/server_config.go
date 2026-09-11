@@ -167,6 +167,46 @@ type Server struct {
 	Push              PushService
 	FCMConfig         provider.FCMConfig
 	I18n              I18n
+	Storage           Storage
+}
+
+// Storage configures the object store behind the media pipeline.
+type Storage struct {
+	// UseMockProvider keeps uploads in memory. Default TRUE so a developer with
+	// no object-store credentials still gets a working server, matching how the
+	// push service already behaves.
+	UseMockProvider bool
+
+	Endpoint  string
+	AccessKey string
+	SecretKey string
+	Bucket    string
+	Region    string
+	UseSSL    bool
+
+	// PublicBaseURL must be a CDN or bucket custom domain, never this API's own
+	// origin: serving user-supplied files same-origin turns any stored-content
+	// flaw into a same-origin scripting problem against the API itself.
+	PublicBaseURL string
+
+	// PresignTTL bounds how long an upload URL stays valid. Short is safer -- the
+	// URL is a bearer capability to write into the bucket.
+	PresignTTL time.Duration
+
+	// MaxUploadBytes caps what the pipeline will ACCEPT at completion. A
+	// presigned PUT cannot enforce a size limit, so an oversized object is
+	// detected after the fact, rejected, and deleted.
+	MaxUploadBytes int64
+
+	// AllowedContentTypes is an allow-list checked against the SNIFFED type, not
+	// the declared one. SVG is deliberately absent: it is an XSS vector that
+	// passes every MIME check because it genuinely is image/svg+xml.
+	AllowedContentTypes []string
+
+	// QuarantinePrefix and PublicPrefix separate unverified uploads from promoted
+	// ones, so a bucket policy can keep the quarantine prefix unreadable.
+	QuarantinePrefix string
+	PublicPrefix     string
 }
 
 // DefaultServiceConfigFromEnv returns the server config as parsed from environment variables
@@ -341,6 +381,27 @@ func DefaultServiceConfigFromEnv() Server {
 		I18n: I18n{
 			DefaultLanguage: util.GetEnvAsLanguageTag("SERVER_I18N_DEFAULT_LANGUAGE", language.English),
 			BundleDirAbs:    util.GetEnv("SERVER_I18N_BUNDLE_DIR_ABS", filepath.Join(util.GetProjectRootDir(), "/web/i18n")), // /app/web/i18n
+		},
+		Storage: Storage{
+			UseMockProvider: util.GetEnvAsBool("SERVER_STORAGE_USE_MOCK", true),
+			Endpoint:        util.GetEnv("SERVER_STORAGE_ENDPOINT", ""),
+			AccessKey:       util.GetEnv("SERVER_STORAGE_ACCESS_KEY", ""),
+			SecretKey:       util.GetEnv("SERVER_STORAGE_SECRET_KEY", ""),
+			Bucket:          util.GetEnv("SERVER_STORAGE_BUCKET", ""),
+			Region:          util.GetEnv("SERVER_STORAGE_REGION", "auto"),
+			UseSSL:          util.GetEnvAsBool("SERVER_STORAGE_USE_SSL", true),
+			PublicBaseURL:   util.GetEnv("SERVER_STORAGE_PUBLIC_BASE_URL", "http://localhost:8080/mock-media"),
+			PresignTTL:      time.Second * time.Duration(util.GetEnvAsInt("SERVER_STORAGE_PRESIGN_TTL_SECONDS", 900)),
+			MaxUploadBytes:  int64(util.GetEnvAsInt("SERVER_STORAGE_MAX_UPLOAD_BYTES", 10*1024*1024)),
+			AllowedContentTypes: util.GetEnvAsStringArr("SERVER_STORAGE_ALLOWED_CONTENT_TYPES", []string{
+				"image/jpeg",
+				"image/png",
+				"image/webp",
+				"image/gif",
+				"application/pdf",
+			}, ","),
+			QuarantinePrefix: util.GetEnv("SERVER_STORAGE_QUARANTINE_PREFIX", "quarantine"),
+			PublicPrefix:     util.GetEnv("SERVER_STORAGE_PUBLIC_PREFIX", "public"),
 		},
 	}
 }

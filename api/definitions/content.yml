@@ -382,3 +382,70 @@ definitions:
     properties:
       featured:
         type: boolean
+  PostMediaPresignPayload:
+    description: |-
+      Declares an intended upload. Every field here is a CLAIM: a presigned PUT
+      cannot constrain what the client actually sends, so these are used only for
+      an early rejection and for reporting promised-versus-actual. The binding
+      checks run at completion, against the stored object.
+    type: object
+    required:
+      - filename
+      - contentType
+      - byteSize
+    properties:
+      filename:
+        type: string
+        minLength: 1
+        maxLength: 255
+        example: hero.jpg
+      contentType:
+        type: string
+        maxLength: 128
+        example: image/jpeg
+      byteSize:
+        type: integer
+        minimum: 1
+        example: 204800
+  MediaPresignResponse:
+    type: object
+    required:
+      - id
+      - uploadUrl
+      - expiresAt
+    properties:
+      id:
+        type: string
+        format: uuid4
+      uploadUrl:
+        description: PUT the file bytes here. Treat as a short-lived secret.
+        type: string
+      expiresAt:
+        type: string
+        format: date-time
+  Media:
+    type: object
+    required:
+      - id
+      - status
+      - contentType
+      - byteSize
+    properties:
+      id:
+        type: string
+        format: uuid4
+      status:
+        type: string
+        enum:
+          - pending
+          - ready
+          - rejected
+      contentType:
+        description: The DETECTED content type, which may differ from the declared one.
+        type: string
+      byteSize:
+        description: The actual stored size, read back from the object store.
+        type: integer
+      publicUrl:
+        type: string
+        x-nullable: true
