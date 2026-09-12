@@ -3,9 +3,11 @@ package community_test
 import (
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/data/dto"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/test/fixtures"
@@ -225,5 +227,62 @@ func TestAcceptInvitationEnforcesPasswordPolicy(t *testing.T) {
 			test.GenericPayload{"password": "short"}, nil)
 
 		assert.Equal(t, http.StatusBadRequest, res.Result().StatusCode)
+	})
+}
+
+// The full seam: approve through the admin API, then accept with the token that
+// approval actually minted.
+//
+// Every other membership test starts from a fixture with a pre-set
+// invitation_valid_until, which meant approval and acceptance were each covered
+// but the JOIN between them was not -- and a zero InvitationTokenValidity (the
+// config key was declared, used, and never read from the environment) mints
+// invitations that are expired on arrival. This is the test that catches that.
+func TestApproveThenAcceptUsesAFreshlyMintedInvitation(t *testing.T) {
+	t.Parallel()
+
+	test.WithTestServer(t, func(s *api.Server) {
+		ctx := t.Context()
+
+		// Apply.
+		res := test.PerformRequest(t, s, "POST", "/api/v1/membership/applications", test.GenericPayload{
+			"email":    "end-to-end@example.com",
+			"fullName": "End To End",
+		}, nil)
+		require.Equal(t, http.StatusAccepted, res.Result().StatusCode)
+
+		application, err := models.MembershipApplications(
+			qm.Where("lower(email) = ?", "end-to-end@example.com"),
+		).One(ctx, s.DB)
+		require.NoError(t, err)
+
+		// Approve through the service the admin handler calls, capturing the
+		// plaintext token exactly as the invitation email would.
+		approval, err := s.Membership.ApproveMembershipApplication(ctx, dto.ApproveMembershipRequest{
+			ApplicationID: application.ID,
+			ReviewerID:    fixtures.Fixtures().UserAdmin.ID,
+		})
+		require.NoError(t, err)
+		require.NotEmpty(t, approval.InvitationToken)
+
+		require.NoError(t, application.Reload(ctx, s.DB))
+		require.True(t, application.InvitationValidUntil.Valid)
+		assert.True(t, application.InvitationValidUntil.Time.After(time.Now()),
+			"a freshly minted invitation must not already be expired (valid until %s)",
+			application.InvitationValidUntil.Time)
+
+		// Accept with that token.
+		res = test.PerformRequest(t, s, "POST",
+			"/api/v1/membership/invitations/"+approval.InvitationToken+"/accept",
+			test.GenericPayload{"password": "a-sufficiently-long-passphrase"}, nil)
+		require.Equal(t, http.StatusOK, res.Result().StatusCode)
+
+		var session types.PostLoginResponse
+		test.ParseResponseAndValidate(t, res, &session)
+		assert.NotEmpty(t, session.AccessToken)
+
+		user, err := models.Users(qm.Where("lower(username) = ?", "end-to-end@example.com")).One(ctx, s.DB)
+		require.NoError(t, err)
+		assert.True(t, user.Password.Valid)
 	})
 }

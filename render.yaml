@@ -70,6 +70,33 @@ services:
       - key: SERVER_FRONTEND_BASE_URL
         sync: false
 
+      # Object storage for media uploads (Cloudflare R2 or any S3-compatible
+      # endpoint). PUBLIC_BASE_URL must be a CDN or bucket custom domain, never
+      # this service's own origin.
+      - key: SERVER_STORAGE_USE_MOCK
+        value: "false"
+      - key: SERVER_STORAGE_ENDPOINT
+        sync: false
+      - key: SERVER_STORAGE_ACCESS_KEY
+        sync: false
+      - key: SERVER_STORAGE_SECRET_KEY
+        sync: false
+      - key: SERVER_STORAGE_BUCKET
+        sync: false
+      - key: SERVER_STORAGE_PUBLIC_BASE_URL
+        sync: false
+
+      # Payments. The Paystack secret key both authenticates our API calls and
+      # is the HMAC key webhook bodies are signed with; there is no separate
+      # webhook secret. The service refuses to start without it while
+      # SERVER_PAYMENT_USE_MOCK is false.
+      - key: SERVER_PAYMENT_USE_MOCK
+        value: "false"
+      - key: SERVER_PAYMENT_SECRET_KEY
+        sync: false
+      - key: SERVER_PAYMENT_CALLBACK_URL
+        sync: false
+
       - key: SERVER_LOGGER_LEVEL
         value: info
       - key: SERVER_LOGGER_REQUEST_LEVEL

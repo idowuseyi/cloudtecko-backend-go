@@ -375,6 +375,10 @@ func DefaultServiceConfigFromEnv() Server {
 			// used to keep a user out for long.
 			LoginMaxFailedAttempts: util.GetEnvAsInt("SERVER_AUTH_LOGIN_MAX_FAILED_ATTEMPTS", 10),
 			LoginFailureWindow:     time.Second * time.Duration(util.GetEnvAsInt("SERVER_AUTH_LOGIN_FAILURE_WINDOW_SECONDS", 900)),
+			// 7 days. Must be non-zero: approval stamps invitation_valid_until as
+			// now + this, and acceptance filters on valid_until > now, so a zero
+			// value mints invitations that are already expired.
+			InvitationTokenValidity: time.Second * time.Duration(util.GetEnvAsInt("SERVER_AUTH_INVITATION_TOKEN_VALIDITY_SECONDS", 7*24*60*60)),
 		},
 		Management: ManagementServer{
 			Secret:           util.GetMgmtSecret("SERVER_MANAGEMENT_SECRET"),
