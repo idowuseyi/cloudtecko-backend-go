@@ -30,4 +30,10 @@ var (
 
 	ErrConflictInvalidStateTransition = NewHTTPError(http.StatusConflict, types.PublicHTTPErrorTypeGeneric, "That change is not valid from the current state.")
 	ErrNotFoundPayment                = NewHTTPError(http.StatusNotFound, types.PublicHTTPErrorTypeGeneric, "The payment does not exist.")
+
+	// ErrNotFoundDonation covers an unknown reference AND a wrong access token,
+	// so the endpoint cannot be used to discover which references exist.
+	ErrNotFoundDonation          = NewHTTPError(http.StatusNotFound, types.PublicHTTPErrorTypeGeneric, "That donation was not found.")
+	ErrBadRequestDonationAmount  = NewHTTPError(http.StatusBadRequest, types.PublicHTTPErrorTypeGeneric, "That donation amount is outside the permitted range.")
+	ErrBadGatewayPaymentProvider = NewHTTPError(http.StatusBadGateway, types.PublicHTTPErrorTypeGeneric, "The payment provider could not be reached. No money has moved.")
 )

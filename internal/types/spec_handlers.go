@@ -42,9 +42,12 @@ func (o *SwaggerSpec) initHandlerCache() {
 	o.Handlers["DELETE"]["/api/v1/auth/account"] = true
 	o.Handlers["GET"]["/api/v1/admin/applications"] = true
 	o.Handlers["GET"]["/api/v1/admin/categories"] = true
+	o.Handlers["GET"]["/api/v1/admin/donations"] = true
 	o.Handlers["GET"]["/.well-known/assetlinks.json"] = true
 	o.Handlers["GET"]["/.well-known/apple-app-site-association"] = true
 	o.Handlers["GET"]["/api/v1/auth/register"] = true
+	o.Handlers["GET"]["/api/v1/donations/{reference}"] = true
+	o.Handlers["GET"]["/api/v1/donations/tiers"] = true
 	o.Handlers["GET"]["/api/v1/events/{slug}"] = true
 	o.Handlers["GET"]["/api/v1/events"] = true
 	o.Handlers["GET"]["/api/v1/faqs"] = true
@@ -72,6 +75,7 @@ func (o *SwaggerSpec) initHandlerCache() {
 	o.Handlers["POST"]["/api/v1/auth/change-password"] = true
 	o.Handlers["POST"]["/api/v1/auth/register/{registrationToken}"] = true
 	o.Handlers["POST"]["/api/v1/contact-messages"] = true
+	o.Handlers["POST"]["/api/v1/donations/checkout"] = true
 	o.Handlers["POST"]["/api/v1/auth/forgot-password/complete"] = true
 	o.Handlers["POST"]["/api/v1/auth/forgot-password"] = true
 	o.Handlers["POST"]["/api/v1/auth/login"] = true

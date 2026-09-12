@@ -423,3 +423,105 @@ type PurgeResult struct {
 	ContactMessages        int64
 	MembershipApplications int64
 }
+
+// --- Donations --------------------------------------------------------------
+
+type DonationTier struct {
+	ID          string
+	Name        string
+	Description string
+	AmountKobo  int64
+	Interval    string
+}
+
+type DonationTierList []DonationTier
+
+func (l DonationTierList) ToTypes() *types.DonationTierList {
+	items := make([]*types.DonationTier, len(l))
+	for i := range l {
+		items[i] = &types.DonationTier{
+			ID:          conv.Pointer(strfmt.UUID4(l[i].ID)),
+			Name:        conv.Pointer(l[i].Name),
+			Description: l[i].Description,
+			AmountKobo:  conv.Pointer(l[i].AmountKobo),
+			Interval:    l[i].Interval,
+		}
+	}
+
+	return &types.DonationTierList{Items: items}
+}
+
+type StartDonationRequest struct {
+	Email       string
+	AmountKobo  int64
+	DisplayName null.String
+	IsAnonymous bool
+	UserID      null.String
+}
+
+// StartDonationResult carries the PLAINTEXT access token, which exists only in
+// memory on its way to the donor. Only its hash is stored.
+type StartDonationResult struct {
+	Reference        string
+	AuthorizationURL string
+	AccessToken      string
+	AmountKobo       int64
+}
+
+func (r StartDonationResult) ToTypes() *types.DonationCheckoutResponse {
+	return &types.DonationCheckoutResponse{
+		Reference:        conv.Pointer(r.Reference),
+		AuthorizationURL: conv.Pointer(r.AuthorizationURL),
+		AccessToken:      conv.Pointer(r.AccessToken),
+		AmountKobo:       conv.Pointer(r.AmountKobo),
+	}
+}
+
+type DonationStatus struct {
+	Reference  string
+	Status     string
+	AmountKobo int64
+	Currency   string
+}
+
+func (d DonationStatus) ToTypes() *types.DonationStatusResponse {
+	return &types.DonationStatusResponse{
+		Reference:  conv.Pointer(d.Reference),
+		Status:     conv.Pointer(d.Status),
+		AmountKobo: conv.Pointer(d.AmountKobo),
+		Currency:   conv.Pointer(d.Currency),
+	}
+}
+
+type Donation struct {
+	ID          string
+	Reference   string
+	Status      string
+	AmountKobo  int64
+	Currency    string
+	Email       string
+	DisplayName null.String
+	IsAnonymous bool
+	CreatedAt   time.Time
+}
+
+type DonationList []Donation
+
+func (l DonationList) ToTypes() *types.DonationList {
+	items := make([]*types.Donation, len(l))
+	for i := range l {
+		items[i] = &types.Donation{
+			ID:          conv.Pointer(strfmt.UUID4(l[i].ID)),
+			Reference:   conv.Pointer(l[i].Reference),
+			Status:      conv.Pointer(l[i].Status),
+			AmountKobo:  conv.Pointer(l[i].AmountKobo),
+			Currency:    conv.Pointer(l[i].Currency),
+			Email:       conv.Pointer(strfmt.Email(l[i].Email)),
+			DisplayName: l[i].DisplayName.Ptr(),
+			IsAnonymous: conv.Pointer(l[i].IsAnonymous),
+			CreatedAt:   conv.Pointer(strfmt.DateTime(l[i].CreatedAt)),
+		}
+	}
+
+	return &types.DonationList{Items: items}
+}

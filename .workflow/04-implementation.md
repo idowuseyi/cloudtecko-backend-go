@@ -73,6 +73,16 @@ container: `make build` green (0 lint issues) and 23/23 test packages passing.
 | `internal/data/local/service_payment.go` | webhook recording and effects |
 | `internal/api/handlers/webhooks/` | signature-verified endpoint + 11 tests |
 
+**Phase 5 — one-off donations**
+
+| File | Change |
+|---|---|
+| `migrations/20260912100000-add-donation-access-token.sql` | hashed donor access token |
+| `internal/data/local/service_donations.go` | checkout, status, verify-on-return |
+| `internal/data/local/reference.go` | unguessable payment references |
+| `internal/api/handlers/donations/` | 3 public handlers + 12 tests |
+| `internal/api/handlers/admin/get_admin_donations.go` | admin listing |
+
 ## Key Decisions
 
 **A nil-dereference panic in generated code was fixed at the template, not the call site.**
@@ -156,6 +166,23 @@ body five times.
 different amount parks the payment in `amount_mismatch` and returns 200. Erroring would lose the
 evidence AND make the provider retry for 72 hours.
 
+**Checkout and the webhook converge on ONE settlement routine.**
+`settleSucceededTransaction` is called by the webhook effect and by verify-on-return, so the two
+paths cannot disagree about what settlement means. A webhook can be delayed, dropped or delivered
+twice and the redirect proves nothing by itself, so the payer returning must be able to drive
+settlement too — and everything in that routine is guarded, so whichever arrives second is a
+no-op. Tested: verify-then-webhook settles exactly once and does not move the timestamp.
+
+**The provider call happens after the transaction commits.** Holding a transaction open across a
+network round trip to a third party pins a database connection for as long as that party takes to
+answer. The cost is that a provider outage leaves a pending donation with no authorization URL,
+which is harmless: no money moved and the intent expires on its own.
+
+**Donation status is token-scoped, and "missing" is treated exactly like "wrong".**
+Both return 404. A 400 for a missing token and 404 for a wrong one would itself say which
+references exist. The token travels in a header, never a query string, because
+`logger.go:200` logs `req.URL.String()` unconditionally.
+
 ## Deviations from Design
 
 1. **`internal/data/local/service_push.go` was not a bug.** `01-brief.md`, `02-plan.md` and
@@ -185,7 +212,10 @@ evidence AND make the provider retry for 72 hours.
     `order_items` still waits — it points at product variants and ticket tiers that do not exist.
 11. **`requireTransition` was written and removed.** It is for admin-driven transitions in later
     phases; dead code is worse than absent code, so it returns when a caller does.
-12. **`render.yaml` needed no change** — `SERVER_ECHO_CORS_ALLOW_ORIGINS` already exists as a
+13. **The `X-Donation-Token` header is declared in swagger but NOT required.** This repo's
+    binding helpers cover path and query params only, so go-swagger would validate a header value
+    nothing ever populates and reject every request. The handler reads it from the request itself.
+14. **`render.yaml` needed no change** — `SERVER_ECHO_CORS_ALLOW_ORIGINS` already exists as a
    prompted variable. It must still be **set at deploy time**: empty leaves CORS off entirely
    with no wildcard fallback, and the frontend then receives nothing.
 

@@ -178,7 +178,20 @@ func (s *Service) applyWebhookEffect(ctx context.Context, exec boil.ContextExecu
 
 // applyChargeSucceeded is the money path.
 func (s *Service) applyChargeSucceeded(ctx context.Context, exec boil.ContextExecutor, event payment.WebhookEvent) (bool, error) {
+	return s.settleSucceededTransaction(ctx, exec, event.Transaction)
+}
+
+// settleSucceededTransaction is THE fulfilment routine, shared by the webhook
+// and by verify-on-return.
+//
+// One routine, two triggers, on purpose. A webhook can be delayed, dropped or
+// delivered twice, and a redirect proves nothing by itself -- so the payer
+// coming back must be able to drive settlement too, and the two paths must not
+// be able to disagree about what settlement means. Everything below is guarded,
+// so whichever arrives second is a no-op.
+func (s *Service) settleSucceededTransaction(ctx context.Context, exec boil.ContextExecutor, transaction payment.Transaction) (bool, error) {
 	log := util.LogFromContext(ctx)
+	event := payment.WebhookEvent{Transaction: transaction}
 
 	// Look up by OUR reference. Never trust a reference to identify a payment on
 	// its own beyond this: an attacker can complete a genuine payment on their

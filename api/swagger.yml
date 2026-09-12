@@ -284,6 +284,32 @@ paths:
                         $ref: '#/definitions/publicHttpError'
             security:
                 - Bearer: []
+    /api/v1/admin/donations:
+        get:
+            description: Lists donations for review.
+            tags:
+                - admin
+            summary: Lists donations
+            operationId: GetAdminDonationsRoute
+            parameters:
+                - type: string
+                  name: status
+                  in: query
+            responses:
+                "200":
+                    description: The donations
+                    schema:
+                        $ref: '#/definitions/donationList'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
     /api/v1/admin/events:
         post:
             description: Creates an UNPUBLISHED event. Publishing is a separate, explicit step so a half-written draft can never reach the site.
@@ -1078,6 +1104,83 @@ paths:
                     description: PublicHTTPError - validation failed
                     schema:
                         $ref: '#/definitions/publicHttpError'
+    /api/v1/donations/checkout:
+        post:
+            description: |-
+                Starts a one-off donation and returns where to send the payer.
+
+                No account is required. The response carries an access token, shown once,
+                which is needed to read this donation's status afterwards -- the
+                reference alone is not sufficient, since it travels in the callback URL.
+            tags:
+                - donations
+            summary: Starts a one-off donation
+            operationId: PostDonationCheckoutRoute
+            parameters:
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/postDonationCheckoutPayload'
+            responses:
+                "201":
+                    description: Where to pay
+                    schema:
+                        $ref: '#/definitions/donationCheckoutResponse'
+                "400":
+                    description: PublicHTTPError - the amount is outside the permitted range
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "502":
+                    description: PublicHTTPError - the provider could not be reached; no money moved
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+    /api/v1/donations/tiers:
+        get:
+            description: Lists the suggested donation amounts shown on the donate page.
+            tags:
+                - donations
+            summary: Lists donation tiers
+            operationId: GetDonationTiersRoute
+            responses:
+                "200":
+                    description: The tiers
+                    schema:
+                        $ref: '#/definitions/donationTierList'
+    /api/v1/donations/{reference}:
+        get:
+            description: |-
+                Reports a donation's status to its donor.
+
+                Requires the X-Donation-Token header issued at checkout. An unknown
+                reference and a wrong token are reported identically, so this cannot be
+                used to discover which references exist.
+
+                If the donation is still pending, the server asks the provider
+                server-to-server what actually happened and settles it through the same
+                guarded path the webhook uses. It never trusts the redirect itself.
+            tags:
+                - donations
+            summary: Reads a donation's status
+            operationId: GetDonationStatusRoute
+            parameters:
+                - maxLength: 64
+                  type: string
+                  name: reference
+                  in: path
+                  required: true
+                - maxLength: 64
+                  type: string
+                  name: X-Donation-Token
+                  in: header
+            responses:
+                "200":
+                    description: The donation status
+                    schema:
+                        $ref: '#/definitions/donationStatusResponse'
+                "404":
+                    description: PublicHTTPError - no such donation, or the token does not match
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
     /api/v1/events:
         get:
             description: |-
@@ -1414,6 +1517,125 @@ definitions:
                 maxLength: 500
                 minLength: 1
                 example: correct horse battery staple
+    donation:
+        type: object
+        required:
+            - id
+            - reference
+            - status
+            - amountKobo
+            - currency
+            - email
+            - isAnonymous
+            - createdAt
+        properties:
+            amountKobo:
+                type: integer
+            createdAt:
+                type: string
+                format: date-time
+            currency:
+                type: string
+            displayName:
+                type: string
+                x-nullable: true
+            email:
+                type: string
+                format: email
+            id:
+                type: string
+                format: uuid4
+            isAnonymous:
+                type: boolean
+            reference:
+                type: string
+            status:
+                type: string
+    donationCheckoutResponse:
+        description: |-
+            Where to send the payer, plus the token needed to read this donation's
+            status afterwards. The token is shown ONCE: only its hash is stored.
+        type: object
+        required:
+            - reference
+            - authorizationUrl
+            - accessToken
+            - amountKobo
+        properties:
+            accessToken:
+                description: Send as the X-Donation-Token header when reading status. Shown once.
+                type: string
+            amountKobo:
+                type: integer
+            authorizationUrl:
+                description: Redirect the payer here.
+                type: string
+            reference:
+                type: string
+                example: cld_don_K4M2P9XQ7RTVWZ3B
+    donationList:
+        type: object
+        required:
+            - items
+        properties:
+            items:
+                type: array
+                items:
+                    $ref: '#/definitions/donation'
+    donationStatusResponse:
+        type: object
+        required:
+            - reference
+            - status
+            - amountKobo
+            - currency
+        properties:
+            amountKobo:
+                type: integer
+            currency:
+                type: string
+            reference:
+                type: string
+            status:
+                type: string
+                enum:
+                    - pending
+                    - active
+                    - completed
+                    - past_due
+                    - cancelled
+                    - failed
+    donationTier:
+        type: object
+        required:
+            - id
+            - name
+            - amountKobo
+        properties:
+            amountKobo:
+                description: Amount in kobo. Never a decimal - money is integer minor units.
+                type: integer
+                example: 500000
+            description:
+                type: string
+            id:
+                type: string
+                format: uuid4
+            interval:
+                description: Empty for a one-off suggestion; "monthly" or "annually" for recurring tiers.
+                type: string
+            name:
+                type: string
+                example: Supporter
+    donationTierList:
+        type: object
+        required:
+            - items
+        properties:
+            items:
+                type: array
+                items:
+                    $ref: '#/definitions/donationTier'
     eventDetail:
         description: |-
             A single event. Times are absolute instants plus the IANA zone the organiser
@@ -1821,6 +2043,28 @@ definitions:
                     - general
                     - support
                     - partnership
+    postDonationCheckoutPayload:
+        type: object
+        required:
+            - email
+            - amountKobo
+        properties:
+            amountKobo:
+                description: Amount in kobo, bounded server-side.
+                type: integer
+                minimum: 1
+                example: 10000
+            displayName:
+                type: string
+                maxLength: 200
+                x-nullable: true
+            email:
+                type: string
+                format: email
+                maxLength: 255
+            isAnonymous:
+                type: boolean
+                default: false
     postEventPayload:
         description: |-
             Create or update an event. `slug` is absent deliberately: it is derived from

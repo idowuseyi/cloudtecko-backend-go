@@ -24,82 +24,87 @@ import (
 
 // Donation is an object representing the database table.
 type Donation struct {
-	ID             string      `boil:"id" json:"id" toml:"id" yaml:"id"`
-	Reference      string      `boil:"reference" json:"reference" toml:"reference" yaml:"reference"`
-	Kind           string      `boil:"kind" json:"kind" toml:"kind" yaml:"kind"`
-	Status         string      `boil:"status" json:"status" toml:"status" yaml:"status"`
-	DonationTierID null.String `boil:"donation_tier_id" json:"donation_tier_id,omitempty" toml:"donation_tier_id" yaml:"donation_tier_id,omitempty"`
-	UserID         null.String `boil:"user_id" json:"user_id,omitempty" toml:"user_id" yaml:"user_id,omitempty"`
-	Email          string      `boil:"email" json:"email" toml:"email" yaml:"email"`
-	DisplayName    null.String `boil:"display_name" json:"display_name,omitempty" toml:"display_name" yaml:"display_name,omitempty"`
-	IsAnonymous    bool        `boil:"is_anonymous" json:"is_anonymous" toml:"is_anonymous" yaml:"is_anonymous"`
-	AmountKobo     int64       `boil:"amount_kobo" json:"amount_kobo" toml:"amount_kobo" yaml:"amount_kobo"`
-	Currency       string      `boil:"currency" json:"currency" toml:"currency" yaml:"currency"`
-	CreatedAt      time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
-	UpdatedAt      time.Time   `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	ID              string      `boil:"id" json:"id" toml:"id" yaml:"id"`
+	Reference       string      `boil:"reference" json:"reference" toml:"reference" yaml:"reference"`
+	Kind            string      `boil:"kind" json:"kind" toml:"kind" yaml:"kind"`
+	Status          string      `boil:"status" json:"status" toml:"status" yaml:"status"`
+	DonationTierID  null.String `boil:"donation_tier_id" json:"donation_tier_id,omitempty" toml:"donation_tier_id" yaml:"donation_tier_id,omitempty"`
+	UserID          null.String `boil:"user_id" json:"user_id,omitempty" toml:"user_id" yaml:"user_id,omitempty"`
+	Email           string      `boil:"email" json:"email" toml:"email" yaml:"email"`
+	DisplayName     null.String `boil:"display_name" json:"display_name,omitempty" toml:"display_name" yaml:"display_name,omitempty"`
+	IsAnonymous     bool        `boil:"is_anonymous" json:"is_anonymous" toml:"is_anonymous" yaml:"is_anonymous"`
+	AmountKobo      int64       `boil:"amount_kobo" json:"amount_kobo" toml:"amount_kobo" yaml:"amount_kobo"`
+	Currency        string      `boil:"currency" json:"currency" toml:"currency" yaml:"currency"`
+	CreatedAt       time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	UpdatedAt       time.Time   `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	AccessTokenHash null.Bytes  `boil:"access_token_hash" json:"access_token_hash,omitempty" toml:"access_token_hash" yaml:"access_token_hash,omitempty"`
 
 	R *donationR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L donationL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var DonationColumns = struct {
-	ID             string
-	Reference      string
-	Kind           string
-	Status         string
-	DonationTierID string
-	UserID         string
-	Email          string
-	DisplayName    string
-	IsAnonymous    string
-	AmountKobo     string
-	Currency       string
-	CreatedAt      string
-	UpdatedAt      string
+	ID              string
+	Reference       string
+	Kind            string
+	Status          string
+	DonationTierID  string
+	UserID          string
+	Email           string
+	DisplayName     string
+	IsAnonymous     string
+	AmountKobo      string
+	Currency        string
+	CreatedAt       string
+	UpdatedAt       string
+	AccessTokenHash string
 }{
-	ID:             "id",
-	Reference:      "reference",
-	Kind:           "kind",
-	Status:         "status",
-	DonationTierID: "donation_tier_id",
-	UserID:         "user_id",
-	Email:          "email",
-	DisplayName:    "display_name",
-	IsAnonymous:    "is_anonymous",
-	AmountKobo:     "amount_kobo",
-	Currency:       "currency",
-	CreatedAt:      "created_at",
-	UpdatedAt:      "updated_at",
+	ID:              "id",
+	Reference:       "reference",
+	Kind:            "kind",
+	Status:          "status",
+	DonationTierID:  "donation_tier_id",
+	UserID:          "user_id",
+	Email:           "email",
+	DisplayName:     "display_name",
+	IsAnonymous:     "is_anonymous",
+	AmountKobo:      "amount_kobo",
+	Currency:        "currency",
+	CreatedAt:       "created_at",
+	UpdatedAt:       "updated_at",
+	AccessTokenHash: "access_token_hash",
 }
 
 var DonationTableColumns = struct {
-	ID             string
-	Reference      string
-	Kind           string
-	Status         string
-	DonationTierID string
-	UserID         string
-	Email          string
-	DisplayName    string
-	IsAnonymous    string
-	AmountKobo     string
-	Currency       string
-	CreatedAt      string
-	UpdatedAt      string
+	ID              string
+	Reference       string
+	Kind            string
+	Status          string
+	DonationTierID  string
+	UserID          string
+	Email           string
+	DisplayName     string
+	IsAnonymous     string
+	AmountKobo      string
+	Currency        string
+	CreatedAt       string
+	UpdatedAt       string
+	AccessTokenHash string
 }{
-	ID:             "donations.id",
-	Reference:      "donations.reference",
-	Kind:           "donations.kind",
-	Status:         "donations.status",
-	DonationTierID: "donations.donation_tier_id",
-	UserID:         "donations.user_id",
-	Email:          "donations.email",
-	DisplayName:    "donations.display_name",
-	IsAnonymous:    "donations.is_anonymous",
-	AmountKobo:     "donations.amount_kobo",
-	Currency:       "donations.currency",
-	CreatedAt:      "donations.created_at",
-	UpdatedAt:      "donations.updated_at",
+	ID:              "donations.id",
+	Reference:       "donations.reference",
+	Kind:            "donations.kind",
+	Status:          "donations.status",
+	DonationTierID:  "donations.donation_tier_id",
+	UserID:          "donations.user_id",
+	Email:           "donations.email",
+	DisplayName:     "donations.display_name",
+	IsAnonymous:     "donations.is_anonymous",
+	AmountKobo:      "donations.amount_kobo",
+	Currency:        "donations.currency",
+	CreatedAt:       "donations.created_at",
+	UpdatedAt:       "donations.updated_at",
+	AccessTokenHash: "donations.access_token_hash",
 }
 
 // Generated where
@@ -113,34 +118,60 @@ func (w whereHelperbool) LTE(x bool) qm.QueryMod { return qmhelper.Where(w.field
 func (w whereHelperbool) GT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
 func (w whereHelperbool) GTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
 
+type whereHelpernull_Bytes struct{ field string }
+
+func (w whereHelpernull_Bytes) EQ(x null.Bytes) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_Bytes) NEQ(x null.Bytes) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_Bytes) LT(x null.Bytes) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_Bytes) LTE(x null.Bytes) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_Bytes) GT(x null.Bytes) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_Bytes) GTE(x null.Bytes) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
+func (w whereHelpernull_Bytes) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_Bytes) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+
 var DonationWhere = struct {
-	ID             whereHelperstring
-	Reference      whereHelperstring
-	Kind           whereHelperstring
-	Status         whereHelperstring
-	DonationTierID whereHelpernull_String
-	UserID         whereHelpernull_String
-	Email          whereHelperstring
-	DisplayName    whereHelpernull_String
-	IsAnonymous    whereHelperbool
-	AmountKobo     whereHelperint64
-	Currency       whereHelperstring
-	CreatedAt      whereHelpertime_Time
-	UpdatedAt      whereHelpertime_Time
+	ID              whereHelperstring
+	Reference       whereHelperstring
+	Kind            whereHelperstring
+	Status          whereHelperstring
+	DonationTierID  whereHelpernull_String
+	UserID          whereHelpernull_String
+	Email           whereHelperstring
+	DisplayName     whereHelpernull_String
+	IsAnonymous     whereHelperbool
+	AmountKobo      whereHelperint64
+	Currency        whereHelperstring
+	CreatedAt       whereHelpertime_Time
+	UpdatedAt       whereHelpertime_Time
+	AccessTokenHash whereHelpernull_Bytes
 }{
-	ID:             whereHelperstring{field: "\"donations\".\"id\""},
-	Reference:      whereHelperstring{field: "\"donations\".\"reference\""},
-	Kind:           whereHelperstring{field: "\"donations\".\"kind\""},
-	Status:         whereHelperstring{field: "\"donations\".\"status\""},
-	DonationTierID: whereHelpernull_String{field: "\"donations\".\"donation_tier_id\""},
-	UserID:         whereHelpernull_String{field: "\"donations\".\"user_id\""},
-	Email:          whereHelperstring{field: "\"donations\".\"email\""},
-	DisplayName:    whereHelpernull_String{field: "\"donations\".\"display_name\""},
-	IsAnonymous:    whereHelperbool{field: "\"donations\".\"is_anonymous\""},
-	AmountKobo:     whereHelperint64{field: "\"donations\".\"amount_kobo\""},
-	Currency:       whereHelperstring{field: "\"donations\".\"currency\""},
-	CreatedAt:      whereHelpertime_Time{field: "\"donations\".\"created_at\""},
-	UpdatedAt:      whereHelpertime_Time{field: "\"donations\".\"updated_at\""},
+	ID:              whereHelperstring{field: "\"donations\".\"id\""},
+	Reference:       whereHelperstring{field: "\"donations\".\"reference\""},
+	Kind:            whereHelperstring{field: "\"donations\".\"kind\""},
+	Status:          whereHelperstring{field: "\"donations\".\"status\""},
+	DonationTierID:  whereHelpernull_String{field: "\"donations\".\"donation_tier_id\""},
+	UserID:          whereHelpernull_String{field: "\"donations\".\"user_id\""},
+	Email:           whereHelperstring{field: "\"donations\".\"email\""},
+	DisplayName:     whereHelpernull_String{field: "\"donations\".\"display_name\""},
+	IsAnonymous:     whereHelperbool{field: "\"donations\".\"is_anonymous\""},
+	AmountKobo:      whereHelperint64{field: "\"donations\".\"amount_kobo\""},
+	Currency:        whereHelperstring{field: "\"donations\".\"currency\""},
+	CreatedAt:       whereHelpertime_Time{field: "\"donations\".\"created_at\""},
+	UpdatedAt:       whereHelpertime_Time{field: "\"donations\".\"updated_at\""},
+	AccessTokenHash: whereHelpernull_Bytes{field: "\"donations\".\"access_token_hash\""},
 }
 
 // DonationRels is where relationship names are stored.
@@ -237,9 +268,9 @@ func (r *donationR) GetPayments() PaymentSlice {
 type donationL struct{}
 
 var (
-	donationAllColumns            = []string{"id", "reference", "kind", "status", "donation_tier_id", "user_id", "email", "display_name", "is_anonymous", "amount_kobo", "currency", "created_at", "updated_at"}
+	donationAllColumns            = []string{"id", "reference", "kind", "status", "donation_tier_id", "user_id", "email", "display_name", "is_anonymous", "amount_kobo", "currency", "created_at", "updated_at", "access_token_hash"}
 	donationColumnsWithoutDefault = []string{"reference", "email", "amount_kobo", "created_at", "updated_at"}
-	donationColumnsWithDefault    = []string{"id", "kind", "status", "donation_tier_id", "user_id", "display_name", "is_anonymous", "currency"}
+	donationColumnsWithDefault    = []string{"id", "kind", "status", "donation_tier_id", "user_id", "display_name", "is_anonymous", "currency", "access_token_hash"}
 	donationPrimaryKeyColumns     = []string{"id"}
 	donationGeneratedColumns      = []string{}
 )

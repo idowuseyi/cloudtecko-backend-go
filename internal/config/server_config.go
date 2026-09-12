@@ -214,6 +214,16 @@ type Payment struct {
 	// a nice page, never a fulfilment trigger: the redirect is fully
 	// attacker-controlled and proves nothing.
 	CallbackURL string
+
+	// IntentValidity bounds how long a payment intent stays live. Past it the
+	// intent expires and any reservation it holds is released.
+	IntentValidity time.Duration
+
+	// Donation bounds, in kobo. A donation amount genuinely comes from the
+	// donor, so it must be bounded: an unbounded integer from an anonymous
+	// caller reaches a provider API call and our own arithmetic.
+	MinDonationKobo int64
+	MaxDonationKobo int64
 }
 
 // Storage configures the object store behind the media pipeline.
@@ -461,6 +471,9 @@ func DefaultServiceConfigFromEnv() Server {
 			BaseURL:         util.GetEnv("SERVER_PAYMENT_BASE_URL", "https://api.paystack.co"),
 			RequestTimeout:  time.Second * time.Duration(util.GetEnvAsInt("SERVER_PAYMENT_REQUEST_TIMEOUT_SECONDS", 30)),
 			CallbackURL:     util.GetEnv("SERVER_PAYMENT_CALLBACK_URL", "http://localhost:3000/payment/complete"),
+			IntentValidity:  time.Second * time.Duration(util.GetEnvAsInt("SERVER_PAYMENT_INTENT_VALIDITY_SECONDS", 1800)),
+			MinDonationKobo: int64(util.GetEnvAsInt("SERVER_PAYMENT_MIN_DONATION_KOBO", 10000)),
+			MaxDonationKobo: int64(util.GetEnvAsInt("SERVER_PAYMENT_MAX_DONATION_KOBO", 500000000)),
 		},
 		Community: Community{
 			ContactThrottle:      time.Second * time.Duration(util.GetEnvAsInt("SERVER_COMMUNITY_CONTACT_THROTTLE_SECONDS", 300)),

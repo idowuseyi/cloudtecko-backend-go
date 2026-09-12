@@ -143,3 +143,144 @@ definitions:
         minLength: 15
         maxLength: 512
         example: a-sufficiently-long-passphrase
+  DonationTier:
+    type: object
+    required:
+      - id
+      - name
+      - amountKobo
+    properties:
+      id:
+        type: string
+        format: uuid4
+      name:
+        type: string
+        example: Supporter
+      description:
+        type: string
+      amountKobo:
+        description: Amount in kobo. Never a decimal - money is integer minor units.
+        type: integer
+        example: 500000
+      interval:
+        description: Empty for a one-off suggestion; "monthly" or "annually" for recurring tiers.
+        type: string
+  DonationTierList:
+    type: object
+    required:
+      - items
+    properties:
+      items:
+        type: array
+        items:
+          "$ref": "#/definitions/DonationTier"
+  PostDonationCheckoutPayload:
+    type: object
+    required:
+      - email
+      - amountKobo
+    properties:
+      email:
+        type: string
+        format: email
+        maxLength: 255
+      amountKobo:
+        description: Amount in kobo, bounded server-side.
+        type: integer
+        minimum: 1
+        example: 10000
+      displayName:
+        type: string
+        maxLength: 200
+        x-nullable: true
+      isAnonymous:
+        type: boolean
+        default: false
+  DonationCheckoutResponse:
+    description: |-
+      Where to send the payer, plus the token needed to read this donation's
+      status afterwards. The token is shown ONCE: only its hash is stored.
+    type: object
+    required:
+      - reference
+      - authorizationUrl
+      - accessToken
+      - amountKobo
+    properties:
+      reference:
+        type: string
+        example: cld_don_K4M2P9XQ7RTVWZ3B
+      authorizationUrl:
+        description: Redirect the payer here.
+        type: string
+      accessToken:
+        description: Send as the X-Donation-Token header when reading status. Shown once.
+        type: string
+      amountKobo:
+        type: integer
+  DonationStatusResponse:
+    type: object
+    required:
+      - reference
+      - status
+      - amountKobo
+      - currency
+    properties:
+      reference:
+        type: string
+      status:
+        type: string
+        enum:
+          - pending
+          - active
+          - completed
+          - past_due
+          - cancelled
+          - failed
+      amountKobo:
+        type: integer
+      currency:
+        type: string
+  Donation:
+    type: object
+    required:
+      - id
+      - reference
+      - status
+      - amountKobo
+      - currency
+      - email
+      - isAnonymous
+      - createdAt
+    properties:
+      id:
+        type: string
+        format: uuid4
+      reference:
+        type: string
+      status:
+        type: string
+      amountKobo:
+        type: integer
+      currency:
+        type: string
+      email:
+        type: string
+        format: email
+      displayName:
+        type: string
+        x-nullable: true
+      isAnonymous:
+        type: boolean
+      createdAt:
+        type: string
+        format: date-time
+  DonationList:
+    type: object
+    required:
+      - items
+    properties:
+      items:
+        type: array
+        items:
+          "$ref": "#/definitions/Donation"

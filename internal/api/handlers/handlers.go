@@ -8,6 +8,7 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/common"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/community"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/content"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/donations"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/push"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/webhooks"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/wellknown"
@@ -22,6 +23,7 @@ func AttachAllRoutes(s *api.Server) {
 		admin.DeleteAdminResourceRoute(s),
 		admin.GetAdminApplicationsRoute(s),
 		admin.GetAdminCategoriesRoute(s),
+		admin.GetAdminDonationsRoute(s),
 		admin.PostAdminApplicationApproveRoute(s),
 		admin.PostAdminApplicationRejectRoute(s),
 		admin.PostAdminCategoryRoute(s),
@@ -60,6 +62,9 @@ func AttachAllRoutes(s *api.Server) {
 		content.GetFeaturedEventRoute(s),
 		content.GetResourceRoute(s),
 		content.GetResourcesRoute(s),
+		donations.GetDonationStatusRoute(s),
+		donations.GetDonationTiersRoute(s),
+		donations.PostDonationCheckoutRoute(s),
 		push.PutUpdatePushTokenRoute(s),
 		webhooks.PostPaymentWebhookRoute(s),
 		wellknown.GetAndroidDigitalAssetLinksRoute(s),

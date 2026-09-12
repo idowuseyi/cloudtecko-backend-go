@@ -1,0 +1,114 @@
+swagger: "2.0"
+info:
+  title: github.com/idowuseyi/cloudtecko-backend-go
+  version: 0.1.0
+paths:
+  /api/v1/donations/tiers:
+    get:
+      description: Lists the suggested donation amounts shown on the donate page.
+      tags:
+        - donations
+      summary: Lists donation tiers
+      operationId: GetDonationTiersRoute
+      responses:
+        "200":
+          description: The tiers
+          schema:
+            "$ref": "../definitions/community.yml#/definitions/DonationTierList"
+  /api/v1/donations/checkout:
+    post:
+      description: |-
+        Starts a one-off donation and returns where to send the payer.
+
+        No account is required. The response carries an access token, shown once,
+        which is needed to read this donation's status afterwards -- the
+        reference alone is not sufficient, since it travels in the callback URL.
+      tags:
+        - donations
+      summary: Starts a one-off donation
+      operationId: PostDonationCheckoutRoute
+      parameters:
+        - name: Payload
+          in: body
+          schema:
+            "$ref": "../definitions/community.yml#/definitions/PostDonationCheckoutPayload"
+      responses:
+        "201":
+          description: Where to pay
+          schema:
+            "$ref": "../definitions/community.yml#/definitions/DonationCheckoutResponse"
+        "400":
+          description: PublicHTTPError - the amount is outside the permitted range
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "502":
+          description: PublicHTTPError - the provider could not be reached; no money moved
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+  /api/v1/donations/{reference}:
+    get:
+      description: |-
+        Reports a donation's status to its donor.
+
+        Requires the X-Donation-Token header issued at checkout. An unknown
+        reference and a wrong token are reported identically, so this cannot be
+        used to discover which references exist.
+
+        If the donation is still pending, the server asks the provider
+        server-to-server what actually happened and settles it through the same
+        guarded path the webhook uses. It never trusts the redirect itself.
+      tags:
+        - donations
+      summary: Reads a donation's status
+      operationId: GetDonationStatusRoute
+      parameters:
+        - name: reference
+          in: path
+          required: true
+          type: string
+          maxLength: 64
+        # Declared for documentation, deliberately NOT required: this repo's
+        # binding helpers bind path and query params only, so go-swagger would
+        # validate a value nothing ever populates and reject every request. The
+        # handler reads the header itself and treats a missing token exactly like
+        # a wrong one, which also avoids a 400-vs-404 distinction that would leak
+        # whether a reference exists.
+        - name: X-Donation-Token
+          in: header
+          type: string
+          maxLength: 64
+      responses:
+        "200":
+          description: The donation status
+          schema:
+            "$ref": "../definitions/community.yml#/definitions/DonationStatusResponse"
+        "404":
+          description: PublicHTTPError - no such donation, or the token does not match
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+  /api/v1/admin/donations:
+    get:
+      security:
+        - Bearer: []
+      description: Lists donations for review.
+      tags:
+        - admin
+      summary: Lists donations
+      operationId: GetAdminDonationsRoute
+      parameters:
+        - name: status
+          in: query
+          type: string
+      responses:
+        "200":
+          description: The donations
+          schema:
+            "$ref": "../definitions/community.yml#/definitions/DonationList"
+        "401":
+          description: PublicHTTPError - not authenticated
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "403":
+          description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
