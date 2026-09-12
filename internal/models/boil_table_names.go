@@ -9,11 +9,18 @@ var TableNames = struct {
 	Categories             string
 	ConfirmationTokens     string
 	ContactMessages        string
+	DonationSubscriptions  string
+	DonationTiers          string
+	Donations              string
 	Events                 string
 	Faqs                   string
 	MediaAssets            string
 	MembershipApplications string
+	Orders                 string
 	PasswordResetTokens    string
+	PaymentRefunds         string
+	PaymentWebhookEvents   string
+	Payments               string
 	PushTokens             string
 	RefreshTokens          string
 	Resources              string
@@ -24,11 +31,18 @@ var TableNames = struct {
 	Categories:             "categories",
 	ConfirmationTokens:     "confirmation_tokens",
 	ContactMessages:        "contact_messages",
+	DonationSubscriptions:  "donation_subscriptions",
+	DonationTiers:          "donation_tiers",
+	Donations:              "donations",
 	Events:                 "events",
 	Faqs:                   "faqs",
 	MediaAssets:            "media_assets",
 	MembershipApplications: "membership_applications",
+	Orders:                 "orders",
 	PasswordResetTokens:    "password_reset_tokens",
+	PaymentRefunds:         "payment_refunds",
+	PaymentWebhookEvents:   "payment_webhook_events",
+	Payments:               "payments",
 	PushTokens:             "push_tokens",
 	RefreshTokens:          "refresh_tokens",
 	Resources:              "resources",

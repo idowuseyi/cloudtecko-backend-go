@@ -20,6 +20,7 @@ var serviceSet = wire.NewSet(
 	newServerWithComponents,
 	NewPush,
 	NewStorage,
+	NewPaymentProvider,
 	NewMailer,
 	NewI18N,
 	authServiceSet,

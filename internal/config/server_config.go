@@ -194,6 +194,26 @@ type Server struct {
 	I18n              I18n
 	Storage           Storage
 	Community         Community
+	Payment           Payment
+}
+
+// Payment configures the payment provider.
+type Payment struct {
+	// UseMockProvider keeps money flows in memory. Default TRUE so a developer
+	// without provider credentials still gets a working server.
+	UseMockProvider bool
+	// MockSecretKey signs mock webhook bodies, so tests exercise the real
+	// signature-verification path rather than bypassing it.
+	MockSecretKey string
+
+	SecretKey      string
+	BaseURL        string
+	RequestTimeout time.Duration
+
+	// CallbackURL is where the provider returns the payer after checkout. It is
+	// a nice page, never a fulfilment trigger: the redirect is fully
+	// attacker-controlled and proves nothing.
+	CallbackURL string
 }
 
 // Storage configures the object store behind the media pipeline.
@@ -429,6 +449,14 @@ func DefaultServiceConfigFromEnv() Server {
 			}, ","),
 			QuarantinePrefix: util.GetEnv("SERVER_STORAGE_QUARANTINE_PREFIX", "quarantine"),
 			PublicPrefix:     util.GetEnv("SERVER_STORAGE_PUBLIC_PREFIX", "public"),
+		},
+		Payment: Payment{
+			UseMockProvider: util.GetEnvAsBool("SERVER_PAYMENT_USE_MOCK", true),
+			MockSecretKey:   util.GetEnv("SERVER_PAYMENT_MOCK_SECRET_KEY", "mock-payment-secret"),
+			SecretKey:       util.GetEnv("SERVER_PAYMENT_SECRET_KEY", ""),
+			BaseURL:         util.GetEnv("SERVER_PAYMENT_BASE_URL", "https://api.paystack.co"),
+			RequestTimeout:  time.Second * time.Duration(util.GetEnvAsInt("SERVER_PAYMENT_REQUEST_TIMEOUT_SECONDS", 30)),
+			CallbackURL:     util.GetEnv("SERVER_PAYMENT_CALLBACK_URL", "http://localhost:3000/payment/complete"),
 		},
 		Community: Community{
 			ContactThrottle:      time.Second * time.Duration(util.GetEnvAsInt("SERVER_COMMUNITY_CONTACT_THROTTLE_SECONDS", 300)),

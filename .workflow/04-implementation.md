@@ -63,6 +63,16 @@ container: `make build` green (0 lint issues) and 23/23 test packages passing.
 | `cmd/db/purge_expired.go` | `app db purge-expired` |
 | `internal/api/server.go`, `wire.go` | `MembershipService` split out of `AuthService` |
 
+**Phase 4 — payment core (no money moves yet)**
+
+| File | Change |
+|---|---|
+| `migrations/20260912090000-create-commerce-spine.sql` | `orders`, `payments`, `payment_refunds`, `payment_webhook_events`, `donations`, `donation_tiers`, `donation_subscriptions` + 7 enums |
+| `internal/payment/` | `Provider` interface + `paystack/` + `mock/` |
+| `internal/data/local/transitions.go` | `transitionStatus`, `claimHoldRelease` |
+| `internal/data/local/service_payment.go` | webhook recording and effects |
+| `internal/api/handlers/webhooks/` | signature-verified endpoint + 11 tests |
+
 ## Key Decisions
 
 **A nil-dereference panic in generated code was fixed at the template, not the call site.**
@@ -129,6 +139,23 @@ a reset link touches an existing account, an invite link creates one on an appro
 **The contact throttle is silent.** Answering "you submitted too recently" would confirm that an
 address has used the form, so a throttled submission returns the same 202 as an accepted one.
 
+**Idempotency is `ON CONFLICT DO NOTHING`, not catch-the-23505.** In PostgreSQL a failed
+statement aborts the entire transaction, so inserting and then handling the unique violation left
+every later query in that transaction failing with "current transaction is aborted" — turning a
+duplicate delivery into a 500, which makes the provider retry the duplicate. The guard against
+redelivery was itself causing redelivery. Five consecutive replays of one delivery now produce
+one recorded event, one settlement, and five 200s.
+
+**The signature buys less than it looks like.** Paystack's HMAC covers the body with no timestamp
+and no nonce, so a captured delivery verifies forever. Replay defence is entirely ours: a unique
+idempotency key keyed on the provider's own event identity (never a digest of the body, which any
+re-serialisation would change), plus guarded status transitions. A test replays the same signed
+body five times.
+
+**An amount mismatch is a persisted state, not an error.** A correctly-signed event claiming a
+different amount parks the payment in `amount_mismatch` and returns 200. Erroring would lose the
+evidence AND make the provider retry for 72 hours.
+
 ## Deviations from Design
 
 1. **`internal/data/local/service_push.go` was not a bug.** `01-brief.md`, `02-plan.md` and
@@ -154,7 +181,11 @@ address has used the form, so a throttled submission returns the same 202 as an 
    `interfacebloat` flagged it. Rather than suppress, `MembershipService` is now a separate seam
    on `api.Server`, still implemented by `*auth.Service` and bound in wire — turning an approved
    application into an account is a different responsibility from signing an existing user in.
-9. **`render.yaml` needed no change** — `SERVER_ECHO_CORS_ALLOW_ORIGINS` already exists as a
+10. **`orders` was created in Phase 4**, earlier than planned, because `payments` references it.
+    `order_items` still waits — it points at product variants and ticket tiers that do not exist.
+11. **`requireTransition` was written and removed.** It is for admin-driven transitions in later
+    phases; dead code is worse than absent code, so it returns when a caller does.
+12. **`render.yaml` needed no change** — `SERVER_ECHO_CORS_ALLOW_ORIGINS` already exists as a
    prompted variable. It must still be **set at deploy time**: empty leaves CORS off entirely
    with no wildcard fallback, and the frontend then receives nothing.
 

@@ -295,6 +295,11 @@ func Init(s *api.Server) error {
 		// addresses, free text and, on the invitation-accept route, a password.
 		APIV1Community: s.Echo.Group("/api/v1", authMiddlewares...),
 
+		// Provider webhooks. Deliberately NOT behind the rate limiter: throttling
+		// a provider's retries would drop money events, and the signature check is
+		// what makes this safe to expose.
+		Webhooks: s.Echo.Group("/webhooks"),
+
 		// Admin surface at /api/v1/admin/**.
 		//
 		// Scopes lists "admin" and NOTHING ELSE. CheckUserScopes is OR, not AND:

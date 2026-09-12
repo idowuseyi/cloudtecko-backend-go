@@ -148,10 +148,13 @@ var UserRels = struct {
 	AccessTokens                         string
 	ConfirmationTokens                   string
 	HandledByUserContactMessages         string
+	Donations                            string
 	UploadedByUserMediaAssets            string
 	AcceptedUserMembershipApplications   string
 	ReviewedByUserMembershipApplications string
+	Orders                               string
 	PasswordResetTokens                  string
+	RequestedByUserPaymentRefunds        string
 	PushTokens                           string
 	RefreshTokens                        string
 }{
@@ -159,10 +162,13 @@ var UserRels = struct {
 	AccessTokens:                         "AccessTokens",
 	ConfirmationTokens:                   "ConfirmationTokens",
 	HandledByUserContactMessages:         "HandledByUserContactMessages",
+	Donations:                            "Donations",
 	UploadedByUserMediaAssets:            "UploadedByUserMediaAssets",
 	AcceptedUserMembershipApplications:   "AcceptedUserMembershipApplications",
 	ReviewedByUserMembershipApplications: "ReviewedByUserMembershipApplications",
+	Orders:                               "Orders",
 	PasswordResetTokens:                  "PasswordResetTokens",
+	RequestedByUserPaymentRefunds:        "RequestedByUserPaymentRefunds",
 	PushTokens:                           "PushTokens",
 	RefreshTokens:                        "RefreshTokens",
 }
@@ -173,10 +179,13 @@ type userR struct {
 	AccessTokens                         AccessTokenSlice           `boil:"AccessTokens" json:"AccessTokens" toml:"AccessTokens" yaml:"AccessTokens"`
 	ConfirmationTokens                   ConfirmationTokenSlice     `boil:"ConfirmationTokens" json:"ConfirmationTokens" toml:"ConfirmationTokens" yaml:"ConfirmationTokens"`
 	HandledByUserContactMessages         ContactMessageSlice        `boil:"HandledByUserContactMessages" json:"HandledByUserContactMessages" toml:"HandledByUserContactMessages" yaml:"HandledByUserContactMessages"`
+	Donations                            DonationSlice              `boil:"Donations" json:"Donations" toml:"Donations" yaml:"Donations"`
 	UploadedByUserMediaAssets            MediaAssetSlice            `boil:"UploadedByUserMediaAssets" json:"UploadedByUserMediaAssets" toml:"UploadedByUserMediaAssets" yaml:"UploadedByUserMediaAssets"`
 	AcceptedUserMembershipApplications   MembershipApplicationSlice `boil:"AcceptedUserMembershipApplications" json:"AcceptedUserMembershipApplications" toml:"AcceptedUserMembershipApplications" yaml:"AcceptedUserMembershipApplications"`
 	ReviewedByUserMembershipApplications MembershipApplicationSlice `boil:"ReviewedByUserMembershipApplications" json:"ReviewedByUserMembershipApplications" toml:"ReviewedByUserMembershipApplications" yaml:"ReviewedByUserMembershipApplications"`
+	Orders                               OrderSlice                 `boil:"Orders" json:"Orders" toml:"Orders" yaml:"Orders"`
 	PasswordResetTokens                  PasswordResetTokenSlice    `boil:"PasswordResetTokens" json:"PasswordResetTokens" toml:"PasswordResetTokens" yaml:"PasswordResetTokens"`
+	RequestedByUserPaymentRefunds        PaymentRefundSlice         `boil:"RequestedByUserPaymentRefunds" json:"RequestedByUserPaymentRefunds" toml:"RequestedByUserPaymentRefunds" yaml:"RequestedByUserPaymentRefunds"`
 	PushTokens                           PushTokenSlice             `boil:"PushTokens" json:"PushTokens" toml:"PushTokens" yaml:"PushTokens"`
 	RefreshTokens                        RefreshTokenSlice          `boil:"RefreshTokens" json:"RefreshTokens" toml:"RefreshTokens" yaml:"RefreshTokens"`
 }
@@ -250,6 +259,22 @@ func (r *userR) GetHandledByUserContactMessages() ContactMessageSlice {
 	return r.HandledByUserContactMessages
 }
 
+func (o *User) GetDonations() DonationSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetDonations()
+}
+
+func (r *userR) GetDonations() DonationSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.Donations
+}
+
 func (o *User) GetUploadedByUserMediaAssets() MediaAssetSlice {
 	if o == nil {
 		return nil
@@ -298,6 +323,22 @@ func (r *userR) GetReviewedByUserMembershipApplications() MembershipApplicationS
 	return r.ReviewedByUserMembershipApplications
 }
 
+func (o *User) GetOrders() OrderSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetOrders()
+}
+
+func (r *userR) GetOrders() OrderSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.Orders
+}
+
 func (o *User) GetPasswordResetTokens() PasswordResetTokenSlice {
 	if o == nil {
 		return nil
@@ -312,6 +353,22 @@ func (r *userR) GetPasswordResetTokens() PasswordResetTokenSlice {
 	}
 
 	return r.PasswordResetTokens
+}
+
+func (o *User) GetRequestedByUserPaymentRefunds() PaymentRefundSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetRequestedByUserPaymentRefunds()
+}
+
+func (r *userR) GetRequestedByUserPaymentRefunds() PaymentRefundSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.RequestedByUserPaymentRefunds
 }
 
 func (o *User) GetPushTokens() PushTokenSlice {
@@ -501,6 +558,20 @@ func (o *User) HandledByUserContactMessages(mods ...qm.QueryMod) contactMessageQ
 	return ContactMessages(queryMods...)
 }
 
+// Donations retrieves all the donation's Donations with an executor.
+func (o *User) Donations(mods ...qm.QueryMod) donationQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"donations\".\"user_id\"=?", o.ID),
+	)
+
+	return Donations(queryMods...)
+}
+
 // UploadedByUserMediaAssets retrieves all the media_asset's MediaAssets with an executor via uploaded_by_user_id column.
 func (o *User) UploadedByUserMediaAssets(mods ...qm.QueryMod) mediaAssetQuery {
 	var queryMods []qm.QueryMod
@@ -543,6 +614,20 @@ func (o *User) ReviewedByUserMembershipApplications(mods ...qm.QueryMod) members
 	return MembershipApplications(queryMods...)
 }
 
+// Orders retrieves all the order's Orders with an executor.
+func (o *User) Orders(mods ...qm.QueryMod) orderQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"orders\".\"user_id\"=?", o.ID),
+	)
+
+	return Orders(queryMods...)
+}
+
 // PasswordResetTokens retrieves all the password_reset_token's PasswordResetTokens with an executor.
 func (o *User) PasswordResetTokens(mods ...qm.QueryMod) passwordResetTokenQuery {
 	var queryMods []qm.QueryMod
@@ -555,6 +640,20 @@ func (o *User) PasswordResetTokens(mods ...qm.QueryMod) passwordResetTokenQuery 
 	)
 
 	return PasswordResetTokens(queryMods...)
+}
+
+// RequestedByUserPaymentRefunds retrieves all the payment_refund's PaymentRefunds with an executor via requested_by_user_id column.
+func (o *User) RequestedByUserPaymentRefunds(mods ...qm.QueryMod) paymentRefundQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"payment_refunds\".\"requested_by_user_id\"=?", o.ID),
+	)
+
+	return PaymentRefunds(queryMods...)
 }
 
 // PushTokens retrieves all the push_token's PushTokens with an executor.
@@ -1012,6 +1111,112 @@ func (userL) LoadHandledByUserContactMessages(ctx context.Context, e boil.Contex
 	return nil
 }
 
+// LoadDonations allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (userL) LoadDonations(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
+	var slice []*User
+	var object *User
+
+	if singular {
+		var ok bool
+		object, ok = maybeUser.(*User)
+		if !ok {
+			object = new(User)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUser))
+			}
+		}
+	} else {
+		s, ok := maybeUser.(*[]*User)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUser))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &userR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &userR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`donations`),
+		qm.WhereIn(`donations.user_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load donations")
+	}
+
+	var resultSlice []*Donation
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice donations")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on donations")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for donations")
+	}
+
+	if singular {
+		object.R.Donations = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &donationR{}
+			}
+			foreign.R.User = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if queries.Equal(local.ID, foreign.UserID) {
+				local.R.Donations = append(local.R.Donations, foreign)
+				if foreign.R == nil {
+					foreign.R = &donationR{}
+				}
+				foreign.R.User = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
 // LoadUploadedByUserMediaAssets allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
 func (userL) LoadUploadedByUserMediaAssets(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
@@ -1330,6 +1535,112 @@ func (userL) LoadReviewedByUserMembershipApplications(ctx context.Context, e boi
 	return nil
 }
 
+// LoadOrders allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (userL) LoadOrders(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
+	var slice []*User
+	var object *User
+
+	if singular {
+		var ok bool
+		object, ok = maybeUser.(*User)
+		if !ok {
+			object = new(User)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUser))
+			}
+		}
+	} else {
+		s, ok := maybeUser.(*[]*User)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUser))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &userR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &userR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`orders`),
+		qm.WhereIn(`orders.user_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load orders")
+	}
+
+	var resultSlice []*Order
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice orders")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on orders")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for orders")
+	}
+
+	if singular {
+		object.R.Orders = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &orderR{}
+			}
+			foreign.R.User = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if queries.Equal(local.ID, foreign.UserID) {
+				local.R.Orders = append(local.R.Orders, foreign)
+				if foreign.R == nil {
+					foreign.R = &orderR{}
+				}
+				foreign.R.User = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
 // LoadPasswordResetTokens allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
 func (userL) LoadPasswordResetTokens(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
@@ -1428,6 +1739,112 @@ func (userL) LoadPasswordResetTokens(ctx context.Context, e boil.ContextExecutor
 					foreign.R = &passwordResetTokenR{}
 				}
 				foreign.R.User = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadRequestedByUserPaymentRefunds allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (userL) LoadRequestedByUserPaymentRefunds(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
+	var slice []*User
+	var object *User
+
+	if singular {
+		var ok bool
+		object, ok = maybeUser.(*User)
+		if !ok {
+			object = new(User)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUser))
+			}
+		}
+	} else {
+		s, ok := maybeUser.(*[]*User)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUser))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &userR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &userR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`payment_refunds`),
+		qm.WhereIn(`payment_refunds.requested_by_user_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load payment_refunds")
+	}
+
+	var resultSlice []*PaymentRefund
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice payment_refunds")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on payment_refunds")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for payment_refunds")
+	}
+
+	if singular {
+		object.R.RequestedByUserPaymentRefunds = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &paymentRefundR{}
+			}
+			foreign.R.RequestedByUser = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if queries.Equal(local.ID, foreign.RequestedByUserID) {
+				local.R.RequestedByUserPaymentRefunds = append(local.R.RequestedByUserPaymentRefunds, foreign)
+				if foreign.R == nil {
+					foreign.R = &paymentRefundR{}
+				}
+				foreign.R.RequestedByUser = local
 				break
 			}
 		}
@@ -1931,6 +2348,133 @@ func (o *User) RemoveHandledByUserContactMessages(ctx context.Context, exec boil
 	return nil
 }
 
+// AddDonations adds the given related objects to the existing relationships
+// of the user, optionally inserting them as new records.
+// Appends related to o.R.Donations.
+// Sets related.R.User appropriately.
+func (o *User) AddDonations(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Donation) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			queries.Assign(&rel.UserID, o.ID)
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"donations\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
+				strmangle.WhereClause("\"", "\"", 2, donationPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			queries.Assign(&rel.UserID, o.ID)
+		}
+	}
+
+	if o.R == nil {
+		o.R = &userR{
+			Donations: related,
+		}
+	} else {
+		o.R.Donations = append(o.R.Donations, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &donationR{
+				User: o,
+			}
+		} else {
+			rel.R.User = o
+		}
+	}
+	return nil
+}
+
+// SetDonations removes all previously related items of the
+// user replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.User's Donations accordingly.
+// Replaces o.R.Donations with related.
+// Sets related.R.User's Donations accordingly.
+func (o *User) SetDonations(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Donation) error {
+	query := "update \"donations\" set \"user_id\" = null where \"user_id\" = $1"
+	values := []interface{}{o.ID}
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, query)
+		fmt.Fprintln(writer, values)
+	}
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+
+	if o.R != nil {
+		for _, rel := range o.R.Donations {
+			queries.SetScanner(&rel.UserID, nil)
+			if rel.R == nil {
+				continue
+			}
+
+			rel.R.User = nil
+		}
+		o.R.Donations = nil
+	}
+
+	return o.AddDonations(ctx, exec, insert, related...)
+}
+
+// RemoveDonations relationships from objects passed in.
+// Removes related items from R.Donations (uses pointer comparison, removal does not keep order)
+// Sets related.R.User.
+func (o *User) RemoveDonations(ctx context.Context, exec boil.ContextExecutor, related ...*Donation) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	for _, rel := range related {
+		queries.SetScanner(&rel.UserID, nil)
+		if rel.R != nil {
+			rel.R.User = nil
+		}
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("user_id")); err != nil {
+			return err
+		}
+	}
+	if o.R == nil {
+		return nil
+	}
+
+	for _, rel := range related {
+		for i, ri := range o.R.Donations {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.Donations)
+			if ln > 1 && i < ln-1 {
+				o.R.Donations[i] = o.R.Donations[ln-1]
+			}
+			o.R.Donations = o.R.Donations[:ln-1]
+			break
+		}
+	}
+
+	return nil
+}
+
 // AddUploadedByUserMediaAssets adds the given related objects to the existing relationships
 // of the user, optionally inserting them as new records.
 // Appends related to o.R.UploadedByUserMediaAssets.
@@ -2312,6 +2856,133 @@ func (o *User) RemoveReviewedByUserMembershipApplications(ctx context.Context, e
 	return nil
 }
 
+// AddOrders adds the given related objects to the existing relationships
+// of the user, optionally inserting them as new records.
+// Appends related to o.R.Orders.
+// Sets related.R.User appropriately.
+func (o *User) AddOrders(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Order) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			queries.Assign(&rel.UserID, o.ID)
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"orders\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
+				strmangle.WhereClause("\"", "\"", 2, orderPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			queries.Assign(&rel.UserID, o.ID)
+		}
+	}
+
+	if o.R == nil {
+		o.R = &userR{
+			Orders: related,
+		}
+	} else {
+		o.R.Orders = append(o.R.Orders, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &orderR{
+				User: o,
+			}
+		} else {
+			rel.R.User = o
+		}
+	}
+	return nil
+}
+
+// SetOrders removes all previously related items of the
+// user replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.User's Orders accordingly.
+// Replaces o.R.Orders with related.
+// Sets related.R.User's Orders accordingly.
+func (o *User) SetOrders(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Order) error {
+	query := "update \"orders\" set \"user_id\" = null where \"user_id\" = $1"
+	values := []interface{}{o.ID}
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, query)
+		fmt.Fprintln(writer, values)
+	}
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+
+	if o.R != nil {
+		for _, rel := range o.R.Orders {
+			queries.SetScanner(&rel.UserID, nil)
+			if rel.R == nil {
+				continue
+			}
+
+			rel.R.User = nil
+		}
+		o.R.Orders = nil
+	}
+
+	return o.AddOrders(ctx, exec, insert, related...)
+}
+
+// RemoveOrders relationships from objects passed in.
+// Removes related items from R.Orders (uses pointer comparison, removal does not keep order)
+// Sets related.R.User.
+func (o *User) RemoveOrders(ctx context.Context, exec boil.ContextExecutor, related ...*Order) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	for _, rel := range related {
+		queries.SetScanner(&rel.UserID, nil)
+		if rel.R != nil {
+			rel.R.User = nil
+		}
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("user_id")); err != nil {
+			return err
+		}
+	}
+	if o.R == nil {
+		return nil
+	}
+
+	for _, rel := range related {
+		for i, ri := range o.R.Orders {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.Orders)
+			if ln > 1 && i < ln-1 {
+				o.R.Orders[i] = o.R.Orders[ln-1]
+			}
+			o.R.Orders = o.R.Orders[:ln-1]
+			break
+		}
+	}
+
+	return nil
+}
+
 // AddPasswordResetTokens adds the given related objects to the existing relationships
 // of the user, optionally inserting them as new records.
 // Appends related to o.R.PasswordResetTokens.
@@ -2362,6 +3033,133 @@ func (o *User) AddPasswordResetTokens(ctx context.Context, exec boil.ContextExec
 			rel.R.User = o
 		}
 	}
+	return nil
+}
+
+// AddRequestedByUserPaymentRefunds adds the given related objects to the existing relationships
+// of the user, optionally inserting them as new records.
+// Appends related to o.R.RequestedByUserPaymentRefunds.
+// Sets related.R.RequestedByUser appropriately.
+func (o *User) AddRequestedByUserPaymentRefunds(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*PaymentRefund) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			queries.Assign(&rel.RequestedByUserID, o.ID)
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"payment_refunds\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"requested_by_user_id"}),
+				strmangle.WhereClause("\"", "\"", 2, paymentRefundPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			queries.Assign(&rel.RequestedByUserID, o.ID)
+		}
+	}
+
+	if o.R == nil {
+		o.R = &userR{
+			RequestedByUserPaymentRefunds: related,
+		}
+	} else {
+		o.R.RequestedByUserPaymentRefunds = append(o.R.RequestedByUserPaymentRefunds, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &paymentRefundR{
+				RequestedByUser: o,
+			}
+		} else {
+			rel.R.RequestedByUser = o
+		}
+	}
+	return nil
+}
+
+// SetRequestedByUserPaymentRefunds removes all previously related items of the
+// user replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.RequestedByUser's RequestedByUserPaymentRefunds accordingly.
+// Replaces o.R.RequestedByUserPaymentRefunds with related.
+// Sets related.R.RequestedByUser's RequestedByUserPaymentRefunds accordingly.
+func (o *User) SetRequestedByUserPaymentRefunds(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*PaymentRefund) error {
+	query := "update \"payment_refunds\" set \"requested_by_user_id\" = null where \"requested_by_user_id\" = $1"
+	values := []interface{}{o.ID}
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, query)
+		fmt.Fprintln(writer, values)
+	}
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+
+	if o.R != nil {
+		for _, rel := range o.R.RequestedByUserPaymentRefunds {
+			queries.SetScanner(&rel.RequestedByUserID, nil)
+			if rel.R == nil {
+				continue
+			}
+
+			rel.R.RequestedByUser = nil
+		}
+		o.R.RequestedByUserPaymentRefunds = nil
+	}
+
+	return o.AddRequestedByUserPaymentRefunds(ctx, exec, insert, related...)
+}
+
+// RemoveRequestedByUserPaymentRefunds relationships from objects passed in.
+// Removes related items from R.RequestedByUserPaymentRefunds (uses pointer comparison, removal does not keep order)
+// Sets related.R.RequestedByUser.
+func (o *User) RemoveRequestedByUserPaymentRefunds(ctx context.Context, exec boil.ContextExecutor, related ...*PaymentRefund) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	for _, rel := range related {
+		queries.SetScanner(&rel.RequestedByUserID, nil)
+		if rel.R != nil {
+			rel.R.RequestedByUser = nil
+		}
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("requested_by_user_id")); err != nil {
+			return err
+		}
+	}
+	if o.R == nil {
+		return nil
+	}
+
+	for _, rel := range related {
+		for i, ri := range o.R.RequestedByUserPaymentRefunds {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.RequestedByUserPaymentRefunds)
+			if ln > 1 && i < ln-1 {
+				o.R.RequestedByUserPaymentRefunds[i] = o.R.RequestedByUserPaymentRefunds[ln-1]
+			}
+			o.R.RequestedByUserPaymentRefunds = o.R.RequestedByUserPaymentRefunds[:ln-1]
+			break
+		}
+	}
+
 	return nil
 }
 

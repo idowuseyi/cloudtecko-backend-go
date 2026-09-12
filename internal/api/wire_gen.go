@@ -52,7 +52,11 @@ func InitNewServer(server config.Server) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	apiServer := newServerWithComponents(server, db, mailer, service, i18nService, clock, authService, authService, localService, metricsService, storage)
+	provider, err := NewPaymentProvider(server)
+	if err != nil {
+		return nil, err
+	}
+	apiServer := newServerWithComponents(server, db, mailer, service, i18nService, clock, authService, authService, localService, metricsService, storage, provider)
 	return apiServer, nil
 }
 
@@ -82,7 +86,11 @@ func InitNewServerWithDB(server config.Server, db *sql.DB, t ...*testing.T) (*Se
 	if err != nil {
 		return nil, err
 	}
-	apiServer := newServerWithComponents(server, db, mailer, service, i18nService, clock, authService, authService, localService, metricsService, storage)
+	provider, err := NewPaymentProvider(server)
+	if err != nil {
+		return nil, err
+	}
+	apiServer := newServerWithComponents(server, db, mailer, service, i18nService, clock, authService, authService, localService, metricsService, storage, provider)
 	return apiServer, nil
 }
 
@@ -93,6 +101,7 @@ var serviceSet = wire.NewSet(
 	newServerWithComponents,
 	NewPush,
 	NewStorage,
+	NewPaymentProvider,
 	NewMailer,
 	NewI18N,
 	authServiceSet, local.NewService, metrics.New, NewClock,

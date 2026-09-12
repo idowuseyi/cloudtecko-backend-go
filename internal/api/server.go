@@ -14,6 +14,7 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/i18n"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/mailer"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/metrics"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/payment"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/push"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/storage"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/util"
@@ -42,7 +43,11 @@ type Router struct {
 	// the only endpoints where an anonymous caller creates rows and triggers
 	// email, which is both a spam vector and a cost.
 	APIV1Community *echo.Group
-	WellKnown      *echo.Group
+	// Webhooks receives provider callbacks. Unauthenticated by necessity and
+	// NOT rate-limited: throttling a provider's retries would drop money events.
+	// Its security is the signature check, performed on the raw body.
+	Webhooks  *echo.Group
+	WellKnown *echo.Group
 }
 
 // Server is a central struct keeping all the dependencies.
@@ -76,6 +81,7 @@ type Server struct {
 	Local      *local.Service
 	Metrics    *metrics.Service
 	Storage    storage.Storage
+	Payment    payment.Provider
 }
 
 // newServerWithComponents is used by wire to initialize the server components.
@@ -93,6 +99,7 @@ func newServerWithComponents(
 	local *local.Service,
 	metrics *metrics.Service,
 	store storage.Storage,
+	paymentProvider payment.Provider,
 ) *Server {
 	return &Server{
 		Config:     cfg,
@@ -106,6 +113,7 @@ func newServerWithComponents(
 		Local:      local,
 		Metrics:    metrics,
 		Storage:    store,
+		Payment:    paymentProvider,
 	}
 }
 

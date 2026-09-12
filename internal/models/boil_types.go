@@ -98,6 +98,64 @@ func AllContactMessageStatus() []string {
 	}
 }
 
+// Enum values for PaymentProvider
+const (
+	PaymentProviderPaystack string = "paystack"
+	PaymentProviderMock     string = "mock"
+)
+
+func AllPaymentProvider() []string {
+	return []string{
+		PaymentProviderPaystack,
+		PaymentProviderMock,
+	}
+}
+
+// Enum values for CurrencyCode
+const (
+	CurrencyCodeNGN string = "NGN"
+)
+
+func AllCurrencyCode() []string {
+	return []string{
+		CurrencyCodeNGN,
+	}
+}
+
+// Enum values for DonationKind
+const (
+	DonationKindOneOff    string = "one_off"
+	DonationKindRecurring string = "recurring"
+)
+
+func AllDonationKind() []string {
+	return []string{
+		DonationKindOneOff,
+		DonationKindRecurring,
+	}
+}
+
+// Enum values for DonationStatus
+const (
+	DonationStatusPending   string = "pending"
+	DonationStatusActive    string = "active"
+	DonationStatusCompleted string = "completed"
+	DonationStatusPastDue   string = "past_due"
+	DonationStatusCancelled string = "cancelled"
+	DonationStatusFailed    string = "failed"
+)
+
+func AllDonationStatus() []string {
+	return []string{
+		DonationStatusPending,
+		DonationStatusActive,
+		DonationStatusCompleted,
+		DonationStatusPastDue,
+		DonationStatusCancelled,
+		DonationStatusFailed,
+	}
+}
+
 // Enum values for MediaStatus
 const (
 	MediaStatusPending  string = "pending"
@@ -131,6 +189,71 @@ func AllApplicationStatus() []string {
 		ApplicationStatusWithdrawn,
 		ApplicationStatusAccepted,
 		ApplicationStatusExpired,
+	}
+}
+
+// Enum values for OrderKind
+const (
+	OrderKindMerch  string = "merch"
+	OrderKindTicket string = "ticket"
+)
+
+func AllOrderKind() []string {
+	return []string{
+		OrderKindMerch,
+		OrderKindTicket,
+	}
+}
+
+// Enum values for OrderStatus
+const (
+	OrderStatusPending       string = "pending"
+	OrderStatusPaymentFailed string = "payment_failed"
+	OrderStatusExpired       string = "expired"
+	OrderStatusPaid          string = "paid"
+	OrderStatusPacked        string = "packed"
+	OrderStatusShipped       string = "shipped"
+	OrderStatusDelivered     string = "delivered"
+	OrderStatusCancelled     string = "cancelled"
+)
+
+func AllOrderStatus() []string {
+	return []string{
+		OrderStatusPending,
+		OrderStatusPaymentFailed,
+		OrderStatusExpired,
+		OrderStatusPaid,
+		OrderStatusPacked,
+		OrderStatusShipped,
+		OrderStatusDelivered,
+		OrderStatusCancelled,
+	}
+}
+
+// Enum values for PaymentStatus
+const (
+	PaymentStatusPending           string = "pending"
+	PaymentStatusProcessing        string = "processing"
+	PaymentStatusSucceeded         string = "succeeded"
+	PaymentStatusFailed            string = "failed"
+	PaymentStatusAbandoned         string = "abandoned"
+	PaymentStatusExpired           string = "expired"
+	PaymentStatusAmountMismatch    string = "amount_mismatch"
+	PaymentStatusPartiallyRefunded string = "partially_refunded"
+	PaymentStatusRefunded          string = "refunded"
+)
+
+func AllPaymentStatus() []string {
+	return []string{
+		PaymentStatusPending,
+		PaymentStatusProcessing,
+		PaymentStatusSucceeded,
+		PaymentStatusFailed,
+		PaymentStatusAbandoned,
+		PaymentStatusExpired,
+		PaymentStatusAmountMismatch,
+		PaymentStatusPartiallyRefunded,
+		PaymentStatusRefunded,
 	}
 }
 

@@ -27,4 +27,7 @@ var (
 	// ErrNotFoundInvitationInvalid covers not-found, not-approved and expired
 	// alike: distinguishing them would tell a caller which invitations exist.
 	ErrNotFoundInvitationInvalid = NewHTTPError(http.StatusNotFound, types.PublicHTTPErrorTypeGeneric, "That invitation is not valid.")
+
+	ErrConflictInvalidStateTransition = NewHTTPError(http.StatusConflict, types.PublicHTTPErrorTypeGeneric, "That change is not valid from the current state.")
+	ErrNotFoundPayment                = NewHTTPError(http.StatusNotFound, types.PublicHTTPErrorTypeGeneric, "The payment does not exist.")
 )

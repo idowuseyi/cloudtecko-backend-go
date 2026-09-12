@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -12,6 +13,9 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/config"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/i18n"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/mailer"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/payment"
+	paymentmock "github.com/idowuseyi/cloudtecko-backend-go/internal/payment/mock"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/payment/paystack"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/persistence"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/push"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/push/provider"
@@ -57,6 +61,34 @@ func NewStorage(cfg config.Server) (storage.Storage, error) {
 	}
 
 	return store, nil
+}
+
+// NewPaymentProvider creates the payment provider.
+//
+// The mock is the default, matching how push and storage behave: a developer
+// without provider credentials still gets a working server. Production sets
+// SERVER_PAYMENT_USE_MOCK=false and supplies a secret key, and a missing key
+// then fails loudly at startup rather than silently at the first charge.
+//
+// implementations chosen at runtime from config.
+//
+//nolint:ireturn // returning the interface is the point: wire injects one of two
+func NewPaymentProvider(cfg config.Server) (payment.Provider, error) {
+	if cfg.Payment.UseMockProvider {
+		log.Warn().Msg("Initializing mock payment provider (no real money moves)")
+
+		return paymentmock.New(cfg.Payment.MockSecretKey), nil
+	}
+
+	if cfg.Payment.SecretKey == "" {
+		return nil, errors.New("SERVER_PAYMENT_SECRET_KEY is required when the mock payment provider is disabled")
+	}
+
+	return paystack.New(paystack.Config{
+		SecretKey: cfg.Payment.SecretKey,
+		BaseURL:   cfg.Payment.BaseURL,
+		Timeout:   cfg.Payment.RequestTimeout,
+	}), nil
 }
 
 // NewPush creates an instance of the push service and registers the configured push providers.

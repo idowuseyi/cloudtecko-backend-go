@@ -1333,6 +1333,34 @@ paths:
             responses:
                 "200":
                     description: OK
+    /webhooks/payments:
+        post:
+            description: |-
+                Receives payment-provider notifications.
+
+                Authenticated by an HMAC over the RAW request body, not by a bearer
+                token. Note the provider's signature carries no timestamp and no nonce,
+                so there is no replay window: anyone who ever observes one valid delivery
+                can replay it verbatim forever and it will still verify. Replay
+                protection is entirely server-side, via a unique idempotency key plus
+                guarded state transitions.
+
+                Always answers 200 for an authentic event, including a duplicate and an
+                event type not acted on -- a non-2xx makes the provider retry for up to
+                72 hours.
+            tags:
+                - webhooks
+            summary: Receives payment provider webhooks
+            operationId: PostPaymentWebhookRoute
+            responses:
+                "200":
+                    description: Received
+                "400":
+                    description: Malformed body
+                "401":
+                    description: The signature did not verify
+                "500":
+                    description: Recording failed; the provider should retry
 definitions:
     archivePayload:
         type: object
