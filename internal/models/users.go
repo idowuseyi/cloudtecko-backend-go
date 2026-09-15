@@ -149,6 +149,7 @@ var UserRels = struct {
 	ConfirmationTokens                   string
 	HandledByUserContactMessages         string
 	Donations                            string
+	EventRegistrations                   string
 	UploadedByUserMediaAssets            string
 	AcceptedUserMembershipApplications   string
 	ReviewedByUserMembershipApplications string
@@ -163,6 +164,7 @@ var UserRels = struct {
 	ConfirmationTokens:                   "ConfirmationTokens",
 	HandledByUserContactMessages:         "HandledByUserContactMessages",
 	Donations:                            "Donations",
+	EventRegistrations:                   "EventRegistrations",
 	UploadedByUserMediaAssets:            "UploadedByUserMediaAssets",
 	AcceptedUserMembershipApplications:   "AcceptedUserMembershipApplications",
 	ReviewedByUserMembershipApplications: "ReviewedByUserMembershipApplications",
@@ -180,6 +182,7 @@ type userR struct {
 	ConfirmationTokens                   ConfirmationTokenSlice     `boil:"ConfirmationTokens" json:"ConfirmationTokens" toml:"ConfirmationTokens" yaml:"ConfirmationTokens"`
 	HandledByUserContactMessages         ContactMessageSlice        `boil:"HandledByUserContactMessages" json:"HandledByUserContactMessages" toml:"HandledByUserContactMessages" yaml:"HandledByUserContactMessages"`
 	Donations                            DonationSlice              `boil:"Donations" json:"Donations" toml:"Donations" yaml:"Donations"`
+	EventRegistrations                   EventRegistrationSlice     `boil:"EventRegistrations" json:"EventRegistrations" toml:"EventRegistrations" yaml:"EventRegistrations"`
 	UploadedByUserMediaAssets            MediaAssetSlice            `boil:"UploadedByUserMediaAssets" json:"UploadedByUserMediaAssets" toml:"UploadedByUserMediaAssets" yaml:"UploadedByUserMediaAssets"`
 	AcceptedUserMembershipApplications   MembershipApplicationSlice `boil:"AcceptedUserMembershipApplications" json:"AcceptedUserMembershipApplications" toml:"AcceptedUserMembershipApplications" yaml:"AcceptedUserMembershipApplications"`
 	ReviewedByUserMembershipApplications MembershipApplicationSlice `boil:"ReviewedByUserMembershipApplications" json:"ReviewedByUserMembershipApplications" toml:"ReviewedByUserMembershipApplications" yaml:"ReviewedByUserMembershipApplications"`
@@ -273,6 +276,22 @@ func (r *userR) GetDonations() DonationSlice {
 	}
 
 	return r.Donations
+}
+
+func (o *User) GetEventRegistrations() EventRegistrationSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetEventRegistrations()
+}
+
+func (r *userR) GetEventRegistrations() EventRegistrationSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.EventRegistrations
 }
 
 func (o *User) GetUploadedByUserMediaAssets() MediaAssetSlice {
@@ -570,6 +589,20 @@ func (o *User) Donations(mods ...qm.QueryMod) donationQuery {
 	)
 
 	return Donations(queryMods...)
+}
+
+// EventRegistrations retrieves all the event_registration's EventRegistrations with an executor.
+func (o *User) EventRegistrations(mods ...qm.QueryMod) eventRegistrationQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"event_registrations\".\"user_id\"=?", o.ID),
+	)
+
+	return EventRegistrations(queryMods...)
 }
 
 // UploadedByUserMediaAssets retrieves all the media_asset's MediaAssets with an executor via uploaded_by_user_id column.
@@ -1207,6 +1240,112 @@ func (userL) LoadDonations(ctx context.Context, e boil.ContextExecutor, singular
 				local.R.Donations = append(local.R.Donations, foreign)
 				if foreign.R == nil {
 					foreign.R = &donationR{}
+				}
+				foreign.R.User = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadEventRegistrations allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (userL) LoadEventRegistrations(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
+	var slice []*User
+	var object *User
+
+	if singular {
+		var ok bool
+		object, ok = maybeUser.(*User)
+		if !ok {
+			object = new(User)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUser))
+			}
+		}
+	} else {
+		s, ok := maybeUser.(*[]*User)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUser))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &userR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &userR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`event_registrations`),
+		qm.WhereIn(`event_registrations.user_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load event_registrations")
+	}
+
+	var resultSlice []*EventRegistration
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice event_registrations")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on event_registrations")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for event_registrations")
+	}
+
+	if singular {
+		object.R.EventRegistrations = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &eventRegistrationR{}
+			}
+			foreign.R.User = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if queries.Equal(local.ID, foreign.UserID) {
+				local.R.EventRegistrations = append(local.R.EventRegistrations, foreign)
+				if foreign.R == nil {
+					foreign.R = &eventRegistrationR{}
 				}
 				foreign.R.User = local
 				break
@@ -2468,6 +2607,133 @@ func (o *User) RemoveDonations(ctx context.Context, exec boil.ContextExecutor, r
 				o.R.Donations[i] = o.R.Donations[ln-1]
 			}
 			o.R.Donations = o.R.Donations[:ln-1]
+			break
+		}
+	}
+
+	return nil
+}
+
+// AddEventRegistrations adds the given related objects to the existing relationships
+// of the user, optionally inserting them as new records.
+// Appends related to o.R.EventRegistrations.
+// Sets related.R.User appropriately.
+func (o *User) AddEventRegistrations(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*EventRegistration) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			queries.Assign(&rel.UserID, o.ID)
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"event_registrations\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
+				strmangle.WhereClause("\"", "\"", 2, eventRegistrationPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			queries.Assign(&rel.UserID, o.ID)
+		}
+	}
+
+	if o.R == nil {
+		o.R = &userR{
+			EventRegistrations: related,
+		}
+	} else {
+		o.R.EventRegistrations = append(o.R.EventRegistrations, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &eventRegistrationR{
+				User: o,
+			}
+		} else {
+			rel.R.User = o
+		}
+	}
+	return nil
+}
+
+// SetEventRegistrations removes all previously related items of the
+// user replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.User's EventRegistrations accordingly.
+// Replaces o.R.EventRegistrations with related.
+// Sets related.R.User's EventRegistrations accordingly.
+func (o *User) SetEventRegistrations(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*EventRegistration) error {
+	query := "update \"event_registrations\" set \"user_id\" = null where \"user_id\" = $1"
+	values := []interface{}{o.ID}
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, query)
+		fmt.Fprintln(writer, values)
+	}
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+
+	if o.R != nil {
+		for _, rel := range o.R.EventRegistrations {
+			queries.SetScanner(&rel.UserID, nil)
+			if rel.R == nil {
+				continue
+			}
+
+			rel.R.User = nil
+		}
+		o.R.EventRegistrations = nil
+	}
+
+	return o.AddEventRegistrations(ctx, exec, insert, related...)
+}
+
+// RemoveEventRegistrations relationships from objects passed in.
+// Removes related items from R.EventRegistrations (uses pointer comparison, removal does not keep order)
+// Sets related.R.User.
+func (o *User) RemoveEventRegistrations(ctx context.Context, exec boil.ContextExecutor, related ...*EventRegistration) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	for _, rel := range related {
+		queries.SetScanner(&rel.UserID, nil)
+		if rel.R != nil {
+			rel.R.User = nil
+		}
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("user_id")); err != nil {
+			return err
+		}
+	}
+	if o.R == nil {
+		return nil
+	}
+
+	for _, rel := range related {
+		for i, ri := range o.R.EventRegistrations {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.EventRegistrations)
+			if ln > 1 && i < ln-1 {
+				o.R.EventRegistrations[i] = o.R.EventRegistrations[ln-1]
+			}
+			o.R.EventRegistrations = o.R.EventRegistrations[:ln-1]
 			break
 		}
 	}

@@ -52,6 +52,7 @@ type Order struct {
 	TrackingReference    null.String `boil:"tracking_reference" json:"tracking_reference,omitempty" toml:"tracking_reference" yaml:"tracking_reference,omitempty"`
 	CreatedAt            time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt            time.Time   `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	AccessTokenHash      null.Bytes  `boil:"access_token_hash" json:"access_token_hash,omitempty" toml:"access_token_hash" yaml:"access_token_hash,omitempty"`
 
 	R *orderR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L orderL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -86,6 +87,7 @@ var OrderColumns = struct {
 	TrackingReference    string
 	CreatedAt            string
 	UpdatedAt            string
+	AccessTokenHash      string
 }{
 	ID:                   "id",
 	Reference:            "reference",
@@ -115,6 +117,7 @@ var OrderColumns = struct {
 	TrackingReference:    "tracking_reference",
 	CreatedAt:            "created_at",
 	UpdatedAt:            "updated_at",
+	AccessTokenHash:      "access_token_hash",
 }
 
 var OrderTableColumns = struct {
@@ -146,6 +149,7 @@ var OrderTableColumns = struct {
 	TrackingReference    string
 	CreatedAt            string
 	UpdatedAt            string
+	AccessTokenHash      string
 }{
 	ID:                   "orders.id",
 	Reference:            "orders.reference",
@@ -175,6 +179,7 @@ var OrderTableColumns = struct {
 	TrackingReference:    "orders.tracking_reference",
 	CreatedAt:            "orders.created_at",
 	UpdatedAt:            "orders.updated_at",
+	AccessTokenHash:      "orders.access_token_hash",
 }
 
 // Generated where
@@ -208,6 +213,7 @@ var OrderWhere = struct {
 	TrackingReference    whereHelpernull_String
 	CreatedAt            whereHelpertime_Time
 	UpdatedAt            whereHelpertime_Time
+	AccessTokenHash      whereHelpernull_Bytes
 }{
 	ID:                   whereHelperstring{field: "\"orders\".\"id\""},
 	Reference:            whereHelperstring{field: "\"orders\".\"reference\""},
@@ -237,21 +243,28 @@ var OrderWhere = struct {
 	TrackingReference:    whereHelpernull_String{field: "\"orders\".\"tracking_reference\""},
 	CreatedAt:            whereHelpertime_Time{field: "\"orders\".\"created_at\""},
 	UpdatedAt:            whereHelpertime_Time{field: "\"orders\".\"updated_at\""},
+	AccessTokenHash:      whereHelpernull_Bytes{field: "\"orders\".\"access_token_hash\""},
 }
 
 // OrderRels is where relationship names are stored.
 var OrderRels = struct {
-	User     string
-	Payments string
+	User               string
+	EventRegistrations string
+	OrderItems         string
+	Payments           string
 }{
-	User:     "User",
-	Payments: "Payments",
+	User:               "User",
+	EventRegistrations: "EventRegistrations",
+	OrderItems:         "OrderItems",
+	Payments:           "Payments",
 }
 
 // orderR is where relationships are stored.
 type orderR struct {
-	User     *User        `boil:"User" json:"User" toml:"User" yaml:"User"`
-	Payments PaymentSlice `boil:"Payments" json:"Payments" toml:"Payments" yaml:"Payments"`
+	User               *User                  `boil:"User" json:"User" toml:"User" yaml:"User"`
+	EventRegistrations EventRegistrationSlice `boil:"EventRegistrations" json:"EventRegistrations" toml:"EventRegistrations" yaml:"EventRegistrations"`
+	OrderItems         OrderItemSlice         `boil:"OrderItems" json:"OrderItems" toml:"OrderItems" yaml:"OrderItems"`
+	Payments           PaymentSlice           `boil:"Payments" json:"Payments" toml:"Payments" yaml:"Payments"`
 }
 
 // NewStruct creates a new relationship struct
@@ -275,6 +288,38 @@ func (r *orderR) GetUser() *User {
 	return r.User
 }
 
+func (o *Order) GetEventRegistrations() EventRegistrationSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetEventRegistrations()
+}
+
+func (r *orderR) GetEventRegistrations() EventRegistrationSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.EventRegistrations
+}
+
+func (o *Order) GetOrderItems() OrderItemSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetOrderItems()
+}
+
+func (r *orderR) GetOrderItems() OrderItemSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.OrderItems
+}
+
 func (o *Order) GetPayments() PaymentSlice {
 	if o == nil {
 		return nil
@@ -295,9 +340,9 @@ func (r *orderR) GetPayments() PaymentSlice {
 type orderL struct{}
 
 var (
-	orderAllColumns            = []string{"id", "reference", "kind", "status", "user_id", "email", "full_name", "phone", "shipping_line1", "shipping_line2", "shipping_city", "shipping_state", "shipping_country", "shipping_postcode", "subtotal_kobo", "shipping_kobo", "tax_kobo", "discount_kobo", "total_kobo", "currency", "reservation_expires_at", "paid_at", "shipped_at", "delivered_at", "cancelled_at", "tracking_reference", "created_at", "updated_at"}
+	orderAllColumns            = []string{"id", "reference", "kind", "status", "user_id", "email", "full_name", "phone", "shipping_line1", "shipping_line2", "shipping_city", "shipping_state", "shipping_country", "shipping_postcode", "subtotal_kobo", "shipping_kobo", "tax_kobo", "discount_kobo", "total_kobo", "currency", "reservation_expires_at", "paid_at", "shipped_at", "delivered_at", "cancelled_at", "tracking_reference", "created_at", "updated_at", "access_token_hash"}
 	orderColumnsWithoutDefault = []string{"reference", "email", "full_name", "created_at", "updated_at"}
-	orderColumnsWithDefault    = []string{"id", "kind", "status", "user_id", "phone", "shipping_line1", "shipping_line2", "shipping_city", "shipping_state", "shipping_country", "shipping_postcode", "subtotal_kobo", "shipping_kobo", "tax_kobo", "discount_kobo", "total_kobo", "currency", "reservation_expires_at", "paid_at", "shipped_at", "delivered_at", "cancelled_at", "tracking_reference"}
+	orderColumnsWithDefault    = []string{"id", "kind", "status", "user_id", "phone", "shipping_line1", "shipping_line2", "shipping_city", "shipping_state", "shipping_country", "shipping_postcode", "subtotal_kobo", "shipping_kobo", "tax_kobo", "discount_kobo", "total_kobo", "currency", "reservation_expires_at", "paid_at", "shipped_at", "delivered_at", "cancelled_at", "tracking_reference", "access_token_hash"}
 	orderPrimaryKeyColumns     = []string{"id"}
 	orderGeneratedColumns      = []string{}
 )
@@ -402,6 +447,34 @@ func (o *Order) User(mods ...qm.QueryMod) userQuery {
 	queryMods = append(queryMods, mods...)
 
 	return Users(queryMods...)
+}
+
+// EventRegistrations retrieves all the event_registration's EventRegistrations with an executor.
+func (o *Order) EventRegistrations(mods ...qm.QueryMod) eventRegistrationQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"event_registrations\".\"order_id\"=?", o.ID),
+	)
+
+	return EventRegistrations(queryMods...)
+}
+
+// OrderItems retrieves all the order_item's OrderItems with an executor.
+func (o *Order) OrderItems(mods ...qm.QueryMod) orderItemQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"order_items\".\"order_id\"=?", o.ID),
+	)
+
+	return OrderItems(queryMods...)
 }
 
 // Payments retrieves all the payment's Payments with an executor.
@@ -526,6 +599,218 @@ func (orderL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular boo
 					foreign.R = &userR{}
 				}
 				foreign.R.Orders = append(foreign.R.Orders, local)
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadEventRegistrations allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (orderL) LoadEventRegistrations(ctx context.Context, e boil.ContextExecutor, singular bool, maybeOrder interface{}, mods queries.Applicator) error {
+	var slice []*Order
+	var object *Order
+
+	if singular {
+		var ok bool
+		object, ok = maybeOrder.(*Order)
+		if !ok {
+			object = new(Order)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeOrder)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeOrder))
+			}
+		}
+	} else {
+		s, ok := maybeOrder.(*[]*Order)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeOrder)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeOrder))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &orderR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &orderR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`event_registrations`),
+		qm.WhereIn(`event_registrations.order_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load event_registrations")
+	}
+
+	var resultSlice []*EventRegistration
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice event_registrations")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on event_registrations")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for event_registrations")
+	}
+
+	if singular {
+		object.R.EventRegistrations = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &eventRegistrationR{}
+			}
+			foreign.R.Order = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if queries.Equal(local.ID, foreign.OrderID) {
+				local.R.EventRegistrations = append(local.R.EventRegistrations, foreign)
+				if foreign.R == nil {
+					foreign.R = &eventRegistrationR{}
+				}
+				foreign.R.Order = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadOrderItems allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (orderL) LoadOrderItems(ctx context.Context, e boil.ContextExecutor, singular bool, maybeOrder interface{}, mods queries.Applicator) error {
+	var slice []*Order
+	var object *Order
+
+	if singular {
+		var ok bool
+		object, ok = maybeOrder.(*Order)
+		if !ok {
+			object = new(Order)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeOrder)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeOrder))
+			}
+		}
+	} else {
+		s, ok := maybeOrder.(*[]*Order)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeOrder)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeOrder))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &orderR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &orderR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`order_items`),
+		qm.WhereIn(`order_items.order_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load order_items")
+	}
+
+	var resultSlice []*OrderItem
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice order_items")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on order_items")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for order_items")
+	}
+
+	if singular {
+		object.R.OrderItems = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &orderItemR{}
+			}
+			foreign.R.Order = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.OrderID {
+				local.R.OrderItems = append(local.R.OrderItems, foreign)
+				if foreign.R == nil {
+					foreign.R = &orderItemR{}
+				}
+				foreign.R.Order = local
 				break
 			}
 		}
@@ -716,6 +1001,186 @@ func (o *Order) RemoveUser(ctx context.Context, exec boil.ContextExecutor, relat
 		}
 		related.R.Orders = related.R.Orders[:ln-1]
 		break
+	}
+	return nil
+}
+
+// AddEventRegistrations adds the given related objects to the existing relationships
+// of the order, optionally inserting them as new records.
+// Appends related to o.R.EventRegistrations.
+// Sets related.R.Order appropriately.
+func (o *Order) AddEventRegistrations(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*EventRegistration) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			queries.Assign(&rel.OrderID, o.ID)
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"event_registrations\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"order_id"}),
+				strmangle.WhereClause("\"", "\"", 2, eventRegistrationPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			queries.Assign(&rel.OrderID, o.ID)
+		}
+	}
+
+	if o.R == nil {
+		o.R = &orderR{
+			EventRegistrations: related,
+		}
+	} else {
+		o.R.EventRegistrations = append(o.R.EventRegistrations, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &eventRegistrationR{
+				Order: o,
+			}
+		} else {
+			rel.R.Order = o
+		}
+	}
+	return nil
+}
+
+// SetEventRegistrations removes all previously related items of the
+// order replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.Order's EventRegistrations accordingly.
+// Replaces o.R.EventRegistrations with related.
+// Sets related.R.Order's EventRegistrations accordingly.
+func (o *Order) SetEventRegistrations(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*EventRegistration) error {
+	query := "update \"event_registrations\" set \"order_id\" = null where \"order_id\" = $1"
+	values := []interface{}{o.ID}
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, query)
+		fmt.Fprintln(writer, values)
+	}
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+
+	if o.R != nil {
+		for _, rel := range o.R.EventRegistrations {
+			queries.SetScanner(&rel.OrderID, nil)
+			if rel.R == nil {
+				continue
+			}
+
+			rel.R.Order = nil
+		}
+		o.R.EventRegistrations = nil
+	}
+
+	return o.AddEventRegistrations(ctx, exec, insert, related...)
+}
+
+// RemoveEventRegistrations relationships from objects passed in.
+// Removes related items from R.EventRegistrations (uses pointer comparison, removal does not keep order)
+// Sets related.R.Order.
+func (o *Order) RemoveEventRegistrations(ctx context.Context, exec boil.ContextExecutor, related ...*EventRegistration) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	for _, rel := range related {
+		queries.SetScanner(&rel.OrderID, nil)
+		if rel.R != nil {
+			rel.R.Order = nil
+		}
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("order_id")); err != nil {
+			return err
+		}
+	}
+	if o.R == nil {
+		return nil
+	}
+
+	for _, rel := range related {
+		for i, ri := range o.R.EventRegistrations {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.EventRegistrations)
+			if ln > 1 && i < ln-1 {
+				o.R.EventRegistrations[i] = o.R.EventRegistrations[ln-1]
+			}
+			o.R.EventRegistrations = o.R.EventRegistrations[:ln-1]
+			break
+		}
+	}
+
+	return nil
+}
+
+// AddOrderItems adds the given related objects to the existing relationships
+// of the order, optionally inserting them as new records.
+// Appends related to o.R.OrderItems.
+// Sets related.R.Order appropriately.
+func (o *Order) AddOrderItems(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*OrderItem) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.OrderID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"order_items\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"order_id"}),
+				strmangle.WhereClause("\"", "\"", 2, orderItemPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.OrderID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &orderR{
+			OrderItems: related,
+		}
+	} else {
+		o.R.OrderItems = append(o.R.OrderItems, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &orderItemR{
+				Order: o,
+			}
+		} else {
+			rel.R.Order = o
+		}
 	}
 	return nil
 }

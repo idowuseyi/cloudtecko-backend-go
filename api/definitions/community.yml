@@ -284,3 +284,95 @@ definitions:
         type: array
         items:
           "$ref": "#/definitions/Donation"
+  TicketTier:
+    type: object
+    required:
+      - id
+      - name
+      - priceKobo
+      - currency
+      - remaining
+      - maxPerOrder
+    properties:
+      id:
+        type: string
+        format: uuid4
+      name:
+        type: string
+        example: General Admission
+      description:
+        type: string
+      priceKobo:
+        description: Zero means a free RSVP tier. Free and paid tiers coexist on one event.
+        type: integer
+      currency:
+        type: string
+      remaining:
+        description: Seats still available, after in-flight holds.
+        type: integer
+      maxPerOrder:
+        description: Zero means unlimited per order.
+        type: integer
+  TicketTierList:
+    type: object
+    required:
+      - items
+    properties:
+      items:
+        type: array
+        items:
+          "$ref": "#/definitions/TicketTier"
+  PostEventRegistrationPayload:
+    type: object
+    required:
+      - tierId
+      - email
+      - fullName
+      - quantity
+    properties:
+      tierId:
+        type: string
+        format: uuid4
+      email:
+        type: string
+        format: email
+        maxLength: 255
+      fullName:
+        type: string
+        minLength: 1
+        maxLength: 200
+      quantity:
+        type: integer
+        minimum: 1
+        maximum: 100
+  EventRegistrationResponse:
+    description: |-
+      A free RSVP comes back confirmed, with no reference and nothing to pay. A
+      paid registration comes back reserved, with somewhere to pay and a token
+      for checking on it afterwards.
+    type: object
+    required:
+      - ticketCode
+      - status
+      - amountKobo
+    properties:
+      ticketCode:
+        type: string
+        example: CLD-4H9KM-2P7QR
+      status:
+        type: string
+        enum:
+          - reserved
+          - confirmed
+          - cancelled
+          - refunded
+      amountKobo:
+        type: integer
+      reference:
+        type: string
+      authorizationUrl:
+        description: Present for paid tiers only. Redirect the payer here.
+        type: string
+      accessToken:
+        description: Present for paid tiers only. Shown once.
+        type: string

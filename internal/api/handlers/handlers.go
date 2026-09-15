@@ -10,6 +10,7 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/content"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/donations"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/push"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/ticketing"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/webhooks"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/api/handlers/wellknown"
 	"github.com/labstack/echo/v4"
@@ -66,6 +67,8 @@ func AttachAllRoutes(s *api.Server) {
 		donations.GetDonationTiersRoute(s),
 		donations.PostDonationCheckoutRoute(s),
 		push.PutUpdatePushTokenRoute(s),
+		ticketing.GetEventTicketTiersRoute(s),
+		ticketing.PostEventRegistrationRoute(s),
 		webhooks.PostPaymentWebhookRoute(s),
 		wellknown.GetAndroidDigitalAssetLinksRoute(s),
 		wellknown.GetAppleAppSiteAssociationRoute(s),

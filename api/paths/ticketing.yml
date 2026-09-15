@@ -1,0 +1,71 @@
+swagger: "2.0"
+info:
+  title: github.com/idowuseyi/cloudtecko-backend-go
+  version: 0.1.0
+paths:
+  /api/v1/events/{slug}/tiers:
+    get:
+      description: |-
+        Lists the ticket types for an event, with the seats still available after
+        in-flight holds are taken into account.
+      tags:
+        - ticketing
+      summary: Lists an event's ticket tiers
+      operationId: GetEventTicketTiersRoute
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          type: string
+      responses:
+        "200":
+          description: The tiers
+          schema:
+            "$ref": "../definitions/community.yml#/definitions/TicketTierList"
+        "404":
+          description: PublicHTTPError - no such published event
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+  /api/v1/events/{slug}/register:
+    post:
+      description: |-
+        Registers for an event.
+
+        Whether payment is required follows from the TIER's price, never from the
+        request, so a client cannot ask to skip it. A free tier confirms
+        immediately; a paid tier reserves the seats and returns somewhere to pay.
+        Seats are held only until the payment intent expires.
+      tags:
+        - ticketing
+      summary: Registers for an event
+      operationId: PostEventRegistrationRoute
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          type: string
+        - name: Payload
+          in: body
+          schema:
+            "$ref": "../definitions/community.yml#/definitions/PostEventRegistrationPayload"
+      responses:
+        "201":
+          description: The registration
+          schema:
+            "$ref": "../definitions/community.yml#/definitions/EventRegistrationResponse"
+        "400":
+          description: PublicHTTPError - more tickets than one order may hold
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "404":
+          description: PublicHTTPError - no such event or ticket tier
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "409":
+          description: PublicHTTPError - sold out, already registered, or sales are not open
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "502":
+          description: PublicHTTPError - the payment provider could not be reached
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"

@@ -36,4 +36,11 @@ var (
 	ErrNotFoundDonation          = NewHTTPError(http.StatusNotFound, types.PublicHTTPErrorTypeGeneric, "That donation was not found.")
 	ErrBadRequestDonationAmount  = NewHTTPError(http.StatusBadRequest, types.PublicHTTPErrorTypeGeneric, "That donation amount is outside the permitted range.")
 	ErrBadGatewayPaymentProvider = NewHTTPError(http.StatusBadGateway, types.PublicHTTPErrorTypeGeneric, "The payment provider could not be reached. No money has moved.")
+
+	ErrNotFoundTicketTier           = NewHTTPError(http.StatusNotFound, types.PublicHTTPErrorTypeGeneric, "That ticket type does not exist for this event.")
+	ErrConflictInsufficientCapacity = NewHTTPError(http.StatusConflict, types.PublicHTTPErrorTypeGeneric, "There are not enough tickets left.")
+	ErrConflictAlreadyRegistered    = NewHTTPError(http.StatusConflict, types.PublicHTTPErrorTypeGeneric, "That email address is already registered for this event.")
+	ErrConflictSalesNotOpen         = NewHTTPError(http.StatusConflict, types.PublicHTTPErrorTypeGeneric, "Ticket sales have not opened yet.")
+	ErrConflictSalesClosed          = NewHTTPError(http.StatusConflict, types.PublicHTTPErrorTypeGeneric, "Ticket sales have closed.")
+	ErrBadRequestQuantityTooHigh    = NewHTTPError(http.StatusBadRequest, types.PublicHTTPErrorTypeGeneric, "That is more tickets than one order may hold.")
 )

@@ -109,6 +109,10 @@ type FixtureMap struct {
 	ApplicationApproved   *models.MembershipApplication
 	ApplicationRejected   *models.MembershipApplication
 	ContactMessageHandled *models.ContactMessage
+
+	TierFree    *models.EventTicketTier
+	TierPaid    *models.EventTicketTier
+	TierSoldOut *models.EventTicketTier
 }
 
 // Fixtures returns a function wrapping our fixtures, which tests are allowed to manipulate.
@@ -445,6 +449,38 @@ func contentFixtures(fix *FixtureMap, now time.Time) {
 		Message:    "An earlier enquiry.",
 		Status:     models.ContactMessageStatusRead,
 		PurgeAfter: now.Add(365 * 24 * time.Hour),
+	}
+
+	fix.TierFree = &models.EventTicketTier{
+		ID:            "d7b9d7d5-7d95-4b85-8ba3-9a82edf41001",
+		EventID:       fix.EventFeatured.ID,
+		Name:          "Free RSVP",
+		PriceKobo:     0,
+		QuantityTotal: 100,
+		MaxPerOrder:   2,
+	}
+
+	fix.TierPaid = &models.EventTicketTier{
+		ID:            "d7b9d7d5-7d95-4b85-8ba3-9a82edf41002",
+		EventID:       fix.EventFeatured.ID,
+		Name:          "General Admission",
+		PriceKobo:     500000,
+		QuantityTotal: 3,
+		MaxPerOrder:   2,
+		SortOrder:     1,
+	}
+
+	// Already at capacity, so the sold-out path is reachable without first
+	// buying everything in the test.
+	fix.TierSoldOut = &models.EventTicketTier{
+		ID:            "d7b9d7d5-7d95-4b85-8ba3-9a82edf41003",
+		EventID:       fix.EventFeatured.ID,
+		Name:          "Sold Out",
+		PriceKobo:     250000,
+		QuantityTotal: 2,
+		QuantitySold:  2,
+		MaxPerOrder:   4,
+		SortOrder:     2,
 	}
 
 	fix.ResourceDraft = &models.Resource{

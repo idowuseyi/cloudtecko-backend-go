@@ -156,6 +156,23 @@ func AllDonationStatus() []string {
 	}
 }
 
+// Enum values for RegistrationStatus
+const (
+	RegistrationStatusReserved  string = "reserved"
+	RegistrationStatusConfirmed string = "confirmed"
+	RegistrationStatusCancelled string = "cancelled"
+	RegistrationStatusRefunded  string = "refunded"
+)
+
+func AllRegistrationStatus() []string {
+	return []string{
+		RegistrationStatusReserved,
+		RegistrationStatusConfirmed,
+		RegistrationStatusCancelled,
+		RegistrationStatusRefunded,
+	}
+}
+
 // Enum values for MediaStatus
 const (
 	MediaStatusPending  string = "pending"

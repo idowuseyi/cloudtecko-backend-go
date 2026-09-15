@@ -21,7 +21,6 @@
 --
 -- A price of 0 is a free RSVP tier. Free and paid tiers coexist on one event,
 -- which is why price is a per-tier column rather than a flag on the event.
-
 -- +migrate Up
 CREATE TYPE registration_status AS ENUM (
     'reserved',
@@ -164,3 +163,4 @@ DROP TABLE IF EXISTS event_registrations;
 DROP TABLE IF EXISTS event_ticket_tiers;
 
 DROP TYPE IF EXISTS registration_status;
+

@@ -12,10 +12,13 @@ var TableNames = struct {
 	DonationSubscriptions  string
 	DonationTiers          string
 	Donations              string
+	EventRegistrations     string
+	EventTicketTiers       string
 	Events                 string
 	Faqs                   string
 	MediaAssets            string
 	MembershipApplications string
+	OrderItems             string
 	Orders                 string
 	PasswordResetTokens    string
 	PaymentRefunds         string
@@ -34,10 +37,13 @@ var TableNames = struct {
 	DonationSubscriptions:  "donation_subscriptions",
 	DonationTiers:          "donation_tiers",
 	Donations:              "donations",
+	EventRegistrations:     "event_registrations",
+	EventTicketTiers:       "event_ticket_tiers",
 	Events:                 "events",
 	Faqs:                   "faqs",
 	MediaAssets:            "media_assets",
 	MembershipApplications: "membership_applications",
+	OrderItems:             "order_items",
 	Orders:                 "orders",
 	PasswordResetTokens:    "password_reset_tokens",
 	PaymentRefunds:         "payment_refunds",

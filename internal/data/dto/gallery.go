@@ -525,3 +525,71 @@ func (l DonationList) ToTypes() *types.DonationList {
 
 	return &types.DonationList{Items: items}
 }
+
+// --- Ticketing --------------------------------------------------------------
+
+type EventRegistrationRequest struct {
+	EventSlug string
+	TierID    string
+	Email     string
+	FullName  string
+	Quantity  int
+	UserID    null.String
+}
+
+// EventRegistrationResult describes what happened. A free RSVP comes back
+// confirmed with no reference; a paid one comes back reserved with somewhere to
+// pay and a token for checking on it afterwards.
+type EventRegistrationResult struct {
+	TicketCode       string
+	Status           string
+	Reference        string
+	AuthorizationURL string
+	AccessToken      string
+	AmountKobo       int64
+}
+
+func (r EventRegistrationResult) ToTypes() *types.EventRegistrationResponse {
+	result := &types.EventRegistrationResponse{
+		TicketCode: conv.Pointer(r.TicketCode),
+		Status:     conv.Pointer(r.Status),
+		AmountKobo: conv.Pointer(r.AmountKobo),
+	}
+
+	if r.Reference != "" {
+		result.Reference = r.Reference
+		result.AuthorizationURL = r.AuthorizationURL
+		result.AccessToken = r.AccessToken
+	}
+
+	return result
+}
+
+type TicketTier struct {
+	ID          string
+	Name        string
+	Description string
+	PriceKobo   int64
+	Currency    string
+	Remaining   int
+	MaxPerOrder int
+}
+
+type TicketTierList []TicketTier
+
+func (l TicketTierList) ToTypes() *types.TicketTierList {
+	items := make([]*types.TicketTier, len(l))
+	for i := range l {
+		items[i] = &types.TicketTier{
+			ID:          conv.Pointer(strfmt.UUID4(l[i].ID)),
+			Name:        conv.Pointer(l[i].Name),
+			Description: l[i].Description,
+			PriceKobo:   conv.Pointer(l[i].PriceKobo),
+			Currency:    conv.Pointer(l[i].Currency),
+			Remaining:   conv.Pointer(int64(l[i].Remaining)),
+			MaxPerOrder: conv.Pointer(int64(l[i].MaxPerOrder)),
+		}
+	}
+
+	return &types.TicketTierList{Items: items}
+}

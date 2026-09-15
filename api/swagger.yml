@@ -1253,6 +1253,72 @@ paths:
                     description: PublicHTTPError, type `GENERIC`
                     schema:
                         $ref: '#/definitions/publicHttpError'
+    /api/v1/events/{slug}/register:
+        post:
+            description: |-
+                Registers for an event.
+
+                Whether payment is required follows from the TIER's price, never from the
+                request, so a client cannot ask to skip it. A free tier confirms
+                immediately; a paid tier reserves the seats and returns somewhere to pay.
+                Seats are held only until the payment intent expires.
+            tags:
+                - ticketing
+            summary: Registers for an event
+            operationId: PostEventRegistrationRoute
+            parameters:
+                - type: string
+                  name: slug
+                  in: path
+                  required: true
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/postEventRegistrationPayload'
+            responses:
+                "201":
+                    description: The registration
+                    schema:
+                        $ref: '#/definitions/eventRegistrationResponse'
+                "400":
+                    description: PublicHTTPError - more tickets than one order may hold
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError - no such event or ticket tier
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "409":
+                    description: PublicHTTPError - sold out, already registered, or sales are not open
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "502":
+                    description: PublicHTTPError - the payment provider could not be reached
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+    /api/v1/events/{slug}/tiers:
+        get:
+            description: |-
+                Lists the ticket types for an event, with the seats still available after
+                in-flight holds are taken into account.
+            tags:
+                - ticketing
+            summary: Lists an event's ticket tiers
+            operationId: GetEventTicketTiersRoute
+            parameters:
+                - type: string
+                  name: slug
+                  in: path
+                  required: true
+            responses:
+                "200":
+                    description: The tiers
+                    schema:
+                        $ref: '#/definitions/ticketTierList'
+                "404":
+                    description: PublicHTTPError - no such published event
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
     /api/v1/faqs:
         get:
             description: Lists published FAQs, optionally narrowed to one category.
@@ -1702,6 +1768,37 @@ definitions:
             venueName:
                 type: string
                 x-nullable: true
+    eventRegistrationResponse:
+        description: |-
+            A free RSVP comes back confirmed, with no reference and nothing to pay. A
+            paid registration comes back reserved, with somewhere to pay and a token
+            for checking on it afterwards.
+        type: object
+        required:
+            - ticketCode
+            - status
+            - amountKobo
+        properties:
+            accessToken:
+                description: Present for paid tiers only. Shown once.
+                type: string
+            amountKobo:
+                type: integer
+            authorizationUrl:
+                description: Present for paid tiers only. Redirect the payer here.
+                type: string
+            reference:
+                type: string
+            status:
+                type: string
+                enum:
+                    - reserved
+                    - confirmed
+                    - cancelled
+                    - refunded
+            ticketCode:
+                type: string
+                example: CLD-4H9KM-2P7QR
     fAQ:
         type: object
         required:
@@ -2123,6 +2220,29 @@ definitions:
                 type: string
                 maxLength: 200
                 x-nullable: true
+    postEventRegistrationPayload:
+        type: object
+        required:
+            - tierId
+            - email
+            - fullName
+            - quantity
+        properties:
+            email:
+                type: string
+                format: email
+                maxLength: 255
+            fullName:
+                type: string
+                maxLength: 200
+                minLength: 1
+            quantity:
+                type: integer
+                maximum: 100
+                minimum: 1
+            tierId:
+                type: string
+                format: uuid4
     postForgotPasswordCompletePayload:
         type: object
         required:
@@ -2467,6 +2587,44 @@ definitions:
                 type: string
             title:
                 type: string
+    ticketTier:
+        type: object
+        required:
+            - id
+            - name
+            - priceKobo
+            - currency
+            - remaining
+            - maxPerOrder
+        properties:
+            currency:
+                type: string
+            description:
+                type: string
+            id:
+                type: string
+                format: uuid4
+            maxPerOrder:
+                description: Zero means unlimited per order.
+                type: integer
+            name:
+                type: string
+                example: General Admission
+            priceKobo:
+                description: Zero means a free RSVP tier. Free and paid tiers coexist on one event.
+                type: integer
+            remaining:
+                description: Seats still available, after in-flight holds.
+                type: integer
+    ticketTierList:
+        type: object
+        required:
+            - items
+        properties:
+            items:
+                type: array
+                items:
+                    $ref: '#/definitions/ticketTier'
     userScope:
         type: string
         enum:

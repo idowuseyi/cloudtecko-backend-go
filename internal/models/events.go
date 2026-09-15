@@ -178,17 +178,23 @@ var EventWhere = struct {
 
 // EventRels is where relationship names are stored.
 var EventRels = struct {
-	Category   string
-	HeroMedium string
+	Category           string
+	HeroMedium         string
+	EventRegistrations string
+	EventTicketTiers   string
 }{
-	Category:   "Category",
-	HeroMedium: "HeroMedium",
+	Category:           "Category",
+	HeroMedium:         "HeroMedium",
+	EventRegistrations: "EventRegistrations",
+	EventTicketTiers:   "EventTicketTiers",
 }
 
 // eventR is where relationships are stored.
 type eventR struct {
-	Category   *Category   `boil:"Category" json:"Category" toml:"Category" yaml:"Category"`
-	HeroMedium *MediaAsset `boil:"HeroMedium" json:"HeroMedium" toml:"HeroMedium" yaml:"HeroMedium"`
+	Category           *Category              `boil:"Category" json:"Category" toml:"Category" yaml:"Category"`
+	HeroMedium         *MediaAsset            `boil:"HeroMedium" json:"HeroMedium" toml:"HeroMedium" yaml:"HeroMedium"`
+	EventRegistrations EventRegistrationSlice `boil:"EventRegistrations" json:"EventRegistrations" toml:"EventRegistrations" yaml:"EventRegistrations"`
+	EventTicketTiers   EventTicketTierSlice   `boil:"EventTicketTiers" json:"EventTicketTiers" toml:"EventTicketTiers" yaml:"EventTicketTiers"`
 }
 
 // NewStruct creates a new relationship struct
@@ -226,6 +232,38 @@ func (r *eventR) GetHeroMedium() *MediaAsset {
 	}
 
 	return r.HeroMedium
+}
+
+func (o *Event) GetEventRegistrations() EventRegistrationSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetEventRegistrations()
+}
+
+func (r *eventR) GetEventRegistrations() EventRegistrationSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.EventRegistrations
+}
+
+func (o *Event) GetEventTicketTiers() EventTicketTierSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetEventTicketTiers()
+}
+
+func (r *eventR) GetEventTicketTiers() EventTicketTierSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.EventTicketTiers
 }
 
 // eventL is where Load methods for each relationship are stored.
@@ -350,6 +388,34 @@ func (o *Event) HeroMedium(mods ...qm.QueryMod) mediaAssetQuery {
 	queryMods = append(queryMods, mods...)
 
 	return MediaAssets(queryMods...)
+}
+
+// EventRegistrations retrieves all the event_registration's EventRegistrations with an executor.
+func (o *Event) EventRegistrations(mods ...qm.QueryMod) eventRegistrationQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"event_registrations\".\"event_id\"=?", o.ID),
+	)
+
+	return EventRegistrations(queryMods...)
+}
+
+// EventTicketTiers retrieves all the event_ticket_tier's EventTicketTiers with an executor.
+func (o *Event) EventTicketTiers(mods ...qm.QueryMod) eventTicketTierQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"event_ticket_tiers\".\"event_id\"=?", o.ID),
+	)
+
+	return EventTicketTiers(queryMods...)
 }
 
 // LoadCategory allows an eager lookup of values, cached into the
@@ -580,6 +646,218 @@ func (eventL) LoadHeroMedium(ctx context.Context, e boil.ContextExecutor, singul
 	return nil
 }
 
+// LoadEventRegistrations allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (eventL) LoadEventRegistrations(ctx context.Context, e boil.ContextExecutor, singular bool, maybeEvent interface{}, mods queries.Applicator) error {
+	var slice []*Event
+	var object *Event
+
+	if singular {
+		var ok bool
+		object, ok = maybeEvent.(*Event)
+		if !ok {
+			object = new(Event)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeEvent)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeEvent))
+			}
+		}
+	} else {
+		s, ok := maybeEvent.(*[]*Event)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeEvent)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeEvent))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &eventR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &eventR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`event_registrations`),
+		qm.WhereIn(`event_registrations.event_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load event_registrations")
+	}
+
+	var resultSlice []*EventRegistration
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice event_registrations")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on event_registrations")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for event_registrations")
+	}
+
+	if singular {
+		object.R.EventRegistrations = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &eventRegistrationR{}
+			}
+			foreign.R.Event = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.EventID {
+				local.R.EventRegistrations = append(local.R.EventRegistrations, foreign)
+				if foreign.R == nil {
+					foreign.R = &eventRegistrationR{}
+				}
+				foreign.R.Event = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadEventTicketTiers allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (eventL) LoadEventTicketTiers(ctx context.Context, e boil.ContextExecutor, singular bool, maybeEvent interface{}, mods queries.Applicator) error {
+	var slice []*Event
+	var object *Event
+
+	if singular {
+		var ok bool
+		object, ok = maybeEvent.(*Event)
+		if !ok {
+			object = new(Event)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeEvent)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeEvent))
+			}
+		}
+	} else {
+		s, ok := maybeEvent.(*[]*Event)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeEvent)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeEvent))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &eventR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &eventR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`event_ticket_tiers`),
+		qm.WhereIn(`event_ticket_tiers.event_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load event_ticket_tiers")
+	}
+
+	var resultSlice []*EventTicketTier
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice event_ticket_tiers")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on event_ticket_tiers")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for event_ticket_tiers")
+	}
+
+	if singular {
+		object.R.EventTicketTiers = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &eventTicketTierR{}
+			}
+			foreign.R.Event = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.EventID {
+				local.R.EventTicketTiers = append(local.R.EventTicketTiers, foreign)
+				if foreign.R == nil {
+					foreign.R = &eventTicketTierR{}
+				}
+				foreign.R.Event = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
 // SetCategory of the event to the related item.
 // Sets o.R.Category to related.
 // Adds o to related.R.Events.
@@ -703,6 +981,112 @@ func (o *Event) RemoveHeroMedium(ctx context.Context, exec boil.ContextExecutor,
 		}
 		related.R.HeroMediumEvents = related.R.HeroMediumEvents[:ln-1]
 		break
+	}
+	return nil
+}
+
+// AddEventRegistrations adds the given related objects to the existing relationships
+// of the event, optionally inserting them as new records.
+// Appends related to o.R.EventRegistrations.
+// Sets related.R.Event appropriately.
+func (o *Event) AddEventRegistrations(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*EventRegistration) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.EventID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"event_registrations\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"event_id"}),
+				strmangle.WhereClause("\"", "\"", 2, eventRegistrationPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.EventID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &eventR{
+			EventRegistrations: related,
+		}
+	} else {
+		o.R.EventRegistrations = append(o.R.EventRegistrations, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &eventRegistrationR{
+				Event: o,
+			}
+		} else {
+			rel.R.Event = o
+		}
+	}
+	return nil
+}
+
+// AddEventTicketTiers adds the given related objects to the existing relationships
+// of the event, optionally inserting them as new records.
+// Appends related to o.R.EventTicketTiers.
+// Sets related.R.Event appropriately.
+func (o *Event) AddEventTicketTiers(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*EventTicketTier) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.EventID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"event_ticket_tiers\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"event_id"}),
+				strmangle.WhereClause("\"", "\"", 2, eventTicketTierPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.EventID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &eventR{
+			EventTicketTiers: related,
+		}
+	} else {
+		o.R.EventTicketTiers = append(o.R.EventTicketTiers, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &eventTicketTierR{
+				Event: o,
+			}
+		} else {
+			rel.R.Event = o
+		}
 	}
 	return nil
 }
