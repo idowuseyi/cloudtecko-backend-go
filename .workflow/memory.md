@@ -48,3 +48,48 @@
   Why: from the host 29 of 31 packages fail on `lookup integresql: no such host`; inside the
   container all 23 pass. The distinction is not "some tests are flaky".
   How to apply: run `go test ./...` via `docker compose exec -T service`, never on the host.
+
+- 2026-09-15 — implement — A failed statement ABORTS the whole transaction in
+  PostgreSQL. Catching a 23505 and then running another query in the same
+  transaction fails with "current transaction is aborted".
+  Why: it bit twice. Slug allocation cannot be insert-and-retry without a
+  SAVEPOINT, and the webhook de-duplication guard turned a duplicate delivery
+  into a 500 — which made the provider retry the duplicate, i.e. the guard
+  against redelivery caused redelivery.
+  How to apply: use `INSERT ... ON CONFLICT DO NOTHING RETURNING id` and treat
+  zero rows as "already there". Never catch a constraint error and continue in
+  the same transaction.
+
+- 2026-09-15 — implement — Capacity must be enforced in the UPDATE's WHERE
+  clause, never as a SELECT-then-UPDATE and never as a CHECK.
+  Why: reverting to SELECT-then-UPDATE let all 10 concurrent buyers take seats
+  on a 3-seat tier. A CHECK would be wrong in the other direction: a captured
+  payment whose hold expired MUST be allowed to exceed capacity, or the response
+  is non-2xx and the money is taken with nothing recorded.
+  How to apply: single statement, `WHERE ... AND reserved + sold + $n <= total`,
+  `RowsAffected != 1` is a 409. Commerce code must stay at READ COMMITTED — at
+  REPEATABLE READ the same statement raises 40001 and the contract becomes a 500.
+
+- 2026-09-15 — implement — This repo's `util.BindAndValidate*` helpers bind path
+  and query params ONLY, never headers.
+  Why: go-swagger still generates validation for a declared header parameter, so
+  a `required: true` header is validated against a value nothing populates and
+  returns 400 on every request, correct ones included.
+  How to apply: declare header params as NOT required and read them with
+  `c.Request().Header.Get(...)` in the handler.
+
+- 2026-09-15 — implement — A config field can be declared, consumed, and never
+  assigned from the environment; it then silently holds the zero value.
+  Why: `InvitationTokenValidity` was used by approval and never read from env, so
+  every invitation was born already expired. It compiled, vetted and passed every
+  test, because the fixtures set the column directly and no test crossed the
+  approve→accept seam.
+  How to apply: test the SEAM between two features, not just each side. Cross-check
+  `Server` struct fields against `util.GetEnv*` call sites when adding config.
+
+- 2026-09-15 — implement — Only ONE credential here is encrypted rather than
+  hashed: a subscription's provider email token (`internal/util/secretbox`).
+  Why: Paystack returns it once and requires it back to cancel, so hashing it
+  would mean a donor can never stop giving through our own UI.
+  How to apply: do not reach for secretbox for anything else. Everything else
+  hashes, per S-018/S-024.

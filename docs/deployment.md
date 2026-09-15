@@ -39,6 +39,14 @@ whose mgmt-secret check is skipped, so a platform prober can reach it.
 | `SERVER_FRONTEND_BASE_URL` | yes | Password-reset links point here. |
 | `DB_MAX_OPEN_CONNS` | recommended | Default is `NumCPU*2`, which overruns small managed plans. |
 | `SERVER_LOGGER_LEVEL` | recommended | `info` in production; the default is `debug`. |
+| `SERVER_AUTH_REGISTRATION_REQUIRES_CONFIRMATION` | **yes** | Must be `true`. With it false, `/register` answers a new address with a session and an existing one without, which discloses whether an address has an account (S-020). |
+| `SERVER_PAYMENT_USE_MOCK` | yes | `false` in production, or no money moves. |
+| `SERVER_PAYMENT_SECRET_KEY` | if payments | Paystack secret key. Authenticates API calls **and** is the HMAC key webhooks are signed with — there is no separate webhook secret, so rotating it rotates webhook verification at the same instant. |
+| `SERVER_PAYMENT_SECRET_ENCRYPTION_KEY` | if payments | Encrypts subscription email tokens. The service refuses to start without it when the mock provider is off. |
+| `SERVER_PAYMENT_CALLBACK_URL` | if payments | Where the payer returns. A page only — fulfilment happens on the signed webhook. |
+| `SERVER_STORAGE_USE_MOCK` | if uploads | `false` in production; mock storage is in-memory and lost on restart. |
+| `SERVER_STORAGE_*` | if uploads | R2/S3 endpoint, keys, bucket. |
+| `SERVER_STORAGE_PUBLIC_BASE_URL` | if uploads | **Must be a CDN or bucket custom domain, never this API's origin.** Serving user-supplied files same-origin turns any stored-content flaw into a same-origin scripting problem against the API. |
 
 Never set `SERVER_PPROF_ENABLE=true` with
 `SERVER_PPROF_ENABLE_MANAGEMENT_KEY_AUTH=false`. The app refuses to boot in that
@@ -112,3 +120,45 @@ date, which is the quickest way to confirm which revision is live.
 The `app` stage is an ordinary distroless image running as uid 65532, so
 Fly.io, Railway, Cloud Run and plain Kubernetes all work with the same
 environment. Only the health-check path and the migration hook need wiring.
+
+
+## Payments
+
+The Paystack secret key does double duty: it authenticates outbound API calls and
+is the HMAC key Paystack signs webhook bodies with. There is no separate webhook
+secret, so rotating the key rotates webhook verification at the same moment —
+plan for a brief window where in-flight deliveries signed with the old key will
+fail verification and be retried.
+
+Register the webhook URL as `https://<your-host>/webhooks/payments` and confirm a
+signed delivery reaches it **before** switching to live keys. The endpoint is
+deliberately not rate-limited: throttling a provider's retries would drop money
+events, and the signature is what makes it safe to expose.
+
+Two properties to be aware of operationally:
+
+- **Paystack's signature carries no timestamp**, so a captured delivery verifies
+  forever. Replay protection is entirely server-side, via a unique idempotency
+  key plus guarded state transitions. Nothing to configure, but it means webhook
+  URL secrecy buys you nothing — do not treat it as a secret.
+- **Retries run for up to 72 hours** (every 3 minutes for four attempts, then
+  hourly). A non-2xx is therefore a request to be retried, which is correct for a
+  genuine failure and wrong for anything we will never handle — the handler
+  returns 200 for authentic-but-unsupported events for that reason.
+
+`GET /api/v1/admin/webhook-events` lists deliveries that were received and never
+processed. It should always be empty; an entry means a provider reported a
+payment and we failed to act on it. Alert on it.
+
+## Scheduled work
+
+There is no job runner in the application. Two things need a scheduler, and both
+are cobra subcommands so a platform cron can invoke them:
+
+| Command | Cadence | Why |
+| --- | --- | --- |
+| `app db purge-expired` | daily | Hard-deletes contact messages and membership applications past their retention window. Nothing about serving a request depends on expired personal data being gone, so unlike a reservation hold there is no lazy path that would trigger it. |
+| `app db grant-scope` | on demand | Not scheduled. This is how the FIRST admin is created: `app db grant-scope --username <email> --scope admin`. There is deliberately no environment variable that auto-grants admin at boot, because that turns a leaked env file into privilege escalation and leaves no audit trail. |
+
+Reservation expiry does **not** need a cron: it runs opportunistically at the top
+of every checkout, because contention on a tier is exactly when expiry matters.

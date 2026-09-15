@@ -37,7 +37,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/subosito/gotenv v1.6.0
 	github.com/timewasted/go-accept-headers v0.0.0-20130320203746-c78f304b1b09
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.56.0
 	golang.org/x/mod v0.40.0
 	golang.org/x/sys v0.47.0
 	golang.org/x/text v0.41.0
