@@ -376,3 +376,194 @@ definitions:
       accessToken:
         description: Present for paid tiers only. Shown once.
         type: string
+  ProductVariant:
+    type: object
+    required:
+      - id
+      - sku
+      - priceKobo
+      - available
+    properties:
+      id:
+        type: string
+        format: uuid4
+      sku:
+        type: string
+      size:
+        type: string
+        x-nullable: true
+      colour:
+        type: string
+        x-nullable: true
+      priceKobo:
+        type: integer
+      available:
+        description: Stock left after in-flight holds. Never negative.
+        type: integer
+  Product:
+    type: object
+    required:
+      - id
+      - slug
+      - title
+      - variants
+    properties:
+      id:
+        type: string
+        format: uuid4
+      slug:
+        type: string
+      title:
+        type: string
+      description:
+        type: string
+      image:
+        type: string
+        x-nullable: true
+      variants:
+        type: array
+        items:
+          "$ref": "#/definitions/ProductVariant"
+  ProductList:
+    type: object
+    required:
+      - items
+    properties:
+      items:
+        type: array
+        items:
+          "$ref": "#/definitions/Product"
+  CartLine:
+    description: An id and a count. Prices are never accepted from the client.
+    type: object
+    required:
+      - variantId
+      - quantity
+    properties:
+      variantId:
+        type: string
+        format: uuid4
+      quantity:
+        type: integer
+        minimum: 1
+        maximum: 100
+  PostCheckoutPayload:
+    type: object
+    required:
+      - lines
+      - email
+      - fullName
+      - shippingState
+    properties:
+      lines:
+        type: array
+        minItems: 1
+        items:
+          "$ref": "#/definitions/CartLine"
+      email:
+        type: string
+        format: email
+        maxLength: 255
+      fullName:
+        type: string
+        minLength: 1
+        maxLength: 200
+      phone:
+        type: string
+        maxLength: 32
+        x-nullable: true
+      shippingLine1:
+        type: string
+        maxLength: 200
+        x-nullable: true
+      shippingLine2:
+        type: string
+        maxLength: 200
+        x-nullable: true
+      shippingCity:
+        type: string
+        maxLength: 120
+        x-nullable: true
+      shippingState:
+        type: string
+        maxLength: 120
+      shippingCountry:
+        type: string
+        maxLength: 120
+        x-nullable: true
+      shippingPostcode:
+        type: string
+        maxLength: 32
+        x-nullable: true
+  CartProblem:
+    description: One cart line that could not be fulfilled, so the client can say which.
+    type: object
+    required:
+      - variantId
+      - reason
+      - available
+    properties:
+      variantId:
+        type: string
+        format: uuid4
+      reason:
+        type: string
+        enum:
+          - unavailable
+          - out_of_stock
+      available:
+        type: integer
+  CheckoutResponse:
+    type: object
+    required:
+      - reference
+      - authorizationUrl
+      - accessToken
+      - subtotalKobo
+      - shippingKobo
+      - taxKobo
+      - totalKobo
+    properties:
+      reference:
+        type: string
+      authorizationUrl:
+        type: string
+      accessToken:
+        description: Shown once. Send as X-Order-Token when reading order status.
+        type: string
+      subtotalKobo:
+        type: integer
+      shippingKobo:
+        type: integer
+      taxKobo:
+        description: Added on top of goods and shipping. Zero unless a VAT rate is configured.
+        type: integer
+      totalKobo:
+        type: integer
+  CheckoutConflictResponse:
+    description: |-
+      A 409 from checkout, carrying per-line detail.
+
+      PublicHTTPError's `detail` is a plain string, which cannot say WHICH cart
+      line failed. A client that only learns "something is unavailable" has to
+      make the customer re-check a whole basket by hand, so this response keeps
+      the standard error envelope and adds a machine-readable list.
+    type: object
+    required:
+      - status
+      - type
+      - title
+      - problems
+    properties:
+      status:
+        type: integer
+        format: int64
+        example: 409
+      type:
+        "$ref": "../definitions/errors.yml#/definitions/PublicHTTPErrorType"
+      title:
+        type: string
+      problems:
+        type: array
+        items:
+          "$ref": "#/definitions/CartProblem"

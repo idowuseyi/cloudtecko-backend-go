@@ -124,10 +124,12 @@ var MediaAssetWhere = struct {
 var MediaAssetRels = struct {
 	UploadedByUser      string
 	HeroMediumEvents    string
+	HeroMediumProducts  string
 	HeroMediumResources string
 }{
 	UploadedByUser:      "UploadedByUser",
 	HeroMediumEvents:    "HeroMediumEvents",
+	HeroMediumProducts:  "HeroMediumProducts",
 	HeroMediumResources: "HeroMediumResources",
 }
 
@@ -135,6 +137,7 @@ var MediaAssetRels = struct {
 type mediaAssetR struct {
 	UploadedByUser      *User         `boil:"UploadedByUser" json:"UploadedByUser" toml:"UploadedByUser" yaml:"UploadedByUser"`
 	HeroMediumEvents    EventSlice    `boil:"HeroMediumEvents" json:"HeroMediumEvents" toml:"HeroMediumEvents" yaml:"HeroMediumEvents"`
+	HeroMediumProducts  ProductSlice  `boil:"HeroMediumProducts" json:"HeroMediumProducts" toml:"HeroMediumProducts" yaml:"HeroMediumProducts"`
 	HeroMediumResources ResourceSlice `boil:"HeroMediumResources" json:"HeroMediumResources" toml:"HeroMediumResources" yaml:"HeroMediumResources"`
 }
 
@@ -173,6 +176,22 @@ func (r *mediaAssetR) GetHeroMediumEvents() EventSlice {
 	}
 
 	return r.HeroMediumEvents
+}
+
+func (o *MediaAsset) GetHeroMediumProducts() ProductSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetHeroMediumProducts()
+}
+
+func (r *mediaAssetR) GetHeroMediumProducts() ProductSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.HeroMediumProducts
 }
 
 func (o *MediaAsset) GetHeroMediumResources() ResourceSlice {
@@ -316,6 +335,20 @@ func (o *MediaAsset) HeroMediumEvents(mods ...qm.QueryMod) eventQuery {
 	)
 
 	return Events(queryMods...)
+}
+
+// HeroMediumProducts retrieves all the product's Products with an executor via hero_media_id column.
+func (o *MediaAsset) HeroMediumProducts(mods ...qm.QueryMod) productQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"products\".\"hero_media_id\"=?", o.ID),
+	)
+
+	return Products(queryMods...)
 }
 
 // HeroMediumResources retrieves all the resource's Resources with an executor via hero_media_id column.
@@ -544,6 +577,112 @@ func (mediaAssetL) LoadHeroMediumEvents(ctx context.Context, e boil.ContextExecu
 				local.R.HeroMediumEvents = append(local.R.HeroMediumEvents, foreign)
 				if foreign.R == nil {
 					foreign.R = &eventR{}
+				}
+				foreign.R.HeroMedium = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadHeroMediumProducts allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (mediaAssetL) LoadHeroMediumProducts(ctx context.Context, e boil.ContextExecutor, singular bool, maybeMediaAsset interface{}, mods queries.Applicator) error {
+	var slice []*MediaAsset
+	var object *MediaAsset
+
+	if singular {
+		var ok bool
+		object, ok = maybeMediaAsset.(*MediaAsset)
+		if !ok {
+			object = new(MediaAsset)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeMediaAsset)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeMediaAsset))
+			}
+		}
+	} else {
+		s, ok := maybeMediaAsset.(*[]*MediaAsset)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeMediaAsset)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeMediaAsset))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &mediaAssetR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &mediaAssetR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`products`),
+		qm.WhereIn(`products.hero_media_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load products")
+	}
+
+	var resultSlice []*Product
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice products")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on products")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for products")
+	}
+
+	if singular {
+		object.R.HeroMediumProducts = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &productR{}
+			}
+			foreign.R.HeroMedium = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if queries.Equal(local.ID, foreign.HeroMediaID) {
+				local.R.HeroMediumProducts = append(local.R.HeroMediumProducts, foreign)
+				if foreign.R == nil {
+					foreign.R = &productR{}
 				}
 				foreign.R.HeroMedium = local
 				break
@@ -860,6 +999,133 @@ func (o *MediaAsset) RemoveHeroMediumEvents(ctx context.Context, exec boil.Conte
 				o.R.HeroMediumEvents[i] = o.R.HeroMediumEvents[ln-1]
 			}
 			o.R.HeroMediumEvents = o.R.HeroMediumEvents[:ln-1]
+			break
+		}
+	}
+
+	return nil
+}
+
+// AddHeroMediumProducts adds the given related objects to the existing relationships
+// of the media_asset, optionally inserting them as new records.
+// Appends related to o.R.HeroMediumProducts.
+// Sets related.R.HeroMedium appropriately.
+func (o *MediaAsset) AddHeroMediumProducts(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Product) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			queries.Assign(&rel.HeroMediaID, o.ID)
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"products\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"hero_media_id"}),
+				strmangle.WhereClause("\"", "\"", 2, productPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			queries.Assign(&rel.HeroMediaID, o.ID)
+		}
+	}
+
+	if o.R == nil {
+		o.R = &mediaAssetR{
+			HeroMediumProducts: related,
+		}
+	} else {
+		o.R.HeroMediumProducts = append(o.R.HeroMediumProducts, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &productR{
+				HeroMedium: o,
+			}
+		} else {
+			rel.R.HeroMedium = o
+		}
+	}
+	return nil
+}
+
+// SetHeroMediumProducts removes all previously related items of the
+// media_asset replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.HeroMedium's HeroMediumProducts accordingly.
+// Replaces o.R.HeroMediumProducts with related.
+// Sets related.R.HeroMedium's HeroMediumProducts accordingly.
+func (o *MediaAsset) SetHeroMediumProducts(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Product) error {
+	query := "update \"products\" set \"hero_media_id\" = null where \"hero_media_id\" = $1"
+	values := []interface{}{o.ID}
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, query)
+		fmt.Fprintln(writer, values)
+	}
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+
+	if o.R != nil {
+		for _, rel := range o.R.HeroMediumProducts {
+			queries.SetScanner(&rel.HeroMediaID, nil)
+			if rel.R == nil {
+				continue
+			}
+
+			rel.R.HeroMedium = nil
+		}
+		o.R.HeroMediumProducts = nil
+	}
+
+	return o.AddHeroMediumProducts(ctx, exec, insert, related...)
+}
+
+// RemoveHeroMediumProducts relationships from objects passed in.
+// Removes related items from R.HeroMediumProducts (uses pointer comparison, removal does not keep order)
+// Sets related.R.HeroMedium.
+func (o *MediaAsset) RemoveHeroMediumProducts(ctx context.Context, exec boil.ContextExecutor, related ...*Product) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	for _, rel := range related {
+		queries.SetScanner(&rel.HeroMediaID, nil)
+		if rel.R != nil {
+			rel.R.HeroMedium = nil
+		}
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("hero_media_id")); err != nil {
+			return err
+		}
+	}
+	if o.R == nil {
+		return nil
+	}
+
+	for _, rel := range related {
+		for i, ri := range o.R.HeroMediumProducts {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.HeroMediumProducts)
+			if ln > 1 && i < ln-1 {
+				o.R.HeroMediumProducts[i] = o.R.HeroMediumProducts[ln-1]
+			}
+			o.R.HeroMediumProducts = o.R.HeroMediumProducts[:ln-1]
 			break
 		}
 	}

@@ -1,0 +1,58 @@
+swagger: "2.0"
+info:
+  title: github.com/idowuseyi/cloudtecko-backend-go
+  version: 0.1.0
+paths:
+  /api/v1/products:
+    get:
+      description: |-
+        Lists the published catalogue with per-variant availability.
+
+        Availability subtracts in-flight holds as well as sales: stock someone is
+        part-way through paying for is not for sale.
+      tags:
+        - merch
+      summary: Lists products
+      operationId: GetProductsRoute
+      responses:
+        "200":
+          description: The catalogue
+          schema:
+            "$ref": "../definitions/community.yml#/definitions/ProductList"
+  /api/v1/checkout:
+    post:
+      description: |-
+        Turns a client-side cart into an order and a payment intent.
+
+        Only variant ids and quantities are honoured. Prices, totals and shipping
+        are looked up or computed server-side and never accepted from the client.
+
+        A 409 carries per-line detail saying WHICH items failed and why, so the
+        frontend does not have to show "something went wrong" for a whole basket
+        when one size sold out.
+      tags:
+        - merch
+      summary: Checks out a cart
+      operationId: PostCheckoutRoute
+      parameters:
+        - name: Payload
+          in: body
+          schema:
+            "$ref": "../definitions/community.yml#/definitions/PostCheckoutPayload"
+      responses:
+        "201":
+          description: Where to pay, and the totals computed server-side
+          schema:
+            "$ref": "../definitions/community.yml#/definitions/CheckoutResponse"
+        "400":
+          description: PublicHTTPError - the cart is empty
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "409":
+          description: Some lines are unavailable or out of stock; the body names which
+          schema:
+            "$ref": "../definitions/community.yml#/definitions/CheckoutConflictResponse"
+        "502":
+          description: PublicHTTPError - the payment provider could not be reached
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"

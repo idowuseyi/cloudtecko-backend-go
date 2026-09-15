@@ -113,6 +113,14 @@ type FixtureMap struct {
 	TierFree    *models.EventTicketTier
 	TierPaid    *models.EventTicketTier
 	TierSoldOut *models.EventTicketTier
+
+	ProductHoodie  *models.Product
+	VariantHoodieM *models.ProductVariant
+	VariantHoodieL *models.ProductVariant
+	VariantSoldOut *models.ProductVariant
+	ProductDraft   *models.Product
+	VariantDraft   *models.ProductVariant
+	ShippingFlat   *models.ShippingZone
 }
 
 // Fixtures returns a function wrapping our fixtures, which tests are allowed to manipulate.
@@ -481,6 +489,70 @@ func contentFixtures(fix *FixtureMap, now time.Time) {
 		QuantitySold:  2,
 		MaxPerOrder:   4,
 		SortOrder:     2,
+	}
+
+	fix.ProductHoodie = &models.Product{
+		ID:          "e8cae8e6-8ea6-4c96-9cb4-ab93fe052001",
+		Slug:        "cloudadore-hoodie",
+		Title:       "Cloudadore Hoodie",
+		Description: "Heavyweight cotton, embroidered logo.",
+		PublishedAt: null.TimeFrom(now.Add(-48 * time.Hour)),
+	}
+
+	fix.VariantHoodieM = &models.ProductVariant{
+		ID:          "e8cae8e6-8ea6-4c96-9cb4-ab93fe052101",
+		ProductID:   fix.ProductHoodie.ID,
+		Sku:         "HOODIE-M",
+		Size:        null.StringFrom("M"),
+		Colour:      null.StringFrom("Navy"),
+		PriceKobo:   1500000,
+		StockTotal:  3,
+		WeightGrams: 600,
+	}
+
+	fix.VariantHoodieL = &models.ProductVariant{
+		ID:          "e8cae8e6-8ea6-4c96-9cb4-ab93fe052102",
+		ProductID:   fix.ProductHoodie.ID,
+		Sku:         "HOODIE-L",
+		Size:        null.StringFrom("L"),
+		Colour:      null.StringFrom("Navy"),
+		PriceKobo:   1500000,
+		StockTotal:  3,
+		WeightGrams: 650,
+	}
+
+	fix.VariantSoldOut = &models.ProductVariant{
+		ID:         "e8cae8e6-8ea6-4c96-9cb4-ab93fe052103",
+		ProductID:  fix.ProductHoodie.ID,
+		Sku:        "HOODIE-XL",
+		Size:       null.StringFrom("XL"),
+		PriceKobo:  1500000,
+		StockTotal: 2,
+		StockSold:  2,
+	}
+
+	// Unpublished: its variants must not be buyable.
+	fix.ProductDraft = &models.Product{
+		ID:    "e8cae8e6-8ea6-4c96-9cb4-ab93fe052002",
+		Slug:  "unreleased-cap",
+		Title: "Unreleased Cap",
+	}
+
+	fix.VariantDraft = &models.ProductVariant{
+		ID:         "e8cae8e6-8ea6-4c96-9cb4-ab93fe052104",
+		ProductID:  fix.ProductDraft.ID,
+		Sku:        "CAP-ONE",
+		PriceKobo:  500000,
+		StockTotal: 50,
+	}
+
+	// One flat nationwide rate: an empty state list matches everything, which is
+	// how the general zone model expresses "flat".
+	fix.ShippingFlat = &models.ShippingZone{
+		ID:            "f9dbf9f7-9fb7-4da7-8dc5-bca40f163001",
+		Name:          "Nationwide",
+		RateKobo:      250000,
+		FreeAboveKobo: 5000000,
 	}
 
 	fix.ResourceDraft = &models.Resource{

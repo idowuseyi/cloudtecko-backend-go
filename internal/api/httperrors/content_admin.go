@@ -43,4 +43,12 @@ var (
 	ErrConflictSalesNotOpen         = NewHTTPError(http.StatusConflict, types.PublicHTTPErrorTypeGeneric, "Ticket sales have not opened yet.")
 	ErrConflictSalesClosed          = NewHTTPError(http.StatusConflict, types.PublicHTTPErrorTypeGeneric, "Ticket sales have closed.")
 	ErrBadRequestQuantityTooHigh    = NewHTTPError(http.StatusBadRequest, types.PublicHTTPErrorTypeGeneric, "That is more tickets than one order may hold.")
+
+	ErrConflictInsufficientStock = NewHTTPError(http.StatusConflict, types.PublicHTTPErrorTypeGeneric, "There is not enough stock left.")
+	ErrBadRequestEmptyCart       = NewHTTPError(http.StatusBadRequest, types.PublicHTTPErrorTypeGeneric, "The cart is empty.")
+
+	// ErrConflictCartChanged carries per-line detail in its response body. A bare
+	// error would make the frontend show "something went wrong" for a whole
+	// basket when one size sold out.
+	ErrConflictCartChanged = NewHTTPError(http.StatusConflict, types.PublicHTTPErrorTypeGeneric, "Some items in your cart are no longer available.")
 )

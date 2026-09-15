@@ -129,17 +129,20 @@ var OrderItemWhere = struct {
 
 // OrderItemRels is where relationship names are stored.
 var OrderItemRels = struct {
-	Order      string
-	TicketTier string
+	Order          string
+	ProductVariant string
+	TicketTier     string
 }{
-	Order:      "Order",
-	TicketTier: "TicketTier",
+	Order:          "Order",
+	ProductVariant: "ProductVariant",
+	TicketTier:     "TicketTier",
 }
 
 // orderItemR is where relationships are stored.
 type orderItemR struct {
-	Order      *Order           `boil:"Order" json:"Order" toml:"Order" yaml:"Order"`
-	TicketTier *EventTicketTier `boil:"TicketTier" json:"TicketTier" toml:"TicketTier" yaml:"TicketTier"`
+	Order          *Order           `boil:"Order" json:"Order" toml:"Order" yaml:"Order"`
+	ProductVariant *ProductVariant  `boil:"ProductVariant" json:"ProductVariant" toml:"ProductVariant" yaml:"ProductVariant"`
+	TicketTier     *EventTicketTier `boil:"TicketTier" json:"TicketTier" toml:"TicketTier" yaml:"TicketTier"`
 }
 
 // NewStruct creates a new relationship struct
@@ -161,6 +164,22 @@ func (r *orderItemR) GetOrder() *Order {
 	}
 
 	return r.Order
+}
+
+func (o *OrderItem) GetProductVariant() *ProductVariant {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetProductVariant()
+}
+
+func (r *orderItemR) GetProductVariant() *ProductVariant {
+	if r == nil {
+		return nil
+	}
+
+	return r.ProductVariant
 }
 
 func (o *OrderItem) GetTicketTier() *EventTicketTier {
@@ -292,6 +311,17 @@ func (o *OrderItem) Order(mods ...qm.QueryMod) orderQuery {
 	return Orders(queryMods...)
 }
 
+// ProductVariant pointed to by the foreign key.
+func (o *OrderItem) ProductVariant(mods ...qm.QueryMod) productVariantQuery {
+	queryMods := []qm.QueryMod{
+		qm.Where("\"id\" = ?", o.ProductVariantID),
+	}
+
+	queryMods = append(queryMods, mods...)
+
+	return ProductVariants(queryMods...)
+}
+
 // TicketTier pointed to by the foreign key.
 func (o *OrderItem) TicketTier(mods ...qm.QueryMod) eventTicketTierQuery {
 	queryMods := []qm.QueryMod{
@@ -405,6 +435,122 @@ func (orderItemL) LoadOrder(ctx context.Context, e boil.ContextExecutor, singula
 				local.R.Order = foreign
 				if foreign.R == nil {
 					foreign.R = &orderR{}
+				}
+				foreign.R.OrderItems = append(foreign.R.OrderItems, local)
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadProductVariant allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for an N-1 relationship.
+func (orderItemL) LoadProductVariant(ctx context.Context, e boil.ContextExecutor, singular bool, maybeOrderItem interface{}, mods queries.Applicator) error {
+	var slice []*OrderItem
+	var object *OrderItem
+
+	if singular {
+		var ok bool
+		object, ok = maybeOrderItem.(*OrderItem)
+		if !ok {
+			object = new(OrderItem)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeOrderItem)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeOrderItem))
+			}
+		}
+	} else {
+		s, ok := maybeOrderItem.(*[]*OrderItem)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeOrderItem)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeOrderItem))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &orderItemR{}
+		}
+		if !queries.IsNil(object.ProductVariantID) {
+			args[object.ProductVariantID] = struct{}{}
+		}
+
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &orderItemR{}
+			}
+
+			if !queries.IsNil(obj.ProductVariantID) {
+				args[obj.ProductVariantID] = struct{}{}
+			}
+
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`product_variants`),
+		qm.WhereIn(`product_variants.id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load ProductVariant")
+	}
+
+	var resultSlice []*ProductVariant
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice ProductVariant")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results of eager load for product_variants")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for product_variants")
+	}
+
+	if len(resultSlice) == 0 {
+		return nil
+	}
+
+	if singular {
+		foreign := resultSlice[0]
+		object.R.ProductVariant = foreign
+		if foreign.R == nil {
+			foreign.R = &productVariantR{}
+		}
+		foreign.R.OrderItems = append(foreign.R.OrderItems, object)
+		return nil
+	}
+
+	for _, local := range slice {
+		for _, foreign := range resultSlice {
+			if queries.Equal(local.ProductVariantID, foreign.ID) {
+				local.R.ProductVariant = foreign
+				if foreign.R == nil {
+					foreign.R = &productVariantR{}
 				}
 				foreign.R.OrderItems = append(foreign.R.OrderItems, local)
 				break
@@ -575,6 +721,86 @@ func (o *OrderItem) SetOrder(ctx context.Context, exec boil.ContextExecutor, ins
 		related.R.OrderItems = append(related.R.OrderItems, o)
 	}
 
+	return nil
+}
+
+// SetProductVariant of the orderItem to the related item.
+// Sets o.R.ProductVariant to related.
+// Adds o to related.R.OrderItems.
+func (o *OrderItem) SetProductVariant(ctx context.Context, exec boil.ContextExecutor, insert bool, related *ProductVariant) error {
+	var err error
+	if insert {
+		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
+			return errors.Wrap(err, "failed to insert into foreign table")
+		}
+	}
+
+	updateQuery := fmt.Sprintf(
+		"UPDATE \"order_items\" SET %s WHERE %s",
+		strmangle.SetParamNames("\"", "\"", 1, []string{"product_variant_id"}),
+		strmangle.WhereClause("\"", "\"", 2, orderItemPrimaryKeyColumns),
+	)
+	values := []interface{}{related.ID, o.ID}
+
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, updateQuery)
+		fmt.Fprintln(writer, values)
+	}
+	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	queries.Assign(&o.ProductVariantID, related.ID)
+	if o.R == nil {
+		o.R = &orderItemR{
+			ProductVariant: related,
+		}
+	} else {
+		o.R.ProductVariant = related
+	}
+
+	if related.R == nil {
+		related.R = &productVariantR{
+			OrderItems: OrderItemSlice{o},
+		}
+	} else {
+		related.R.OrderItems = append(related.R.OrderItems, o)
+	}
+
+	return nil
+}
+
+// RemoveProductVariant relationship.
+// Sets o.R.ProductVariant to nil.
+// Removes o from all passed in related items' relationships struct.
+func (o *OrderItem) RemoveProductVariant(ctx context.Context, exec boil.ContextExecutor, related *ProductVariant) error {
+	var err error
+
+	queries.SetScanner(&o.ProductVariantID, nil)
+	if _, err = o.Update(ctx, exec, boil.Whitelist("product_variant_id")); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	if o.R != nil {
+		o.R.ProductVariant = nil
+	}
+	if related == nil || related.R == nil {
+		return nil
+	}
+
+	for i, ri := range related.R.OrderItems {
+		if queries.Equal(o.ProductVariantID, ri.ProductVariantID) {
+			continue
+		}
+
+		ln := len(related.R.OrderItems)
+		if ln > 1 && i < ln-1 {
+			related.R.OrderItems[i] = related.R.OrderItems[ln-1]
+		}
+		related.R.OrderItems = related.R.OrderItems[:ln-1]
+		break
+	}
 	return nil
 }
 

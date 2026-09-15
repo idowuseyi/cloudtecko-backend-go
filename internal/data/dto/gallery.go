@@ -1,12 +1,14 @@
 package dto
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/aarondl/null/v8"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/types"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/money"
 )
 
 // GalleryStatus is the availability badge an event card carries.
@@ -592,4 +594,133 @@ func (l TicketTierList) ToTypes() *types.TicketTierList {
 	}
 
 	return &types.TicketTierList{Items: items}
+}
+
+// --- Merch ------------------------------------------------------------------
+
+type ProductVariant struct {
+	ID        string
+	SKU       string
+	Size      null.String
+	Colour    null.String
+	PriceKobo int64
+	Available int
+}
+
+type Product struct {
+	ID          string
+	Slug        string
+	Title       string
+	Description string
+	ImageURL    null.String
+	Variants    []ProductVariant
+}
+
+type ProductList []Product
+
+func (l ProductList) ToTypes() *types.ProductList {
+	items := make([]*types.Product, len(l))
+
+	for i := range l {
+		variants := make([]*types.ProductVariant, len(l[i].Variants))
+		for variantIndex, variant := range l[i].Variants {
+			variants[variantIndex] = &types.ProductVariant{
+				ID:        conv.Pointer(strfmt.UUID4(variant.ID)),
+				Sku:       conv.Pointer(variant.SKU),
+				Size:      variant.Size.Ptr(),
+				Colour:    variant.Colour.Ptr(),
+				PriceKobo: conv.Pointer(variant.PriceKobo),
+				Available: conv.Pointer(int64(variant.Available)),
+			}
+		}
+
+		items[i] = &types.Product{
+			ID:          conv.Pointer(strfmt.UUID4(l[i].ID)),
+			Slug:        conv.Pointer(l[i].Slug),
+			Title:       conv.Pointer(l[i].Title),
+			Description: l[i].Description,
+			Image:       l[i].ImageURL.Ptr(),
+			Variants:    variants,
+		}
+	}
+
+	return &types.ProductList{Items: items}
+}
+
+// CartLine is what the client sends: an id and a count, and nothing else.
+// Prices are never accepted from the client.
+type CartLine struct {
+	VariantID string
+	Quantity  int
+}
+
+// CartProblemReason explains why one line could not be fulfilled.
+type CartProblemReason string
+
+const (
+	CartProblemUnavailable CartProblemReason = "unavailable"
+	CartProblemOutOfStock  CartProblemReason = "out_of_stock"
+)
+
+// CartProblem names ONE failed line. The cart is client-side, so the frontend
+// has to be told which item is the problem -- otherwise a single sold-out size
+// shows as "something went wrong" for the whole basket.
+type CartProblem struct {
+	VariantID string
+	Reason    CartProblemReason
+	Available int
+}
+
+type CheckoutRequest struct {
+	Lines            []CartLine
+	Email            string
+	FullName         string
+	Phone            null.String
+	ShippingLine1    null.String
+	ShippingLine2    null.String
+	ShippingCity     null.String
+	ShippingState    string
+	ShippingCountry  null.String
+	ShippingPostcode null.String
+	UserID           null.String
+}
+
+type CheckoutResult struct {
+	Reference        string
+	AuthorizationURL string
+	AccessToken      string
+	Totals           money.Totals
+	Problems         []CartProblem
+}
+
+func (r CheckoutResult) ToTypes() *types.CheckoutResponse {
+	return &types.CheckoutResponse{
+		Reference:        conv.Pointer(r.Reference),
+		AuthorizationURL: conv.Pointer(r.AuthorizationURL),
+		AccessToken:      conv.Pointer(r.AccessToken),
+		SubtotalKobo:     conv.Pointer(r.Totals.SubtotalKobo),
+		ShippingKobo:     conv.Pointer(r.Totals.ShippingKobo),
+		TaxKobo:          conv.Pointer(r.Totals.TaxKobo),
+		TotalKobo:        conv.Pointer(r.Totals.TotalKobo),
+	}
+}
+
+// ConflictToTypes renders the 409 body, which keeps the standard error envelope
+// and adds the per-line detail a plain `detail` string cannot carry.
+func (r CheckoutResult) ConflictToTypes() *types.CheckoutConflictResponse {
+	problems := make([]*types.CartProblem, len(r.Problems))
+	for i := range r.Problems {
+		problems[i] = &types.CartProblem{
+			VariantID: conv.Pointer(strfmt.UUID4(r.Problems[i].VariantID)),
+			Reason:    conv.Pointer(string(r.Problems[i].Reason)),
+			Available: conv.Pointer(int64(r.Problems[i].Available)),
+		}
+	}
+
+	return &types.CheckoutConflictResponse{
+		Status:   conv.Pointer(int64(http.StatusConflict)),
+		Type:     types.PublicHTTPErrorTypeGeneric.Pointer(),
+		Title:    conv.Pointer("Some items in your cart are no longer available."),
+		Problems: problems,
+	}
 }

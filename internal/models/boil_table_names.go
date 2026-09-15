@@ -24,9 +24,12 @@ var TableNames = struct {
 	PaymentRefunds         string
 	PaymentWebhookEvents   string
 	Payments               string
+	ProductVariants        string
+	Products               string
 	PushTokens             string
 	RefreshTokens          string
 	Resources              string
+	ShippingZones          string
 	Users                  string
 }{
 	AccessTokens:           "access_tokens",
@@ -49,8 +52,11 @@ var TableNames = struct {
 	PaymentRefunds:         "payment_refunds",
 	PaymentWebhookEvents:   "payment_webhook_events",
 	Payments:               "payments",
+	ProductVariants:        "product_variants",
+	Products:               "products",
 	PushTokens:             "push_tokens",
 	RefreshTokens:          "refresh_tokens",
 	Resources:              "resources",
+	ShippingZones:          "shipping_zones",
 	Users:                  "users",
 }
