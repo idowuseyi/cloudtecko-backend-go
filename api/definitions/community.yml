@@ -567,3 +567,27 @@ definitions:
         type: array
         items:
           "$ref": "#/definitions/CartProblem"
+  PostRecurringDonationPayload:
+    description: |-
+      There is no amount here on purpose: it comes from the tier. The provider
+      fixes an amount to a Plan, so accepting one from the client would silently
+      disagree with what is actually charged.
+    type: object
+    required:
+      - tierId
+      - email
+    properties:
+      tierId:
+        type: string
+        format: uuid4
+      email:
+        type: string
+        format: email
+        maxLength: 255
+      displayName:
+        type: string
+        maxLength: 200
+        x-nullable: true
+      isAnonymous:
+        type: boolean
+        default: false

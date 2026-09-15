@@ -112,3 +112,75 @@ paths:
           description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
           schema:
             "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+  /api/v1/donations/recurring:
+    post:
+      description: |-
+        Starts a recurring donation against a tier.
+
+        The amount comes from the tier, never the request: the provider fixes an
+        amount to a Plan, and a price change means a new tier rather than an edit
+        to an existing one.
+      tags:
+        - donations
+      summary: Starts a recurring donation
+      operationId: PostRecurringDonationRoute
+      parameters:
+        - name: Payload
+          in: body
+          schema:
+            "$ref": "../definitions/community.yml#/definitions/PostRecurringDonationPayload"
+      responses:
+        "201":
+          description: Where to pay
+          schema:
+            "$ref": "../definitions/community.yml#/definitions/DonationCheckoutResponse"
+        "400":
+          description: PublicHTTPError - that tier is not a recurring one
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "404":
+          description: PublicHTTPError - no such tier
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "502":
+          description: PublicHTTPError - the payment provider could not be reached
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+  /api/v1/donations/{reference}/cancel:
+    post:
+      description: |-
+        Stops a recurring donation.
+
+        Requires the access token issued at checkout: there is no account to
+        scope this to, and cancelling a stranger's giving on a guessed reference
+        would cost the organisation money.
+
+        Idempotent -- a donor unsure whether it worked will click again. If the
+        provider refuses, the donation is NOT marked cancelled locally: telling
+        someone they have stopped giving while charges continue is the worst
+        outcome available.
+      tags:
+        - donations
+      summary: Cancels a recurring donation
+      operationId: PostCancelRecurringDonationRoute
+      parameters:
+        - name: reference
+          in: path
+          required: true
+          type: string
+          maxLength: 64
+        - name: X-Donation-Token
+          in: header
+          type: string
+          maxLength: 64
+      responses:
+        "204":
+          description: Cancelled
+        "404":
+          description: PublicHTTPError - no such recurring donation, or the token does not match
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
+        "502":
+          description: PublicHTTPError - the provider refused; nothing was changed locally
+          schema:
+            "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"

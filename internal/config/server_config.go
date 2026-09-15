@@ -234,6 +234,11 @@ type Payment struct {
 	// would be double-counted. Moving to inclusive pricing is a migration that
 	// changes that constraint, not a change to this value.
 	TaxRateBasisPoints int64
+
+	// SecretEncryptionKey encrypts values that must be recoverable -- currently
+	// only a subscription's provider email token, which the provider returns once
+	// and requires back to cancel. Everything else in this system is hashed.
+	SecretEncryptionKey string
 }
 
 // Storage configures the object store behind the media pipeline.
@@ -475,16 +480,17 @@ func DefaultServiceConfigFromEnv() Server {
 			PublicPrefix:     util.GetEnv("SERVER_STORAGE_PUBLIC_PREFIX", "public"),
 		},
 		Payment: Payment{
-			UseMockProvider:    util.GetEnvAsBool("SERVER_PAYMENT_USE_MOCK", true),
-			MockSecretKey:      util.GetEnv("SERVER_PAYMENT_MOCK_SECRET_KEY", "mock-payment-secret"),
-			SecretKey:          util.GetEnv("SERVER_PAYMENT_SECRET_KEY", ""),
-			BaseURL:            util.GetEnv("SERVER_PAYMENT_BASE_URL", "https://api.paystack.co"),
-			RequestTimeout:     time.Second * time.Duration(util.GetEnvAsInt("SERVER_PAYMENT_REQUEST_TIMEOUT_SECONDS", 30)),
-			CallbackURL:        util.GetEnv("SERVER_PAYMENT_CALLBACK_URL", "http://localhost:3000/payment/complete"),
-			IntentValidity:     time.Second * time.Duration(util.GetEnvAsInt("SERVER_PAYMENT_INTENT_VALIDITY_SECONDS", 1800)),
-			MinDonationKobo:    int64(util.GetEnvAsInt("SERVER_PAYMENT_MIN_DONATION_KOBO", 10000)),
-			MaxDonationKobo:    int64(util.GetEnvAsInt("SERVER_PAYMENT_MAX_DONATION_KOBO", 500000000)),
-			TaxRateBasisPoints: int64(util.GetEnvAsInt("SERVER_PAYMENT_TAX_RATE_BASIS_POINTS", 0)),
+			UseMockProvider:     util.GetEnvAsBool("SERVER_PAYMENT_USE_MOCK", true),
+			MockSecretKey:       util.GetEnv("SERVER_PAYMENT_MOCK_SECRET_KEY", "mock-payment-secret"),
+			SecretKey:           util.GetEnv("SERVER_PAYMENT_SECRET_KEY", ""),
+			BaseURL:             util.GetEnv("SERVER_PAYMENT_BASE_URL", "https://api.paystack.co"),
+			RequestTimeout:      time.Second * time.Duration(util.GetEnvAsInt("SERVER_PAYMENT_REQUEST_TIMEOUT_SECONDS", 30)),
+			CallbackURL:         util.GetEnv("SERVER_PAYMENT_CALLBACK_URL", "http://localhost:3000/payment/complete"),
+			IntentValidity:      time.Second * time.Duration(util.GetEnvAsInt("SERVER_PAYMENT_INTENT_VALIDITY_SECONDS", 1800)),
+			MinDonationKobo:     int64(util.GetEnvAsInt("SERVER_PAYMENT_MIN_DONATION_KOBO", 10000)),
+			MaxDonationKobo:     int64(util.GetEnvAsInt("SERVER_PAYMENT_MAX_DONATION_KOBO", 500000000)),
+			TaxRateBasisPoints:  int64(util.GetEnvAsInt("SERVER_PAYMENT_TAX_RATE_BASIS_POINTS", 0)),
+			SecretEncryptionKey: util.GetEnv("SERVER_PAYMENT_SECRET_ENCRYPTION_KEY", ""),
 		},
 		Community: Community{
 			ContactThrottle:      time.Second * time.Duration(util.GetEnvAsInt("SERVER_COMMUNITY_CONTACT_THROTTLE_SECONDS", 300)),

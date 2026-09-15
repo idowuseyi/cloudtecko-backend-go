@@ -724,3 +724,16 @@ func (r CheckoutResult) ConflictToTypes() *types.CheckoutConflictResponse {
 		Problems: problems,
 	}
 }
+
+// StartRecurringDonationRequest begins a subscription.
+//
+// There is no amount: it comes from the tier, because the provider fixes an
+// amount to a Plan and accepting one from the client would silently disagree
+// with what is actually charged.
+type StartRecurringDonationRequest struct {
+	TierID      string
+	Email       string
+	DisplayName null.String
+	IsAnonymous bool
+	UserID      null.String
+}

@@ -116,6 +116,8 @@ type mockEnvelope struct {
 		Amount           int64  `json:"amount"`
 		Currency         string `json:"currency"`
 		SubscriptionCode string `json:"subscription_code"`
+		EmailToken       string `json:"email_token"`
+		CustomerCode     string `json:"customer_code"`
 		AmountRefunded   int64  `json:"amount_refunded"`
 	} `json:"data"`
 }
@@ -173,9 +175,11 @@ func (p *Provider) ParseWebhook(rawBody []byte, signature string) (payment.Webho
 			Channel:           "card",
 			PaidAt:            time.Now(),
 		},
-		SubscriptionCode: envelope.Data.SubscriptionCode,
-		RefundedMinor:    envelope.Data.AmountRefunded,
-		Raw:              rawBody,
+		SubscriptionCode:       envelope.Data.SubscriptionCode,
+		SubscriptionEmailToken: envelope.Data.EmailToken,
+		CustomerCode:           envelope.Data.CustomerCode,
+		RefundedMinor:          envelope.Data.AmountRefunded,
+		Raw:                    rawBody,
 	}, nil
 }
 

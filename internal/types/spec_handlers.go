@@ -74,6 +74,7 @@ func (o *SwaggerSpec) initHandlerCache() {
 	o.Handlers["POST"]["/api/v1/admin/resources/{id}/archive"] = true
 	o.Handlers["POST"]["/api/v1/admin/resources/{id}/publish"] = true
 	o.Handlers["POST"]["/api/v1/admin/resources"] = true
+	o.Handlers["POST"]["/api/v1/donations/{reference}/cancel"] = true
 	o.Handlers["POST"]["/api/v1/auth/change-password"] = true
 	o.Handlers["POST"]["/api/v1/checkout"] = true
 	o.Handlers["POST"]["/api/v1/auth/register/{registrationToken}"] = true
@@ -86,6 +87,7 @@ func (o *SwaggerSpec) initHandlerCache() {
 	o.Handlers["POST"]["/api/v1/auth/logout"] = true
 	o.Handlers["POST"]["/api/v1/membership/applications"] = true
 	o.Handlers["POST"]["/webhooks/payments"] = true
+	o.Handlers["POST"]["/api/v1/donations/recurring"] = true
 	o.Handlers["POST"]["/api/v1/auth/refresh"] = true
 	o.Handlers["POST"]["/api/v1/auth/register"] = true
 	o.Handlers["PUT"]["/api/v1/admin/events/{id}"] = true

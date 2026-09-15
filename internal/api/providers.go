@@ -22,6 +22,7 @@ import (
 	"github.com/idowuseyi/cloudtecko-backend-go/internal/storage"
 	storagemock "github.com/idowuseyi/cloudtecko-backend-go/internal/storage/mock"
 	storages3 "github.com/idowuseyi/cloudtecko-backend-go/internal/storage/s3"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/util/secretbox"
 	"github.com/rs/zerolog/log"
 )
 
@@ -61,6 +62,31 @@ func NewStorage(cfg config.Server) (storage.Storage, error) {
 	}
 
 	return store, nil
+}
+
+// NewSecretBox builds the encryptor for values that must be recoverable.
+//
+// Fails at startup when no key is configured and the mock provider is off,
+// rather than degrading to plaintext: silently storing a live payment credential
+// unencrypted is worse than refusing to boot.
+func NewSecretBox(cfg config.Server) (*secretbox.Box, error) {
+	secret := cfg.Payment.SecretEncryptionKey
+	if secret == "" {
+		if !cfg.Payment.UseMockProvider {
+			return nil, errors.New("SERVER_PAYMENT_SECRET_ENCRYPTION_KEY is required when the mock payment provider is disabled")
+		}
+
+		log.Warn().Msg("Using a development encryption key: set SERVER_PAYMENT_SECRET_ENCRYPTION_KEY before handling real subscriptions")
+
+		secret = "development-only-encryption-key"
+	}
+
+	box, err := secretbox.New(secret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create secret box: %w", err)
+	}
+
+	return box, nil
 }
 
 // NewPaymentProvider creates the payment provider.

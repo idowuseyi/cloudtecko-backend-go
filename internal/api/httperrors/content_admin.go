@@ -47,6 +47,9 @@ var (
 	ErrConflictInsufficientStock = NewHTTPError(http.StatusConflict, types.PublicHTTPErrorTypeGeneric, "There is not enough stock left.")
 	ErrBadRequestEmptyCart       = NewHTTPError(http.StatusBadRequest, types.PublicHTTPErrorTypeGeneric, "The cart is empty.")
 
+	ErrNotFoundDonationTier       = NewHTTPError(http.StatusNotFound, types.PublicHTTPErrorTypeGeneric, "That donation tier does not exist.")
+	ErrBadRequestTierNotRecurring = NewHTTPError(http.StatusBadRequest, types.PublicHTTPErrorTypeGeneric, "That tier is not a recurring one.")
+
 	// ErrConflictCartChanged carries per-line detail in its response body. A bare
 	// error would make the frontend show "something went wrong" for a whole
 	// basket when one size sold out.

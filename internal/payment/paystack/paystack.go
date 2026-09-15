@@ -106,9 +106,17 @@ type webhookEnvelope struct {
 		} `json:"authorization"`
 		Subscription struct {
 			SubscriptionCode string `json:"subscription_code"`
+			EmailToken       string `json:"email_token"`
+			Customer         struct {
+				CustomerCode string `json:"customer_code"`
+			} `json:"customer"`
 		} `json:"subscription"`
 		SubscriptionCode string `json:"subscription_code"`
-		Transaction      struct {
+		EmailToken       string `json:"email_token"`
+		Customer         struct {
+			CustomerCode string `json:"customer_code"`
+		} `json:"customer"`
+		Transaction struct {
 			Reference string `json:"reference"`
 		} `json:"transaction"`
 		AmountRefunded int64 `json:"amount_refunded"`
@@ -164,9 +172,11 @@ func (p *Provider) ParseWebhook(rawBody []byte, signature string) (payment.Webho
 			PaidAt:            parsePaystackTime(envelope.Data.PaidAt),
 			FailureReason:     envelope.Data.GatewayResp,
 		},
-		SubscriptionCode: subscriptionCode,
-		RefundedMinor:    envelope.Data.AmountRefunded,
-		Raw:              rawBody,
+		SubscriptionCode:       subscriptionCode,
+		SubscriptionEmailToken: envelope.Data.EmailToken,
+		CustomerCode:           envelope.Data.Customer.CustomerCode,
+		RefundedMinor:          envelope.Data.AmountRefunded,
+		Raw:                    rawBody,
 	}, nil
 }
 

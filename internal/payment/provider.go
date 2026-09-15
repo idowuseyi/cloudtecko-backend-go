@@ -92,8 +92,15 @@ type WebhookEvent struct {
 	IdempotencyKey   string
 	Transaction      Transaction
 	SubscriptionCode string
-	RefundedMinor    int64
-	Raw              []byte
+
+	// SubscriptionEmailToken is returned by the provider EXACTLY ONCE, at
+	// subscription creation, and is required back to cancel. It is the only
+	// credential in this system that must be stored recoverably.
+	SubscriptionEmailToken string
+
+	CustomerCode  string
+	RefundedMinor int64
+	Raw           []byte
 }
 
 // PlanRequest creates a recurring plan.

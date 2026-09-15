@@ -1171,6 +1171,40 @@ paths:
                     description: PublicHTTPError - the provider could not be reached; no money moved
                     schema:
                         $ref: '#/definitions/publicHttpError'
+    /api/v1/donations/recurring:
+        post:
+            description: |-
+                Starts a recurring donation against a tier.
+
+                The amount comes from the tier, never the request: the provider fixes an
+                amount to a Plan, and a price change means a new tier rather than an edit
+                to an existing one.
+            tags:
+                - donations
+            summary: Starts a recurring donation
+            operationId: PostRecurringDonationRoute
+            parameters:
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/postRecurringDonationPayload'
+            responses:
+                "201":
+                    description: Where to pay
+                    schema:
+                        $ref: '#/definitions/donationCheckoutResponse'
+                "400":
+                    description: PublicHTTPError - that tier is not a recurring one
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError - no such tier
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "502":
+                    description: PublicHTTPError - the payment provider could not be reached
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
     /api/v1/donations/tiers:
         get:
             description: Lists the suggested donation amounts shown on the donate page.
@@ -1216,6 +1250,44 @@ paths:
                         $ref: '#/definitions/donationStatusResponse'
                 "404":
                     description: PublicHTTPError - no such donation, or the token does not match
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+    /api/v1/donations/{reference}/cancel:
+        post:
+            description: |-
+                Stops a recurring donation.
+
+                Requires the access token issued at checkout: there is no account to
+                scope this to, and cancelling a stranger's giving on a guessed reference
+                would cost the organisation money.
+
+                Idempotent -- a donor unsure whether it worked will click again. If the
+                provider refuses, the donation is NOT marked cancelled locally: telling
+                someone they have stopped giving while charges continue is the worst
+                outcome available.
+            tags:
+                - donations
+            summary: Cancels a recurring donation
+            operationId: PostCancelRecurringDonationRoute
+            parameters:
+                - maxLength: 64
+                  type: string
+                  name: reference
+                  in: path
+                  required: true
+                - maxLength: 64
+                  type: string
+                  name: X-Donation-Token
+                  in: header
+            responses:
+                "204":
+                    description: Cancelled
+                "404":
+                    description: PublicHTTPError - no such recurring donation, or the token does not match
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "502":
+                    description: PublicHTTPError - the provider refused; nothing was changed locally
                     schema:
                         $ref: '#/definitions/publicHttpError'
     /api/v1/events:
@@ -2558,6 +2630,30 @@ definitions:
             organisation:
                 type: string
                 maxLength: 200
+    postRecurringDonationPayload:
+        description: |-
+            There is no amount here on purpose: it comes from the tier. The provider
+            fixes an amount to a Plan, so accepting one from the client would silently
+            disagree with what is actually charged.
+        type: object
+        required:
+            - tierId
+            - email
+        properties:
+            displayName:
+                type: string
+                maxLength: 200
+                x-nullable: true
+            email:
+                type: string
+                format: email
+                maxLength: 255
+            isAnonymous:
+                type: boolean
+                default: false
+            tierId:
+                type: string
+                format: uuid4
     postRefreshPayload:
         type: object
         required:

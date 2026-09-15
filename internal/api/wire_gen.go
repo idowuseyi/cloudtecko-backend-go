@@ -51,7 +51,11 @@ func InitNewServer(server config.Server) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	localService := local.NewService(server, db, clock, storage, provider)
+	box, err := NewSecretBox(server)
+	if err != nil {
+		return nil, err
+	}
+	localService := local.NewService(server, db, clock, storage, provider, box)
 	metricsService, err := metrics.New(server, db)
 	if err != nil {
 		return nil, err
@@ -85,7 +89,11 @@ func InitNewServerWithDB(server config.Server, db *sql.DB, t ...*testing.T) (*Se
 	if err != nil {
 		return nil, err
 	}
-	localService := local.NewService(server, db, clock, storage, provider)
+	box, err := NewSecretBox(server)
+	if err != nil {
+		return nil, err
+	}
+	localService := local.NewService(server, db, clock, storage, provider, box)
 	metricsService, err := metrics.New(server, db)
 	if err != nil {
 		return nil, err
@@ -102,6 +110,7 @@ var serviceSet = wire.NewSet(
 	NewPush,
 	NewStorage,
 	NewPaymentProvider,
+	NewSecretBox,
 	NewMailer,
 	NewI18N,
 	authServiceSet, local.NewService, metrics.New, NewClock,

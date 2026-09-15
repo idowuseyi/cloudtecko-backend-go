@@ -166,11 +166,37 @@ func (s *Service) applyWebhookEffect(ctx context.Context, exec boil.ContextExecu
 		return s.applyChargeSucceeded(ctx, exec, event)
 	case payment.EventChargeFailed:
 		return s.applyChargeFailed(ctx, exec, event)
-	case payment.EventRefundProcessed, payment.EventSubscriptionCreated,
-		payment.EventSubscriptionDisabled, payment.EventInvoiceFailed:
-		// Recorded now, acted on in the phases that own them. Returning without
-		// error keeps the response 200 so the provider stops retrying.
-		return false, nil
+	case payment.EventSubscriptionCreated:
+		// Captures the email token, which the provider returns exactly once. Miss
+		// it and the donor can never cancel through our interface.
+		if err := s.RecordSubscriptionCreated(ctx, event); err != nil {
+			return false, err
+		}
+
+		return true, nil
+
+	case payment.EventSubscriptionDisabled:
+		if err := s.MarkSubscriptionDisabled(ctx, event.SubscriptionCode); err != nil {
+			return false, err
+		}
+
+		return true, nil
+
+	case payment.EventInvoiceFailed:
+		// Past due, NOT cancelled: the provider retries, and a donor whose card
+		// expired has not chosen to stop giving.
+		if err := s.MarkSubscriptionPastDue(ctx, event.SubscriptionCode); err != nil {
+			return false, err
+		}
+
+		return true, nil
+
+	case payment.EventRefundProcessed:
+		if err := s.recordRefund(ctx, exec, event); err != nil {
+			return false, err
+		}
+
+		return true, nil
 	default:
 		return false, nil
 	}
@@ -375,4 +401,81 @@ func (s *Service) UnprocessedWebhookCount(ctx context.Context) (int64, error) {
 	}
 
 	return count, nil
+}
+
+// recordRefund applies a refund the provider reports.
+//
+// Refunds can originate in the provider's OWN dashboard, not just from our admin
+// API, so this must handle an event we never initiated. Ignoring it would leave
+// our records saying a payment succeeded in full while the money has gone back.
+func (s *Service) recordRefund(ctx context.Context, exec boil.ContextExecutor, event payment.WebhookEvent) error {
+	log := util.LogFromContext(ctx)
+
+	paymentRow, err := models.Payments(
+		models.PaymentWhere.Reference.EQ(event.Transaction.Reference),
+	).One(ctx, exec)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Warn().Str("reference", event.Transaction.Reference).
+				Msg("Refund event referenced a payment we do not have")
+
+			return nil
+		}
+
+		return fmt.Errorf("failed to load payment: %w", err)
+	}
+
+	refunded := event.RefundedMinor
+	if refunded <= 0 {
+		refunded = paymentRow.AmountKobo
+	}
+
+	if refunded > paymentRow.AmountKobo {
+		// The CHECK forbids refunding more than was charged, and a provider
+		// reporting that is a discrepancy to investigate rather than to apply.
+		log.Error().
+			Str("reference", paymentRow.Reference).
+			Int64("chargedKobo", paymentRow.AmountKobo).
+			Int64("refundedKobo", refunded).
+			Msg("Refund exceeds the original charge, refusing to apply")
+
+		return nil
+	}
+
+	next := models.PaymentStatusPartiallyRefunded
+	if refunded == paymentRow.AmountKobo {
+		next = models.PaymentStatusRefunded
+	}
+
+	won, err := transitionStatus(ctx, exec, transitionTablePayments, paymentRow.ID,
+		[]string{models.PaymentStatusSucceeded, models.PaymentStatusPartiallyRefunded}, next)
+	if err != nil || !won {
+		return err
+	}
+
+	paymentRow.AmountRefundedKobo = refunded
+	if _, err := paymentRow.Update(ctx, exec, boil.Whitelist(
+		models.PaymentColumns.AmountRefundedKobo,
+		models.PaymentColumns.UpdatedAt,
+	)); err != nil {
+		return fmt.Errorf("failed to record refund amount: %w", err)
+	}
+
+	// A refund that came from the provider's dashboard has no local refund row,
+	// so one is created for the audit trail. restock stays false: whether stock
+	// goes back is a human decision that depends on whether the goods were
+	// actually returned.
+	refundRow := &models.PaymentRefund{
+		PaymentID:        paymentRow.ID,
+		AmountKobo:       refunded,
+		Reason:           "provider-reported",
+		Status:           "processed",
+		ProviderRefundID: null.NewString(event.Transaction.ProviderID, event.Transaction.ProviderID != ""),
+	}
+
+	if err := refundRow.Insert(ctx, exec, boil.Infer()); err != nil {
+		return fmt.Errorf("failed to record refund: %w", err)
+	}
+
+	return nil
 }

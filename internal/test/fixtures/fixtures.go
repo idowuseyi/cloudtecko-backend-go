@@ -121,6 +121,9 @@ type FixtureMap struct {
 	ProductDraft   *models.Product
 	VariantDraft   *models.ProductVariant
 	ShippingFlat   *models.ShippingZone
+
+	DonationTierMonthly *models.DonationTier
+	DonationTierOneOff  *models.DonationTier
 }
 
 // Fixtures returns a function wrapping our fixtures, which tests are allowed to manipulate.
@@ -553,6 +556,22 @@ func contentFixtures(fix *FixtureMap, now time.Time) {
 		Name:          "Nationwide",
 		RateKobo:      250000,
 		FreeAboveKobo: 5000000,
+	}
+
+	fix.DonationTierMonthly = &models.DonationTier{
+		ID:          "aabbccdd-1122-4334-8556-778899aa0001",
+		Name:        "Monthly Supporter",
+		Description: "Support the community every month.",
+		AmountKobo:  500000,
+		Interval:    "monthly",
+	}
+
+	// No interval, so it is a suggested one-off amount rather than a plan.
+	fix.DonationTierOneOff = &models.DonationTier{
+		ID:         "aabbccdd-1122-4334-8556-778899aa0002",
+		Name:       "One-off Gift",
+		AmountKobo: 250000,
+		SortOrder:  1,
 	}
 
 	fix.ResourceDraft = &models.Resource{
