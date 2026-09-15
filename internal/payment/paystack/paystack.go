@@ -157,6 +157,15 @@ func (p *Provider) ParseWebhook(rawBody []byte, signature string) (payment.Webho
 		identity = reference
 	}
 
+	if identity == "" {
+		// With neither an id nor a reference the key would be just the event type,
+		// so the FIRST such delivery would be recorded and every later one of the
+		// same type silently discarded as a duplicate -- including real money
+		// events. Refusing is safe: a non-2xx makes the provider retry, and a
+		// genuine Paystack event always carries one or the other.
+		return payment.WebhookEvent{}, payment.ErrUnidentifiableEvent
+	}
+
 	return payment.WebhookEvent{
 		Type:           eventType,
 		IdempotencyKey: envelope.Event + ":" + identity,

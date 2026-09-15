@@ -90,6 +90,11 @@ services:
       # is the HMAC key webhook bodies are signed with; there is no separate
       # webhook secret. The service refuses to start without it while
       # SERVER_PAYMENT_USE_MOCK is false.
+      #
+      # This is also the default, so the line below is belt and braces rather
+      # than the thing standing between production and a mock that would accept
+      # a self-signed charge.success. It stays explicit precisely because a
+      # reader should not have to know the default to audit this file.
       - key: SERVER_PAYMENT_USE_MOCK
         value: "false"
       - key: SERVER_PAYMENT_SECRET_KEY

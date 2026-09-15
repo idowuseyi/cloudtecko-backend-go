@@ -113,9 +113,18 @@ func (s *Storage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 // source lingers; the caller sees an error and must treat the outcome as
 // unknown. The orphan sweep over media_assets still in 'pending' is what
 // eventually reclaims the stale source.
-func (s *Storage) Move(ctx context.Context, from string, to string) error {
+func (s *Storage) Move(ctx context.Context, from string, to string, contentType string) error {
 	if _, err := s.client.CopyObject(ctx,
-		minio.CopyDestOptions{Bucket: s.bucket, Object: to},
+		minio.CopyDestOptions{
+			Bucket: s.bucket,
+			Object: to,
+			// ReplaceMetadata is what makes UserMetadata take effect. Without it
+			// CopyObject preserves the SOURCE object's metadata, which means the
+			// Content-Type the uploading client chose on its presigned PUT -- see
+			// storage.Storage.Move.
+			ReplaceMetadata: true,
+			UserMetadata:    map[string]string{"Content-Type": contentType},
+		},
 		minio.CopySrcOptions{Bucket: s.bucket, Object: from},
 	); err != nil {
 		if isNotFound(err) {

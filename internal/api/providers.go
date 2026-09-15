@@ -91,17 +91,29 @@ func NewSecretBox(cfg config.Server) (*secretbox.Box, error) {
 
 // NewPaymentProvider creates the payment provider.
 //
-// The mock is the default, matching how push and storage behave: a developer
-// without provider credentials still gets a working server. Production sets
-// SERVER_PAYMENT_USE_MOCK=false and supplies a secret key, and a missing key
-// then fails loudly at startup rather than silently at the first charge.
+// The real provider is the default here, UNLIKE push and storage. Those degrade
+// to a harmless no-op when mocked; this one degrades to a forgery oracle,
+// because the mock verifies webhook signatures with a key that is by definition
+// known to whoever configured it. A deployment that forgets an environment
+// variable must not land on that.
+//
+// Either way a missing key fails loudly at startup rather than silently at the
+// first charge -- or, worse, not at all.
 //
 // implementations chosen at runtime from config.
 //
 //nolint:ireturn // returning the interface is the point: wire injects one of two
 func NewPaymentProvider(cfg config.Server) (payment.Provider, error) {
 	if cfg.Payment.UseMockProvider {
-		log.Warn().Msg("Initializing mock payment provider (no real money moves)")
+		// No key, no mock. The mock signs webhooks with this value, so a default
+		// or empty key means anyone able to reach /webhooks/payments can forge a
+		// settlement and have an order fulfilled without paying. Refusing to boot
+		// is the only safe behaviour.
+		if cfg.Payment.MockSecretKey == "" {
+			return nil, errors.New("SERVER_PAYMENT_MOCK_SECRET_KEY is required when the mock payment provider is enabled")
+		}
+
+		log.Warn().Msg("Initializing MOCK payment provider: webhook signatures are verified with a locally-configured key and no real money moves. Never enable this in production.")
 
 		return paymentmock.New(cfg.Payment.MockSecretKey), nil
 	}

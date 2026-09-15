@@ -147,7 +147,10 @@ func (s *Service) CompleteMediaUpload(ctx context.Context, assetID string) (dto.
 
 	publicKey := path.Join(s.config.Storage.PublicPrefix, strings.TrimPrefix(asset.ObjectKey, s.config.Storage.QuarantinePrefix+"/"))
 
-	if err := s.storage.Move(ctx, asset.ObjectKey, publicKey); err != nil {
+	// detected, never asset.ContentType: the declared type is a client claim and
+	// the object's stored header is one too, since a presigned PUT does not bind
+	// it. This is the only point where the type we actually verified is written.
+	if err := s.storage.Move(ctx, asset.ObjectKey, publicKey, detected); err != nil {
 		// Move is copy-then-delete and is not atomic. On failure the destination
 		// may exist; the asset stays 'pending' so the orphan sweep can reconcile
 		// it, and the caller is told the outcome is unknown rather than "nothing

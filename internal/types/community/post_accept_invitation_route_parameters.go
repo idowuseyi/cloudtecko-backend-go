@@ -30,9 +30,6 @@ type PostAcceptInvitationRouteParams struct {
 	HTTPRequest *http.Request `json:"-"`
 	// In: body
 	Payload *types.PostAcceptInvitationPayload
-	// Required: true
-	// In: path
-	Token strfmt.UUID4 `param:"token"`
 }
 
 // BindRequest both binds and validates a request, it assumes that complex things implement a Validatable(strfmt.Registry) error interface
@@ -67,11 +64,6 @@ func (o *PostAcceptInvitationRouteParams) BindRequest(r *http.Request, route *mi
 			}
 		}
 	}
-
-	rToken, rhkToken, _ := route.Params.GetOK("token")
-	if err := o.bindToken(rToken, rhkToken, route.Formats); err != nil {
-		res = append(res, err)
-	}
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
@@ -89,49 +81,8 @@ func (o *PostAcceptInvitationRouteParams) Validate(formats strfmt.Registry) erro
 	//  res = append(res, err)
 	//}
 
-	// token
-	// Required: true
-	// Parameter is provided by construction from the route
-
-	if err := o.validateToken(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-// bindToken binds and validates parameter Token from path.
-func (o *PostAcceptInvitationRouteParams) bindToken(rawData []string, hasKey bool, formats strfmt.Registry) error {
-	var raw string
-	if len(rawData) > 0 {
-		raw = rawData[len(rawData)-1]
-	}
-
-	// Required: true
-	// Parameter is provided by construction from the route
-
-	// Format: uuid4
-	value, err := formats.Parse("uuid4", raw)
-	if err != nil {
-		return errors.InvalidType("token", "path", "strfmt.UUID4", raw)
-	}
-	o.Token = *(value.(*strfmt.UUID4))
-
-	if err := o.validateToken(formats); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// validateToken carries out validations for parameter Token
-func (o *PostAcceptInvitationRouteParams) validateToken(formats strfmt.Registry) error {
-
-	if err := validate.FormatOf("token", "path", "uuid4", o.Token.String(), formats); err != nil {
-		return err
 	}
 	return nil
 }

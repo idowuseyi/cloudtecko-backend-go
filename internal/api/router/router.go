@@ -31,12 +31,22 @@ import (
 // /api/v1/auth carries credentials. The community endpoints carry a password on
 // invitation acceptance, and names, email addresses and free text everywhere
 // else -- personal data that would otherwise be copied verbatim into the log
-// aggregator whenever SERVER_LOGGER_LOG_REQUEST_BODY is on. The admin media and
-// commerce surfaces are listed for the same reason.
+// aggregator whenever SERVER_LOGGER_LOG_REQUEST_BODY is on.
+//
+// The commerce paths are here for the same reason and are easy to overlook,
+// because their sensitivity is not in the endpoint's purpose: checkout carries a
+// full shipping address, event registration carries attendee names and email
+// addresses, and both donation endpoints carry a donor's identity together with
+// what they gave -- which is precisely what is_anonymous exists to protect.
+//
+// Prefix matching means a path listed here also covers everything beneath it.
 var sensitiveBodyPaths = []string{
 	"/api/v1/auth",
 	"/api/v1/contact-messages",
 	"/api/v1/membership",
+	"/api/v1/checkout",
+	"/api/v1/donations",
+	"/api/v1/events",
 	"/api/v1/admin/applications",
 	"/webhooks",
 }
@@ -82,8 +92,6 @@ func Init(s *api.Server) error {
 	s.Echo.Debug = s.Config.Echo.Debug
 	s.Echo.HideBanner = true
 	s.Echo.Logger.SetOutput(&echoLogger{level: s.Config.Logger.RequestLevel, log: log.With().Str("component", "echo").Logger()})
-	echo.NotFoundHandler = NotFoundHandler(s.Config)
-
 	s.Echo.HTTPErrorHandler = HTTPErrorHandlerWithConfig(HTTPErrorHandlerConfig{
 		HideInternalServerErrorDetails: s.Config.Echo.HideInternalServerErrorDetails,
 	})
@@ -316,6 +324,34 @@ func Init(s *api.Server) error {
 
 	// ---
 	// Finally attach our handlers
+	// Not-found handling, registered PER INSTANCE.
+	//
+	// The obvious form is `echo.NotFoundHandler = NotFoundHandler(s.Config)`,
+	// which is what this used to do -- but that is a package-level global shared
+	// by every Echo instance in the process, and writing it while another
+	// instance is being constructed is a real data race. Harmless in production,
+	// where Init runs once at boot; fatal to `go test -race`, which is exactly
+	// when a race detector earns its keep.
+	//
+	// Every group created WITH middleware registers its own catch-all, which
+	// would otherwise fall through to that global, so each one needs the handler
+	// explicitly. The root route covers anything outside a group.
+	notFound := NotFoundHandler(s.Config)
+
+	s.Echo.RouteNotFound("/*", notFound)
+
+	for _, group := range []*echo.Group{
+		s.Router.Root,
+		s.Router.Management,
+		s.Router.APIV1Auth,
+		s.Router.APIV1Push,
+		s.Router.APIV1Community,
+		s.Router.APIV1Admin,
+		s.Router.Webhooks,
+	} {
+		group.RouteNotFound("/*", notFound)
+	}
+
 	handlers.AttachAllRoutes(s)
 
 	if s.Config.Management.EnableMetrics {

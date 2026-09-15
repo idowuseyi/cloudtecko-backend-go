@@ -69,11 +69,16 @@ paths:
           description: PublicHTTPError - validation failed
           schema:
             "$ref": "../definitions/errors.yml#/definitions/PublicHTTPError"
-  /api/v1/membership/invitations/{token}/accept:
+  /api/v1/membership/invitations/accept:
     post:
       description: |-
         Accepts an invitation by choosing a password, creating the account and
         returning a session.
+
+        The invitation token travels in the BODY, never the path. A token in a
+        URL is written to every access log between the client and this process,
+        sent onward in the Referer header of any outbound link on the landing
+        page, and kept in browser history -- none of which this service controls.
 
         A not-found, not-approved and expired invitation are reported
         identically, so the endpoint cannot be used to discover which invitations
@@ -83,11 +88,6 @@ paths:
       summary: Accepts a membership invitation
       operationId: PostAcceptInvitationRoute
       parameters:
-        - name: token
-          in: path
-          required: true
-          type: string
-          format: uuid4
         - name: Payload
           in: body
           schema:

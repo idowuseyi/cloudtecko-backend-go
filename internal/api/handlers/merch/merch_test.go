@@ -172,6 +172,35 @@ func TestEmptyCartIsRejected(t *testing.T) {
 	})
 }
 
+// The cart is bounded, and the bound is a denial-of-service control rather than
+// a usability one.
+//
+// Checkout holds one pooled connection for the whole transaction and takes a row
+// lock per line. Unbounded, an anonymous caller could send thousands of lines in
+// a single request and occupy the pool -- which is ten connections -- for as long
+// as it takes to walk them. The 1MB body limit alone still permits some 17,000
+// lines, so the bound has to be on the array.
+func TestOversizedCartIsRejected(t *testing.T) {
+	t.Parallel()
+
+	test.WithTestServer(t, func(s *api.Server) {
+		variantID := fixtures.Fixtures().VariantHoodieM.ID
+
+		lines := make([]map[string]any, 0, 51)
+		for range 51 {
+			lines = append(lines, map[string]any{"variantId": variantID, "quantity": 1})
+		}
+
+		res := test.PerformRequest(t, s, "POST", "/api/v1/checkout", test.GenericPayload{
+			"lines": lines, "email": "x@example.com",
+			"fullName": "X", "shippingState": "Lagos",
+		}, nil)
+
+		assert.Equal(t, http.StatusBadRequest, res.Result().StatusCode,
+			"a cart past the bound must be refused before any row is locked")
+	})
+}
+
 // The stock twin of the ticketing race. Same single-statement reservation, so
 // the same property must hold.
 func TestConcurrentCheckoutsNeverOversell(t *testing.T) {

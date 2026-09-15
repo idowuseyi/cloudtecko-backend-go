@@ -15,6 +15,10 @@ import (
 // not at approval time, so an unaccepted invitation leaves no orphan account
 // and the link alone grants nothing.
 //
+// The token is a body field rather than a path segment because it is a bearer
+// credential, and a credential in a URL leaks to logs, Referer headers and
+// browser history.
+//
 // swagger:model postAcceptInvitationPayload
 type PostAcceptInvitationPayload struct {
 
@@ -24,6 +28,12 @@ type PostAcceptInvitationPayload struct {
 	// Max Length: 512
 	// Min Length: 15
 	Password *string `json:"password"`
+
+	// token
+	// Example: 3a9c0f7e-1f1a-4d0e-9a1f-2b0c3d4e5f60
+	// Required: true
+	// Format: uuid4
+	Token *strfmt.UUID4 `json:"token"`
 }
 
 // Validate validates this post accept invitation payload
@@ -31,6 +41,10 @@ func (m *PostAcceptInvitationPayload) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validatePassword(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateToken(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -51,6 +65,19 @@ func (m *PostAcceptInvitationPayload) validatePassword(formats strfmt.Registry) 
 	}
 
 	if err := validate.MaxLength("password", "body", *m.Password, 512); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *PostAcceptInvitationPayload) validateToken(formats strfmt.Registry) error {
+
+	if err := validate.Required("token", "body", m.Token); err != nil {
+		return err
+	}
+
+	if err := validate.FormatOf("token", "body", "uuid4", m.Token.String(), formats); err != nil {
 		return err
 	}
 

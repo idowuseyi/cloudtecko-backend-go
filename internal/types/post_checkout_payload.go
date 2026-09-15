@@ -33,6 +33,7 @@ type PostCheckoutPayload struct {
 
 	// lines
 	// Required: true
+	// Max Items: 50
 	// Min Items: 1
 	Lines []*CartLine `json:"lines"`
 
@@ -159,6 +160,10 @@ func (m *PostCheckoutPayload) validateLines(formats strfmt.Registry) error {
 	iLinesSize := int64(len(m.Lines))
 
 	if err := validate.MinItems("lines", "body", iLinesSize, 1); err != nil {
+		return err
+	}
+
+	if err := validate.MaxItems("lines", "body", iLinesSize, 50); err != nil {
 		return err
 	}
 

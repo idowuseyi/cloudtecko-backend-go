@@ -21,6 +21,17 @@ var (
 	// and return 200: the alternative -- a non-2xx -- would make the provider
 	// retry an event we will never handle, for 72 hours.
 	ErrUnsupportedEvent = errors.New("payment: unsupported webhook event")
+
+	// ErrUnidentifiableEvent means the webhook carries nothing stable to
+	// de-duplicate on -- no event id and no transaction reference.
+	//
+	// Unlike ErrUnsupportedEvent this is NOT recorded and 200'd. An event with no
+	// identity produces the same idempotency key as every other event of its
+	// type, so accepting one would make the first delivery poison the rest: each
+	// later one matches the stored key and is dropped as a duplicate. A non-2xx
+	// makes the provider retry, which is the right outcome for a delivery this
+	// application cannot safely tell apart from another.
+	ErrUnidentifiableEvent = errors.New("payment: webhook event carries no usable identity")
 )
 
 // Status is the provider-independent outcome of a transaction.

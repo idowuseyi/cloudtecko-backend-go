@@ -69,6 +69,28 @@ func seedPaidOrder(t *testing.T, s *api.Server, reference string) (*models.Order
 	return order, paymentRow
 }
 
+// touchAdminAuthentication marks the admin as having just authenticated.
+//
+// AuthModeSecure compares last_authenticated_at against a 15-minute threshold,
+// and a fixture cannot express "recently": its clock freezes when IntegreSQL
+// builds the cached template, so a fixture value passes for fifteen minutes
+// after any fixture edit and fails forever afterwards. That is the same
+// time-bomb the confirmation-token fixture had. A time-RELATIVE precondition has
+// to be established by the test at run time.
+func touchAdminAuthentication(t *testing.T, s *api.Server) {
+	t.Helper()
+
+	admin, err := models.FindUser(t.Context(), s.DB, fixtures.Fixtures().UserAdmin.ID)
+	require.NoError(t, err)
+
+	admin.LastAuthenticatedAt = null.TimeFrom(time.Now())
+	_, err = admin.Update(t.Context(), s.DB, boil.Whitelist(
+		models.UserColumns.LastAuthenticatedAt,
+		models.UserColumns.UpdatedAt,
+	))
+	require.NoError(t, err)
+}
+
 func advance(t *testing.T, s *api.Server, orderID string, action string) *http.Response {
 	t.Helper()
 
@@ -186,6 +208,8 @@ func TestRefundRecordsAndTransitions(t *testing.T) {
 	t.Parallel()
 
 	test.WithTestServer(t, func(s *api.Server) {
+		touchAdminAuthentication(t, s)
+
 		_, paymentRow := seedPaidOrder(t, s, "cld_mch_REFUND1")
 
 		res := test.PerformRequest(t, s, "POST", "/api/v1/admin/payments/"+paymentRow.ID+"/refund",
@@ -206,6 +230,8 @@ func TestPartialRefundLeavesTheRemainderRefundable(t *testing.T) {
 	t.Parallel()
 
 	test.WithTestServer(t, func(s *api.Server) {
+		touchAdminAuthentication(t, s)
+
 		_, paymentRow := seedPaidOrder(t, s, "cld_mch_PARTIAL1")
 
 		first := test.PerformRequest(t, s, "POST", "/api/v1/admin/payments/"+paymentRow.ID+"/refund",
@@ -230,6 +256,8 @@ func TestRefundCannotExceedTheCharge(t *testing.T) {
 	t.Parallel()
 
 	test.WithTestServer(t, func(s *api.Server) {
+		touchAdminAuthentication(t, s)
+
 		_, paymentRow := seedPaidOrder(t, s, "cld_mch_OVER1")
 
 		res := test.PerformRequest(t, s, "POST", "/api/v1/admin/payments/"+paymentRow.ID+"/refund",
@@ -246,6 +274,8 @@ func TestRefundDoesNotRestockUnlessAsked(t *testing.T) {
 	t.Parallel()
 
 	test.WithTestServer(t, func(s *api.Server) {
+		touchAdminAuthentication(t, s)
+
 		fix := fixtures.Fixtures()
 		_, paymentRow := seedPaidOrder(t, s, "cld_mch_NORESTOCK1")
 
@@ -263,6 +293,8 @@ func TestRefundWithRestockReturnsStock(t *testing.T) {
 	t.Parallel()
 
 	test.WithTestServer(t, func(s *api.Server) {
+		touchAdminAuthentication(t, s)
+
 		fix := fixtures.Fixtures()
 		_, paymentRow := seedPaidOrder(t, s, "cld_mch_RESTOCK1")
 

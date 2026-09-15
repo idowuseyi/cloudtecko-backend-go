@@ -56,14 +56,23 @@ type Storage interface {
 	// pulling the whole object.
 	Get(ctx context.Context, key string) (io.ReadCloser, error)
 
-	// Move relocates an object, typically quarantine -> public.
+	// Move relocates an object, typically quarantine -> public, REWRITING its
+	// content type to contentType.
+	//
+	// The rewrite is the security-relevant half. A presigned PUT signs only the
+	// method, bucket, key and expiry, so the uploading client chooses the
+	// Content-Type the store records and there is no signature binding it to
+	// anything we approved. Copying the object as-is would carry that
+	// client-chosen header onto the public object: bytes that sniff as an
+	// allow-listed image, served to a browser as whatever the uploader asked
+	// for. Promotion therefore replaces it with the type we sniffed ourselves.
 	//
 	// On S3-compatible stores this is COPY followed by DELETE, not an atomic
 	// rename. A failure between the two leaves the source in place and the
 	// destination written; implementations must therefore be safe to retry, and
 	// callers must treat a Move error as "state unknown" rather than "nothing
 	// happened".
-	Move(ctx context.Context, from string, to string) error
+	Move(ctx context.Context, from string, to string, contentType string) error
 
 	Delete(ctx context.Context, key string) error
 

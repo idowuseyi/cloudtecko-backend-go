@@ -70,6 +70,16 @@ func execClosureNewTestServer(ctx context.Context, t *testing.T, config config.S
 	config.Push.UseFCMProvider = false
 	config.Push.UseMockProvider = true
 
+	// Tests opt into the mock payment provider explicitly. Unlike push and
+	// storage it does NOT default on, because a mock that verifies webhook
+	// signatures with a locally-known key is a forgery oracle if it is ever
+	// reached in production -- see config.Payment.UseMockProvider. Opting in here
+	// keeps the default safe without making the suite unable to move fake money.
+	config.Payment.UseMockProvider = true
+	if config.Payment.MockSecretKey == "" {
+		config.Payment.MockSecretKey = "mock-payment-secret"
+	}
+
 	s, err := api.InitNewServerWithDB(config, db, t)
 	if err != nil {
 		t.Fatalf("Failed to initialize server: %v", err)

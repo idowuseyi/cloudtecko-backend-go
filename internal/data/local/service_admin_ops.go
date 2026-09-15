@@ -248,24 +248,27 @@ func (s *Service) RefundPayment(ctx context.Context, request dto.RefundRequest) 
 			return fmt.Errorf("failed to record refund: %w", err)
 		}
 
-		total := paymentRow.AmountRefundedKobo + amount
-
-		next := models.PaymentStatusPartiallyRefunded
-		if total >= paymentRow.AmountKobo {
-			next = models.PaymentStatusRefunded
-		}
-
-		if _, err := transitionStatus(ctx, exec, transitionTablePayments, paymentRow.ID,
-			[]string{models.PaymentStatusSucceeded, models.PaymentStatusPartiallyRefunded}, next); err != nil {
+		// paymentRow was read BEFORE this transaction opened, so its refunded total
+		// is a snapshot that another refund may already have moved. Accumulating
+		// from it would let two concurrent refunds each add to the same stale zero
+		// and lose one. addRefundedAmount adds and caps in one statement instead.
+		total, applied, err := addRefundedAmount(ctx, exec, paymentRow.ID, amount)
+		if err != nil {
 			return err
 		}
 
-		paymentRow.AmountRefundedKobo = total
-		if _, err := paymentRow.Update(ctx, exec, boil.Whitelist(
-			models.PaymentColumns.AmountRefundedKobo,
-			models.PaymentColumns.UpdatedAt,
-		)); err != nil {
-			return fmt.Errorf("failed to record refunded amount: %w", err)
+		if !applied {
+			// The money has already left the provider at this point, so this is not
+			// a rejection of the refund -- it is a discrepancy. Failing the
+			// transaction rolls back the refund row and surfaces it rather than
+			// recording a total the CHECK forbids.
+			return httperrors.ErrConflictRefundExceedsCharge
+		}
+
+		if _, err := transitionStatus(ctx, exec, transitionTablePayments, paymentRow.ID,
+			[]string{models.PaymentStatusSucceeded, models.PaymentStatusPartiallyRefunded},
+			refundedStatusFor(total, paymentRow.AmountKobo)); err != nil {
+			return err
 		}
 
 		// Restock is a HUMAN decision, passed through from the request: whether

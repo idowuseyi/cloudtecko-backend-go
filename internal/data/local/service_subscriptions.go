@@ -166,7 +166,14 @@ func (s *Service) ensurePlan(ctx context.Context, tier *models.DonationTier) (st
 // donor can never stop giving through our interface -- they would have to
 // contact their bank. It is therefore ENCRYPTED rather than hashed, the only
 // credential in this schema treated that way.
-func (s *Service) RecordSubscriptionCreated(ctx context.Context, event payment.WebhookEvent) error {
+//
+// Takes exec rather than reaching for s.db: this runs INSIDE the webhook
+// transaction, alongside the guarded status transition that makes the delivery
+// idempotent. A write on s.db would commit independently of that guard, so a
+// redelivery could roll back the transition and keep the subscription write --
+// and it would borrow a second pooled connection while the outer transaction
+// holds one, which deadlocks the pool under load.
+func (s *Service) RecordSubscriptionCreated(ctx context.Context, exec boil.ContextExecutor, event payment.WebhookEvent) error {
 	log := util.LogFromContext(ctx)
 
 	if event.SubscriptionCode == "" {
@@ -175,7 +182,7 @@ func (s *Service) RecordSubscriptionCreated(ctx context.Context, event payment.W
 
 	paymentRow, err := models.Payments(
 		models.PaymentWhere.Reference.EQ(event.Transaction.Reference),
-	).One(ctx, s.db)
+	).One(ctx, exec)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			log.Warn().Str("reference", event.Transaction.Reference).
@@ -193,7 +200,7 @@ func (s *Service) RecordSubscriptionCreated(ctx context.Context, event payment.W
 
 	subscription, err := models.DonationSubscriptions(
 		models.DonationSubscriptionWhere.DonationID.EQ(paymentRow.DonationID.String),
-	).One(ctx, s.db)
+	).One(ctx, exec)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil
@@ -215,7 +222,7 @@ func (s *Service) RecordSubscriptionCreated(ctx context.Context, event payment.W
 	subscription.ProviderEmailToken = null.NewString(sealed, sealed != "")
 	subscription.ProviderCustomerCode = null.NewString(event.CustomerCode, event.CustomerCode != "")
 
-	if _, err := subscription.Update(ctx, s.db, boil.Whitelist(
+	if _, err := subscription.Update(ctx, exec, boil.Whitelist(
 		models.DonationSubscriptionColumns.ProviderSubscriptionCode,
 		models.DonationSubscriptionColumns.ProviderEmailToken,
 		models.DonationSubscriptionColumns.ProviderCustomerCode,
@@ -303,14 +310,16 @@ func (s *Service) CancelRecurringDonation(ctx context.Context, reference string,
 // Not cancelled: the provider retries, and a donor whose card expired has not
 // chosen to stop giving. Treating a failed charge as a cancellation would quietly
 // end recurring revenue on a temporary problem.
-func (s *Service) MarkSubscriptionPastDue(ctx context.Context, subscriptionCode string) error {
+//
+// Takes exec for the same reason as [Service.RecordSubscriptionCreated].
+func (s *Service) MarkSubscriptionPastDue(ctx context.Context, exec boil.ContextExecutor, subscriptionCode string) error {
 	if subscriptionCode == "" {
 		return nil
 	}
 
 	subscription, err := models.DonationSubscriptions(
 		models.DonationSubscriptionWhere.ProviderSubscriptionCode.EQ(null.StringFrom(subscriptionCode)),
-	).One(ctx, s.db)
+	).One(ctx, exec)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil
@@ -319,7 +328,7 @@ func (s *Service) MarkSubscriptionPastDue(ctx context.Context, subscriptionCode 
 		return fmt.Errorf("failed to load subscription: %w", err)
 	}
 
-	donation, err := models.FindDonation(ctx, s.db, subscription.DonationID)
+	donation, err := models.FindDonation(ctx, exec, subscription.DonationID)
 	if err != nil {
 		return fmt.Errorf("failed to load donation: %w", err)
 	}
@@ -329,7 +338,7 @@ func (s *Service) MarkSubscriptionPastDue(ctx context.Context, subscriptionCode 
 	}
 
 	donation.Status = models.DonationStatusPastDue
-	if _, err := donation.Update(ctx, s.db, boil.Whitelist(
+	if _, err := donation.Update(ctx, exec, boil.Whitelist(
 		models.DonationColumns.Status,
 		models.DonationColumns.UpdatedAt,
 	)); err != nil {
@@ -340,14 +349,19 @@ func (s *Service) MarkSubscriptionPastDue(ctx context.Context, subscriptionCode 
 }
 
 // MarkSubscriptionDisabled records that the PROVIDER ended a subscription.
-func (s *Service) MarkSubscriptionDisabled(ctx context.Context, subscriptionCode string) error {
+//
+// Takes exec for the same reason as [Service.RecordSubscriptionCreated], and
+// deliberately opens no transaction of its own: the caller already holds one,
+// and nesting would take a second connection from a pool the outer transaction
+// is already holding one of.
+func (s *Service) MarkSubscriptionDisabled(ctx context.Context, exec boil.ContextExecutor, subscriptionCode string) error {
 	if subscriptionCode == "" {
 		return nil
 	}
 
 	subscription, err := models.DonationSubscriptions(
 		models.DonationSubscriptionWhere.ProviderSubscriptionCode.EQ(null.StringFrom(subscriptionCode)),
-	).One(ctx, s.db)
+	).One(ctx, exec)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil
@@ -356,30 +370,28 @@ func (s *Service) MarkSubscriptionDisabled(ctx context.Context, subscriptionCode
 		return fmt.Errorf("failed to load subscription: %w", err)
 	}
 
-	return db.WithTransaction(ctx, s.db, func(exec boil.ContextExecutor) error {
-		donation, err := models.FindDonation(ctx, exec, subscription.DonationID)
-		if err != nil {
-			return fmt.Errorf("failed to load donation: %w", err)
-		}
+	donation, err := models.FindDonation(ctx, exec, subscription.DonationID)
+	if err != nil {
+		return fmt.Errorf("failed to load donation: %w", err)
+	}
 
-		donation.Status = models.DonationStatusCancelled
-		if _, err := donation.Update(ctx, exec, boil.Whitelist(
-			models.DonationColumns.Status,
-			models.DonationColumns.UpdatedAt,
+	donation.Status = models.DonationStatusCancelled
+	if _, err := donation.Update(ctx, exec, boil.Whitelist(
+		models.DonationColumns.Status,
+		models.DonationColumns.UpdatedAt,
+	)); err != nil {
+		return fmt.Errorf("failed to cancel donation: %w", err)
+	}
+
+	if !subscription.CancelledAt.Valid {
+		subscription.CancelledAt = null.TimeFrom(s.clock.Now())
+		if _, err := subscription.Update(ctx, exec, boil.Whitelist(
+			models.DonationSubscriptionColumns.CancelledAt,
+			models.DonationSubscriptionColumns.UpdatedAt,
 		)); err != nil {
-			return fmt.Errorf("failed to cancel donation: %w", err)
+			return fmt.Errorf("failed to record cancellation: %w", err)
 		}
+	}
 
-		if !subscription.CancelledAt.Valid {
-			subscription.CancelledAt = null.TimeFrom(s.clock.Now())
-			if _, err := subscription.Update(ctx, exec, boil.Whitelist(
-				models.DonationSubscriptionColumns.CancelledAt,
-				models.DonationSubscriptionColumns.UpdatedAt,
-			)); err != nil {
-				return fmt.Errorf("failed to record cancellation: %w", err)
-			}
-		}
-
-		return nil
-	})
+	return nil
 }

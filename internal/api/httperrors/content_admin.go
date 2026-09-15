@@ -37,6 +37,12 @@ var (
 	ErrBadRequestDonationAmount  = NewHTTPError(http.StatusBadRequest, types.PublicHTTPErrorTypeGeneric, "That donation amount is outside the permitted range.")
 	ErrBadGatewayPaymentProvider = NewHTTPError(http.StatusBadGateway, types.PublicHTTPErrorTypeGeneric, "The payment provider could not be reached. No money has moved.")
 
+	// ErrConflictRefundExceedsCharge reports that the refunded total would pass
+	// what was charged -- normally because another refund landed first. It is an
+	// admin-facing message because only an admin can reach this path, and only an
+	// operator can reconcile it: the provider has already moved the money.
+	ErrConflictRefundExceedsCharge = NewHTTPError(http.StatusConflict, types.PublicHTTPErrorTypeGeneric, "The refunded total would exceed the original charge. Check for a refund that has already been applied.")
+
 	ErrNotFoundTicketTier           = NewHTTPError(http.StatusNotFound, types.PublicHTTPErrorTypeGeneric, "That ticket type does not exist for this event.")
 	ErrConflictInsufficientCapacity = NewHTTPError(http.StatusConflict, types.PublicHTTPErrorTypeGeneric, "There are not enough tickets left.")
 	ErrConflictAlreadyRegistered    = NewHTTPError(http.StatusConflict, types.PublicHTTPErrorTypeGeneric, "That email address is already registered for this event.")

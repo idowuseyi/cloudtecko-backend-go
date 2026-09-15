@@ -50,6 +50,37 @@ func reserveStock(ctx context.Context, exec boil.ContextExecutor, variantID stri
 	return nil
 }
 
+// confirmStock moves a hold into a sale, mirroring confirmSeats.
+//
+// stock_sold is allowed to pass stock_total for the same reason seats are: if
+// the hold had already expired when the payment landed, reserved is not
+// decremented (GREATEST floors it at zero) and the units are still sold. The
+// alternative is refusing a payment the provider has already captured.
+//
+// releaseHold says whether THIS caller owns the reservation being converted.
+// Callers pass the result of claimHoldRelease and nothing else: releasing a hold
+// that lazy expiry already gave back would decrement the counter twice and
+// withdraw stock that was never taken.
+func confirmStock(ctx context.Context, exec boil.ContextExecutor, variantID string, quantity int, releaseHold bool) error {
+	statement := `UPDATE product_variants
+	                 SET stock_sold = stock_sold + $2,
+	                     updated_at = now()
+	               WHERE id = $1`
+	if releaseHold {
+		statement = `UPDATE product_variants
+		                SET stock_sold = stock_sold + $2,
+		                    stock_reserved = GREATEST(stock_reserved - $2, 0),
+		                    updated_at = now()
+		              WHERE id = $1`
+	}
+
+	if _, err := queries.Raw(statement, variantID, quantity).ExecContext(ctx, exec); err != nil {
+		return fmt.Errorf("failed to confirm stock: %w", err)
+	}
+
+	return nil
+}
+
 // ListProducts returns the published catalogue.
 func (s *Service) ListProducts(ctx context.Context) (dto.ProductList, error) {
 	products, err := models.Products(

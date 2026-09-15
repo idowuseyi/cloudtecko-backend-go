@@ -25,6 +25,11 @@ func contactPayload(email string) test.GenericPayload {
 	}
 }
 
+// acceptInvitationPath carries no token: the invitation travels in the body,
+// because a bearer credential in a URL reaches every access log between the
+// client and this process.
+const acceptInvitationPath = "/api/v1/membership/invitations/accept"
+
 func TestPostContactMessageStoresAndAccepts(t *testing.T) {
 	t.Parallel()
 
@@ -161,9 +166,11 @@ func TestAcceptInvitationCreatesTheAccount(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, exists, "approval must not have created a user")
 
-		res := test.PerformRequest(t, s, "POST",
-			"/api/v1/membership/invitations/"+fixtures.MembershipInvitationTokenPlain+"/accept",
-			test.GenericPayload{"password": "a-sufficiently-long-passphrase"}, nil)
+		res := test.PerformRequest(t, s, "POST", acceptInvitationPath,
+			test.GenericPayload{
+				"token":    fixtures.MembershipInvitationTokenPlain,
+				"password": "a-sufficiently-long-passphrase",
+			}, nil)
 		require.Equal(t, http.StatusOK, res.Result().StatusCode)
 
 		var session types.PostLoginResponse
@@ -186,13 +193,15 @@ func TestAcceptInvitationIsSingleUse(t *testing.T) {
 	t.Parallel()
 
 	test.WithTestServer(t, func(s *api.Server) {
-		path := "/api/v1/membership/invitations/" + fixtures.MembershipInvitationTokenPlain + "/accept"
-		payload := test.GenericPayload{"password": "a-sufficiently-long-passphrase"}
+		payload := test.GenericPayload{
+			"token":    fixtures.MembershipInvitationTokenPlain,
+			"password": "a-sufficiently-long-passphrase",
+		}
 
-		first := test.PerformRequest(t, s, "POST", path, payload, nil)
+		first := test.PerformRequest(t, s, "POST", acceptInvitationPath, payload, nil)
 		require.Equal(t, http.StatusOK, first.Result().StatusCode)
 
-		second := test.PerformRequest(t, s, "POST", path, payload, nil)
+		second := test.PerformRequest(t, s, "POST", acceptInvitationPath, payload, nil)
 		assert.Equal(t, http.StatusNotFound, second.Result().StatusCode,
 			"a consumed invitation must no longer match")
 	})
@@ -208,9 +217,11 @@ func TestAcceptInvitationDoesNotDistinguishFailureReasons(t *testing.T) {
 			"11111111-1111-4111-8111-111111111111", // never existed
 			fixtures.UserAdminAccessToken1Plain,    // a real token, wrong kind
 		} {
-			res := test.PerformRequest(t, s, "POST",
-				"/api/v1/membership/invitations/"+token+"/accept",
-				test.GenericPayload{"password": "a-sufficiently-long-passphrase"}, nil)
+			res := test.PerformRequest(t, s, "POST", acceptInvitationPath,
+				test.GenericPayload{
+					"token":    token,
+					"password": "a-sufficiently-long-passphrase",
+				}, nil)
 
 			assert.Equal(t, http.StatusNotFound, res.Result().StatusCode)
 		}
@@ -222,9 +233,11 @@ func TestAcceptInvitationEnforcesPasswordPolicy(t *testing.T) {
 	t.Parallel()
 
 	test.WithTestServer(t, func(s *api.Server) {
-		res := test.PerformRequest(t, s, "POST",
-			"/api/v1/membership/invitations/"+fixtures.MembershipInvitationTokenPlain+"/accept",
-			test.GenericPayload{"password": "short"}, nil)
+		res := test.PerformRequest(t, s, "POST", acceptInvitationPath,
+			test.GenericPayload{
+				"token":    fixtures.MembershipInvitationTokenPlain,
+				"password": "short",
+			}, nil)
 
 		assert.Equal(t, http.StatusBadRequest, res.Result().StatusCode)
 	})
@@ -272,9 +285,11 @@ func TestApproveThenAcceptUsesAFreshlyMintedInvitation(t *testing.T) {
 			application.InvitationValidUntil.Time)
 
 		// Accept with that token.
-		res = test.PerformRequest(t, s, "POST",
-			"/api/v1/membership/invitations/"+approval.InvitationToken+"/accept",
-			test.GenericPayload{"password": "a-sufficiently-long-passphrase"}, nil)
+		res = test.PerformRequest(t, s, "POST", acceptInvitationPath,
+			test.GenericPayload{
+				"token":    approval.InvitationToken,
+				"password": "a-sufficiently-long-passphrase",
+			}, nil)
 		require.Equal(t, http.StatusOK, res.Result().StatusCode)
 
 		var session types.PostLoginResponse

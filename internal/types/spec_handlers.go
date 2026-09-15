@@ -63,7 +63,7 @@ func (o *SwaggerSpec) initHandlerCache() {
 	o.Handlers["GET"]["/swagger.yml"] = true
 	o.Handlers["GET"]["/api/v1/auth/userinfo"] = true
 	o.Handlers["GET"]["/-/version"] = true
-	o.Handlers["POST"]["/api/v1/membership/invitations/{token}/accept"] = true
+	o.Handlers["POST"]["/api/v1/membership/invitations/accept"] = true
 	o.Handlers["POST"]["/api/v1/admin/orders/{id}/{action}"] = true
 	o.Handlers["POST"]["/api/v1/admin/applications/{id}/approve"] = true
 	o.Handlers["POST"]["/api/v1/admin/applications/{id}/reject"] = true

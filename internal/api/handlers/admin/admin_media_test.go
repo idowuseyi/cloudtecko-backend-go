@@ -90,6 +90,42 @@ func TestMediaUploadHappyPath(t *testing.T) {
 	})
 }
 
+// Promotion must REWRITE the object's content type to the sniffed one.
+//
+// PresignedPutObject signs only the method, bucket, key and expiry, so the
+// uploading client chooses the Content-Type the store records and nothing binds
+// it to what we approved. Copying the object as-is carried that header onto the
+// public object: bytes that sniff as a real PNG, served to every visitor as
+// whatever the uploader asked for -- text/html being the interesting choice.
+func TestPromotionRewritesTheStoredContentType(t *testing.T) {
+	t.Parallel()
+
+	test.WithTestServer(t, func(s *api.Server) {
+		assetID, key := presign(t, s, "hero.png")
+
+		// A genuine PNG stored under a content type the client chose freely. The
+		// bytes pass the sniff; only the header is hostile.
+		mockStore(t, s).PutForTest(key, realPNG(t), "text/html")
+
+		res := complete(t, s, assetID)
+		require.Equal(t, http.StatusOK, res.StatusCode,
+			"the bytes are a real PNG, so the upload itself is legitimate")
+
+		var media types.Media
+		test.ParseResponseAndValidate(t, test.PerformRequest(t, s, "POST",
+			"/api/v1/admin/media/"+assetID+"/complete", nil, adminAuth(t)), &media)
+
+		require.NotNil(t, media.PublicURL)
+
+		publicKey := (*media.PublicURL)[strings.Index(*media.PublicURL, "public/"):]
+
+		stored, exists := mockStore(t, s).ContentTypeForTest(publicKey)
+		require.True(t, exists, "the promoted object must exist at %s", publicKey)
+		assert.Equal(t, "image/png", stored,
+			"the public object must carry the SNIFFED type; a browser is served this header, not the database row")
+	})
+}
+
 // The entire point of verify-on-complete: a presigned PUT cannot stop a client
 // sending something other than what it declared.
 func TestMediaCompleteRejectsContentTypeLie(t *testing.T) {

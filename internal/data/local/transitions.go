@@ -2,11 +2,14 @@ package local
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries"
+	"github.com/idowuseyi/cloudtecko-backend-go/internal/models"
 )
 
 // transitionTable names a table whose status column may be transitioned.
@@ -119,4 +122,63 @@ func pgTextArray(values []string) string {
 	}
 
 	return "{" + strings.Join(quoted, ",") + "}"
+}
+
+// addRefundedAmount accumulates a refund against a payment in ONE statement,
+// refusing any amount that would take the total past what was charged.
+//
+// Both refund paths -- an admin-initiated refund and one the provider reports
+// from its own dashboard -- must agree on a single running total, and neither
+// may read it, decide, and write it back. That read-then-write spans a
+// round trip: two refunds of 600 against a 1000 charge each read 0, each write
+// 600, and 1200 has left the account while the row says 600.
+//
+// So the addition and its cap live in the same UPDATE, exactly as seat and stock
+// reservation do. Under READ COMMITTED the second writer blocks on the first's
+// row lock and then re-evaluates the predicate against the newly committed
+// total, so it sees 600 already refunded and matches nothing.
+//
+// Returns the new total and whether this call was applied; false means the
+// refund would have exceeded the charge, which is a discrepancy to investigate
+// rather than a transient failure to retry.
+func addRefundedAmount(
+	ctx context.Context,
+	exec boil.ContextExecutor,
+	paymentID string,
+	amountKobo int64,
+) (int64, bool, error) {
+	var (
+		totalRefunded int64
+		charged       int64
+	)
+
+	err := queries.Raw(
+		`UPDATE payments
+		    SET amount_refunded_kobo = amount_refunded_kobo + $2, updated_at = now()
+		  WHERE id = $1
+		    AND amount_refunded_kobo + $2 <= amount_kobo
+		RETURNING amount_refunded_kobo, amount_kobo`,
+		paymentID, amountKobo,
+	).QueryRowContext(ctx, exec).Scan(&totalRefunded, &charged)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		// The predicate excluded the row: either it is gone, or this refund would
+		// take the total past the charge. Neither is retryable.
+		return 0, false, nil
+	}
+
+	if err != nil {
+		return 0, false, fmt.Errorf("failed to accumulate refunded amount: %w", err)
+	}
+
+	return totalRefunded, true, nil
+}
+
+// refundedStatusFor names the status a payment reaches at a given refunded total.
+func refundedStatusFor(totalRefundedKobo int64, chargedKobo int64) string {
+	if totalRefundedKobo >= chargedKobo {
+		return models.PaymentStatusRefunded
+	}
+
+	return models.PaymentStatusPartiallyRefunded
 }

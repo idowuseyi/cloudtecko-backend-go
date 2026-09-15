@@ -40,7 +40,7 @@ whose mgmt-secret check is skipped, so a platform prober can reach it.
 | `DB_MAX_OPEN_CONNS` | recommended | Default is `NumCPU*2`, which overruns small managed plans. |
 | `SERVER_LOGGER_LEVEL` | recommended | `info` in production; the default is `debug`. |
 | `SERVER_AUTH_REGISTRATION_REQUIRES_CONFIRMATION` | **yes** | Must be `true`. With it false, `/register` answers a new address with a session and an existing one without, which discloses whether an address has an account (S-020). |
-| `SERVER_PAYMENT_USE_MOCK` | yes | `false` in production, or no money moves. |
+| `SERVER_PAYMENT_USE_MOCK` | no | Already defaults to `false`, unlike the push and storage mocks. Set it explicitly in production anyway, so the file can be audited without knowing the default. Turning it **on** in a reachable environment means anyone who can POST to `/webhooks/payments` can sign their own `charge.success` and be sent goods (S-034). |
 | `SERVER_PAYMENT_SECRET_KEY` | if payments | Paystack secret key. Authenticates API calls **and** is the HMAC key webhooks are signed with — there is no separate webhook secret, so rotating it rotates webhook verification at the same instant. |
 | `SERVER_PAYMENT_SECRET_ENCRYPTION_KEY` | if payments | Encrypts subscription email tokens. The service refuses to start without it when the mock provider is off. |
 | `SERVER_PAYMENT_CALLBACK_URL` | if payments | Where the payer returns. A page only — fulfilment happens on the signed webhook. |

@@ -199,11 +199,19 @@ type Server struct {
 
 // Payment configures the payment provider.
 type Payment struct {
-	// UseMockProvider keeps money flows in memory. Default TRUE so a developer
-	// without provider credentials still gets a working server.
+	// UseMockProvider keeps money flows in memory.
+	//
+	// Defaults to FALSE, unlike push and storage. Those degrade to a no-op when
+	// mocked; this one degrades to "anyone who can reach /webhooks/payments can
+	// forge a settlement", because the mock verifies webhook signatures with a
+	// key that is necessarily known. A developer opts in explicitly; a forgotten
+	// environment variable must not opt a deployment in.
 	UseMockProvider bool
-	// MockSecretKey signs mock webhook bodies, so tests exercise the real
-	// signature-verification path rather than bypassing it.
+
+	// MockSecretKey signs mock webhook bodies so tests exercise the real
+	// signature-verification path rather than bypassing it. There is deliberately
+	// NO default: a committed constant here is a usable forgery key for anyone
+	// who reads the repository.
 	MockSecretKey string
 
 	SecretKey      string
@@ -480,8 +488,8 @@ func DefaultServiceConfigFromEnv() Server {
 			PublicPrefix:     util.GetEnv("SERVER_STORAGE_PUBLIC_PREFIX", "public"),
 		},
 		Payment: Payment{
-			UseMockProvider:     util.GetEnvAsBool("SERVER_PAYMENT_USE_MOCK", true),
-			MockSecretKey:       util.GetEnv("SERVER_PAYMENT_MOCK_SECRET_KEY", "mock-payment-secret"),
+			UseMockProvider:     util.GetEnvAsBool("SERVER_PAYMENT_USE_MOCK", false),
+			MockSecretKey:       util.GetEnv("SERVER_PAYMENT_MOCK_SECRET_KEY", ""),
 			SecretKey:           util.GetEnv("SERVER_PAYMENT_SECRET_KEY", ""),
 			BaseURL:             util.GetEnv("SERVER_PAYMENT_BASE_URL", "https://api.paystack.co"),
 			RequestTimeout:      time.Second * time.Duration(util.GetEnvAsInt("SERVER_PAYMENT_REQUEST_TIMEOUT_SECONDS", 30)),

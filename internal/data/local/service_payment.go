@@ -169,14 +169,14 @@ func (s *Service) applyWebhookEffect(ctx context.Context, exec boil.ContextExecu
 	case payment.EventSubscriptionCreated:
 		// Captures the email token, which the provider returns exactly once. Miss
 		// it and the donor can never cancel through our interface.
-		if err := s.RecordSubscriptionCreated(ctx, event); err != nil {
+		if err := s.RecordSubscriptionCreated(ctx, exec, event); err != nil {
 			return false, err
 		}
 
 		return true, nil
 
 	case payment.EventSubscriptionDisabled:
-		if err := s.MarkSubscriptionDisabled(ctx, event.SubscriptionCode); err != nil {
+		if err := s.MarkSubscriptionDisabled(ctx, exec, event.SubscriptionCode); err != nil {
 			return false, err
 		}
 
@@ -185,7 +185,7 @@ func (s *Service) applyWebhookEffect(ctx context.Context, exec boil.ContextExecu
 	case payment.EventInvoiceFailed:
 		// Past due, NOT cancelled: the provider retries, and a donor whose card
 		// expired has not chosen to stop giving.
-		if err := s.MarkSubscriptionPastDue(ctx, event.SubscriptionCode); err != nil {
+		if err := s.MarkSubscriptionPastDue(ctx, exec, event.SubscriptionCode); err != nil {
 			return false, err
 		}
 
@@ -304,12 +304,94 @@ func (s *Service) settleSucceededTransaction(ctx context.Context, exec boil.Cont
 			models.OrderStatusPaid); err != nil {
 			return false, err
 		}
-		// Stock and seat counters are adjusted by the phases that introduce them,
-		// gated on claimHoldRelease so a late webhook cannot drive a reservation
-		// negative.
+
+		if err := s.fulfilOrderReservations(ctx, exec, paymentRow); err != nil {
+			return false, err
+		}
 	}
 
 	return true, nil
+}
+
+// fulfilOrderReservations converts a paid order's holds into sales.
+//
+// Nothing else does this. Reservation happens at checkout and release happens on
+// expiry or refund, but the step in between -- the one that says these units are
+// SOLD -- only ever runs here, because only here is the money known to have
+// arrived. Without it stock_sold and quantity_sold stay at zero for every paid
+// order, and the reservation is never given back either: a refund then
+// decrements a sold counter that was never incremented and the units are
+// withdrawn from sale permanently.
+//
+// The hold claim is what makes a late webhook safe. If lazy expiry already
+// released these reservations, claimHoldRelease loses and releaseHold is false:
+// the units are still sold (the payment is real and captured), but reserved is
+// left alone rather than decremented a second time. A registration settled that
+// way is stamped oversold_at for a human to resolve -- the seats may exceed
+// capacity, and that is strictly better than rejecting a captured payment.
+func (s *Service) fulfilOrderReservations(ctx context.Context, exec boil.ContextExecutor, paymentRow *models.Payment) error {
+	releaseHold, err := claimHoldRelease(ctx, exec, paymentRow.ID)
+	if err != nil {
+		return err
+	}
+
+	items, err := models.OrderItems(
+		models.OrderItemWhere.OrderID.EQ(paymentRow.OrderID.String),
+	).All(ctx, exec)
+	if err != nil {
+		return fmt.Errorf("failed to load order items: %w", err)
+	}
+
+	for _, item := range items {
+		switch {
+		case item.ProductVariantID.Valid:
+			if err := confirmStock(ctx, exec, item.ProductVariantID.String, item.Quantity, releaseHold); err != nil {
+				return err
+			}
+		case item.TicketTierID.Valid:
+			if err := confirmSeats(ctx, exec, item.TicketTierID.String, item.Quantity, releaseHold); err != nil {
+				return err
+			}
+		}
+	}
+
+	return s.confirmOrderRegistrations(ctx, exec, paymentRow.OrderID.String, !releaseHold)
+}
+
+// confirmOrderRegistrations moves a paid order's registrations to confirmed.
+//
+// A paid registration is inserted as "reserved" and stays there until the money
+// lands, so this is what actually gives someone a ticket. oversold marks the
+// ones settled after their hold had already lapsed: the seat is granted anyway,
+// but flagged, because capacity may now be exceeded.
+func (s *Service) confirmOrderRegistrations(ctx context.Context, exec boil.ContextExecutor, orderID string, oversold bool) error {
+	registrations, err := models.EventRegistrations(
+		models.EventRegistrationWhere.OrderID.EQ(null.StringFrom(orderID)),
+		models.EventRegistrationWhere.Status.EQ(models.RegistrationStatusReserved),
+	).All(ctx, exec)
+	if err != nil {
+		return fmt.Errorf("failed to load order registrations: %w", err)
+	}
+
+	for _, registration := range registrations {
+		columns := []string{
+			models.EventRegistrationColumns.Status,
+			models.EventRegistrationColumns.UpdatedAt,
+		}
+
+		registration.Status = models.RegistrationStatusConfirmed
+
+		if oversold && !registration.OversoldAt.Valid {
+			registration.OversoldAt = null.TimeFrom(s.clock.Now())
+			columns = append(columns, models.EventRegistrationColumns.OversoldAt)
+		}
+
+		if _, err := registration.Update(ctx, exec, boil.Whitelist(columns...)); err != nil {
+			return fmt.Errorf("failed to confirm registration: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (s *Service) applyChargeFailed(ctx context.Context, exec boil.ContextExecutor, event payment.WebhookEvent) (bool, error) {
@@ -425,40 +507,57 @@ func (s *Service) recordRefund(ctx context.Context, exec boil.ContextExecutor, e
 		return fmt.Errorf("failed to load payment: %w", err)
 	}
 
+	// An event with no amount means "the rest of it", not "the whole charge".
+	// Assuming the full charge double-counts against anything already refunded,
+	// and addRefundedAmount would then refuse the event entirely -- losing the
+	// record of a refund that really happened.
 	refunded := event.RefundedMinor
 	if refunded <= 0 {
-		refunded = paymentRow.AmountKobo
+		refunded = paymentRow.AmountKobo - paymentRow.AmountRefundedKobo
 	}
 
-	if refunded > paymentRow.AmountKobo {
-		// The CHECK forbids refunding more than was charged, and a provider
-		// reporting that is a discrepancy to investigate rather than to apply.
-		log.Error().
-			Str("reference", paymentRow.Reference).
-			Int64("chargedKobo", paymentRow.AmountKobo).
-			Int64("refundedKobo", refunded).
-			Msg("Refund exceeds the original charge, refusing to apply")
+	if refunded <= 0 {
+		log.Warn().Str("reference", paymentRow.Reference).
+			Msg("Refund event carried no amount and nothing remains to refund")
 
 		return nil
 	}
 
-	next := models.PaymentStatusPartiallyRefunded
-	if refunded == paymentRow.AmountKobo {
-		next = models.PaymentStatusRefunded
-	}
-
-	won, err := transitionStatus(ctx, exec, transitionTablePayments, paymentRow.ID,
-		[]string{models.PaymentStatusSucceeded, models.PaymentStatusPartiallyRefunded}, next)
-	if err != nil || !won {
+	// Accumulate through the guarded UPDATE rather than writing a total computed
+	// here. A payment can be refunded more than once -- two partial refunds from
+	// the dashboard, or one from the dashboard and one from our admin API -- and
+	// the amount on this event is THIS refund, not the running total. The cap
+	// lives in the same statement, so an event that would take the total past the
+	// charge is refused rather than applied.
+	totalRefunded, applied, err := addRefundedAmount(ctx, exec, paymentRow.ID, refunded)
+	if err != nil {
 		return err
 	}
 
-	paymentRow.AmountRefundedKobo = refunded
-	if _, err := paymentRow.Update(ctx, exec, boil.Whitelist(
-		models.PaymentColumns.AmountRefundedKobo,
-		models.PaymentColumns.UpdatedAt,
-	)); err != nil {
-		return fmt.Errorf("failed to record refund amount: %w", err)
+	if !applied {
+		log.Error().
+			Str("reference", paymentRow.Reference).
+			Int64("chargedKobo", paymentRow.AmountKobo).
+			Int64("alreadyRefundedKobo", paymentRow.AmountRefundedKobo).
+			Int64("refundedKobo", refunded).
+			Msg("Refund would exceed the original charge, refusing to apply")
+
+		return nil
+	}
+
+	won, err := transitionStatus(ctx, exec, transitionTablePayments, paymentRow.ID,
+		[]string{models.PaymentStatusSucceeded, models.PaymentStatusPartiallyRefunded},
+		refundedStatusFor(totalRefunded, paymentRow.AmountKobo))
+	if err != nil {
+		return err
+	}
+
+	if !won {
+		// The amount is recorded but the status would not move -- the payment is
+		// already fully refunded, or never succeeded. Left for an operator; the
+		// refund row below still lands, so the trail is complete.
+		log.Warn().Str("reference", paymentRow.Reference).
+			Msg("Recorded a refund whose status transition did not apply")
 	}
 
 	// A refund that came from the provider's dashboard has no local refund row,

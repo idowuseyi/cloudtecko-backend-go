@@ -50,6 +50,18 @@ func (s *Storage) PutForTest(key string, data []byte, contentType string) {
 	s.objects[key] = object{data: data, contentType: contentType}
 }
 
+// ContentTypeForTest returns the content type the STORE holds for a key, which
+// is not the same thing as the type recorded in the database. A browser fetching
+// the public URL is served this one.
+func (s *Storage) ContentTypeForTest(key string) (string, bool) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	obj, exists := s.objects[key]
+
+	return obj.contentType, exists
+}
+
 // Keys returns the stored keys, for assertions about promotion and cleanup.
 func (s *Storage) Keys() []string {
 	s.mutex.RLock()
@@ -98,7 +110,7 @@ func (s *Storage) Get(_ context.Context, key string) (io.ReadCloser, error) {
 	return io.NopCloser(bytes.NewReader(obj.data)), nil
 }
 
-func (s *Storage) Move(_ context.Context, from string, to string) error {
+func (s *Storage) Move(_ context.Context, from string, to string, contentType string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -107,6 +119,9 @@ func (s *Storage) Move(_ context.Context, from string, to string) error {
 		return storage.ErrObjectNotFound
 	}
 
+	// Rewrite the content type exactly as the real store does, so a test can
+	// observe that the client-declared type does not survive promotion.
+	obj.contentType = contentType
 	s.objects[to] = obj
 
 	if s.FailMoveAfterCopy {
