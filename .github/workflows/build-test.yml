@@ -67,7 +67,7 @@ jobs:
         # Was `bash <(curl -s https://codecov.io/bash)`: piping a remote,
         # unpinned script straight into a shell that holds repo credentials.
         run: docker cp builder:/tmp/coverage.out ./coverage.out
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v6
         with:
           files: ./coverage.out
           fail_ci_if_error: false
