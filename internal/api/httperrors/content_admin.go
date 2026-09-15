@@ -50,6 +50,10 @@ var (
 	ErrNotFoundDonationTier       = NewHTTPError(http.StatusNotFound, types.PublicHTTPErrorTypeGeneric, "That donation tier does not exist.")
 	ErrBadRequestTierNotRecurring = NewHTTPError(http.StatusBadRequest, types.PublicHTTPErrorTypeGeneric, "That tier is not a recurring one.")
 
+	ErrNotFoundOrder          = NewHTTPError(http.StatusNotFound, types.PublicHTTPErrorTypeGeneric, "The order does not exist.")
+	ErrConflictNotRefundable  = NewHTTPError(http.StatusConflict, types.PublicHTTPErrorTypeGeneric, "That payment is not in a refundable state.")
+	ErrBadRequestRefundAmount = NewHTTPError(http.StatusBadRequest, types.PublicHTTPErrorTypeGeneric, "That refund amount is not valid for this payment.")
+
 	// ErrConflictCartChanged carries per-line detail in its response body. A bare
 	// error would make the frontend show "something went wrong" for a whole
 	// basket when one size sold out.

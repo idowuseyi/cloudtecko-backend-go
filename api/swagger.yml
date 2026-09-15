@@ -611,6 +611,145 @@ paths:
                         $ref: '#/definitions/publicHttpError'
             security:
                 - Bearer: []
+    /api/v1/admin/orders:
+        get:
+            description: Lists orders for fulfilment and review.
+            tags:
+                - admin
+            summary: Lists orders
+            operationId: GetAdminOrdersRoute
+            parameters:
+                - type: string
+                  name: status
+                  in: query
+            responses:
+                "200":
+                    description: The orders
+                    schema:
+                        $ref: '#/definitions/orderList'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+    /api/v1/admin/orders/{id}/{action}:
+        post:
+            description: |-
+                Advances an order along its fulfilment path: pack, ship, deliver or
+                cancel.
+
+                Each step is guarded against the states it may legally come from, so an
+                order cannot skip a step by calling endpoints out of order, and two
+                admins working from a stale list cannot both advance the same order.
+                Cancelling restocks whatever the order was holding.
+            tags:
+                - admin
+            summary: Advances an order
+            operationId: PostAdminAdvanceOrderRoute
+            parameters:
+                - type: string
+                  format: uuid4
+                  name: id
+                  in: path
+                  required: true
+                - enum:
+                    - packed
+                    - shipped
+                    - delivered
+                    - cancelled
+                  type: string
+                  name: action
+                  in: path
+                  required: true
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/postAdvanceOrderPayload'
+            responses:
+                "200":
+                    description: The order
+                    schema:
+                        $ref: '#/definitions/orderSummary'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError - no such order
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "409":
+                    description: PublicHTTPError - not a legal transition from the current state
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+    /api/v1/admin/payments/{id}/refund:
+        post:
+            description: |-
+                Refunds a payment, in full or in part.
+
+                The provider is called FIRST. Recording a refund we failed to make would
+                say a customer was repaid when they were not, which is worse than the
+                reverse -- if the local write fails after the provider succeeds, the
+                refund webhook reconciles it.
+
+                Restock is explicit, never inferred: whether goods came back is a human
+                judgement.
+            tags:
+                - admin
+            summary: Refunds a payment
+            operationId: PostAdminRefundRoute
+            parameters:
+                - type: string
+                  format: uuid4
+                  name: id
+                  in: path
+                  required: true
+                - name: Payload
+                  in: body
+                  schema:
+                    $ref: '#/definitions/postRefundPayload'
+            responses:
+                "200":
+                    description: The refund
+                    schema:
+                        $ref: '#/definitions/refundResponse'
+                "400":
+                    description: PublicHTTPError - the amount is not valid for this payment
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "404":
+                    description: PublicHTTPError - no such payment
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "409":
+                    description: PublicHTTPError - that payment is not refundable
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "502":
+                    description: PublicHTTPError - the provider refused; nothing was recorded
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
     /api/v1/admin/resources:
         post:
             description: Creates an UNPUBLISHED resource.
@@ -783,6 +922,33 @@ paths:
                         $ref: '#/definitions/publicHttpError'
                 "404":
                     description: PublicHTTPError
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+            security:
+                - Bearer: []
+    /api/v1/admin/webhook-events:
+        get:
+            description: |-
+                Lists provider events that were received but never processed.
+
+                This is the operational alarm for "money taken, nothing recorded". An
+                entry here means a provider told us about a payment and we failed to act
+                on it; it should normally be empty.
+            tags:
+                - admin
+            summary: Lists unprocessed webhook events
+            operationId: GetAdminWebhookEventsRoute
+            responses:
+                "200":
+                    description: The unprocessed events
+                    schema:
+                        $ref: '#/definitions/webhookEventList'
+                "401":
+                    description: PublicHTTPError - not authenticated
+                    schema:
+                        $ref: '#/definitions/publicHttpError'
+                "403":
+                    description: PublicHTTPError, type `MISSING_SCOPES` - the admin scope is required
                     schema:
                         $ref: '#/definitions/publicHttpError'
             security:
@@ -2261,6 +2427,40 @@ definitions:
         enum:
             - asc
             - desc
+    orderList:
+        type: object
+        required:
+            - items
+        properties:
+            items:
+                type: array
+                items:
+                    $ref: '#/definitions/orderSummary'
+    orderSummary:
+        type: object
+        required:
+            - id
+            - reference
+            - status
+            - totalKobo
+            - email
+            - createdAt
+        properties:
+            createdAt:
+                type: string
+                format: date-time
+            email:
+                type: string
+                format: email
+            id:
+                type: string
+                format: uuid4
+            reference:
+                type: string
+            status:
+                type: string
+            totalKobo:
+                type: integer
     postAcceptInvitationPayload:
         description: |-
             Accepts an invitation by choosing a password. The account is created HERE,
@@ -2275,6 +2475,13 @@ definitions:
                 maxLength: 512
                 minLength: 15
                 example: a-sufficiently-long-passphrase
+    postAdvanceOrderPayload:
+        type: object
+        properties:
+            trackingReference:
+                type: string
+                maxLength: 120
+                x-nullable: true
     postApplicationReviewPayload:
         type: object
         properties:
@@ -2664,6 +2871,20 @@ definitions:
                 type: string
                 format: uuid4
                 example: 7503cd8a-c921-4368-a32d-6c1d01d86da9
+    postRefundPayload:
+        type: object
+        properties:
+            amountKobo:
+                description: Omit or send 0 to refund the full remaining amount.
+                type: integer
+                minimum: 0
+            reason:
+                type: string
+                maxLength: 500
+            restock:
+                description: Whether to return stock. A human decision - a refund does not imply goods came back.
+                type: boolean
+                default: false
     postRegisterPayload:
         type: object
         required:
@@ -2869,6 +3090,23 @@ definitions:
                 type: string
                 maxLength: 500
                 example: fcm
+    refundResponse:
+        type: object
+        required:
+            - paymentId
+            - amountKobo
+            - totalRefundedKobo
+            - status
+        properties:
+            amountKobo:
+                type: integer
+            paymentId:
+                type: string
+                format: uuid4
+            status:
+                type: string
+            totalRefundedKobo:
+                type: integer
     registerResponse:
         type: object
         required:
@@ -2971,6 +3209,40 @@ definitions:
             - app
             - cms
             - admin
+    webhookEventList:
+        description: Unprocessed provider events - the alarm for "money taken, nothing recorded".
+        type: object
+        required:
+            - items
+        properties:
+            items:
+                type: array
+                items:
+                    $ref: '#/definitions/webhookEventSummary'
+    webhookEventSummary:
+        type: object
+        required:
+            - id
+            - provider
+            - eventType
+            - receivedAt
+            - attempts
+        properties:
+            attempts:
+                type: integer
+            eventType:
+                type: string
+            id:
+                type: string
+                format: uuid4
+            provider:
+                type: string
+            providerReference:
+                type: string
+                x-nullable: true
+            receivedAt:
+                type: string
+                format: date-time
 parameters:
     registrationTokenParam:
         type: string

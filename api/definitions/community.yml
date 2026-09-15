@@ -591,3 +591,109 @@ definitions:
       isAnonymous:
         type: boolean
         default: false
+  OrderSummary:
+    type: object
+    required:
+      - id
+      - reference
+      - status
+      - totalKobo
+      - email
+      - createdAt
+    properties:
+      id:
+        type: string
+        format: uuid4
+      reference:
+        type: string
+      status:
+        type: string
+      totalKobo:
+        type: integer
+      email:
+        type: string
+        format: email
+      createdAt:
+        type: string
+        format: date-time
+  OrderList:
+    type: object
+    required:
+      - items
+    properties:
+      items:
+        type: array
+        items:
+          "$ref": "#/definitions/OrderSummary"
+  PostAdvanceOrderPayload:
+    type: object
+    properties:
+      trackingReference:
+        type: string
+        maxLength: 120
+        x-nullable: true
+  PostRefundPayload:
+    type: object
+    properties:
+      amountKobo:
+        description: Omit or send 0 to refund the full remaining amount.
+        type: integer
+        minimum: 0
+      reason:
+        type: string
+        maxLength: 500
+      restock:
+        description: Whether to return stock. A human decision - a refund does not imply goods came back.
+        type: boolean
+        default: false
+  RefundResponse:
+    type: object
+    required:
+      - paymentId
+      - amountKobo
+      - totalRefundedKobo
+      - status
+    properties:
+      paymentId:
+        type: string
+        format: uuid4
+      amountKobo:
+        type: integer
+      totalRefundedKobo:
+        type: integer
+      status:
+        type: string
+  WebhookEventSummary:
+    type: object
+    required:
+      - id
+      - provider
+      - eventType
+      - receivedAt
+      - attempts
+    properties:
+      id:
+        type: string
+        format: uuid4
+      provider:
+        type: string
+      eventType:
+        type: string
+      providerReference:
+        type: string
+        x-nullable: true
+      receivedAt:
+        type: string
+        format: date-time
+      attempts:
+        type: integer
+  WebhookEventList:
+    description: Unprocessed provider events - the alarm for "money taken, nothing recorded".
+    type: object
+    required:
+      - items
+    properties:
+      items:
+        type: array
+        items:
+          "$ref": "#/definitions/WebhookEventSummary"

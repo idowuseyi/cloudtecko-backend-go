@@ -43,6 +43,8 @@ func (o *SwaggerSpec) initHandlerCache() {
 	o.Handlers["GET"]["/api/v1/admin/applications"] = true
 	o.Handlers["GET"]["/api/v1/admin/categories"] = true
 	o.Handlers["GET"]["/api/v1/admin/donations"] = true
+	o.Handlers["GET"]["/api/v1/admin/orders"] = true
+	o.Handlers["GET"]["/api/v1/admin/webhook-events"] = true
 	o.Handlers["GET"]["/.well-known/assetlinks.json"] = true
 	o.Handlers["GET"]["/.well-known/apple-app-site-association"] = true
 	o.Handlers["GET"]["/api/v1/auth/register"] = true
@@ -62,6 +64,7 @@ func (o *SwaggerSpec) initHandlerCache() {
 	o.Handlers["GET"]["/api/v1/auth/userinfo"] = true
 	o.Handlers["GET"]["/-/version"] = true
 	o.Handlers["POST"]["/api/v1/membership/invitations/{token}/accept"] = true
+	o.Handlers["POST"]["/api/v1/admin/orders/{id}/{action}"] = true
 	o.Handlers["POST"]["/api/v1/admin/applications/{id}/approve"] = true
 	o.Handlers["POST"]["/api/v1/admin/applications/{id}/reject"] = true
 	o.Handlers["POST"]["/api/v1/admin/categories"] = true
@@ -71,6 +74,7 @@ func (o *SwaggerSpec) initHandlerCache() {
 	o.Handlers["POST"]["/api/v1/admin/events"] = true
 	o.Handlers["POST"]["/api/v1/admin/media/{id}/complete"] = true
 	o.Handlers["POST"]["/api/v1/admin/media/presign"] = true
+	o.Handlers["POST"]["/api/v1/admin/payments/{id}/refund"] = true
 	o.Handlers["POST"]["/api/v1/admin/resources/{id}/archive"] = true
 	o.Handlers["POST"]["/api/v1/admin/resources/{id}/publish"] = true
 	o.Handlers["POST"]["/api/v1/admin/resources"] = true

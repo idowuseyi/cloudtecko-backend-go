@@ -737,3 +737,115 @@ type StartRecurringDonationRequest struct {
 	IsAnonymous bool
 	UserID      null.String
 }
+
+// --- Admin operations -------------------------------------------------------
+
+type AdvanceOrderRequest struct {
+	OrderID           string
+	To                string
+	TrackingReference null.String
+	ActorUserID       null.String
+	ActorEmail        string
+	SourceIP          string
+}
+
+type OrderSummary struct {
+	ID        string
+	Reference string
+	Status    string
+	TotalKobo int64
+	Email     string
+	CreatedAt time.Time
+}
+
+type OrderSummaryList []OrderSummary
+
+func (l OrderSummaryList) ToTypes() *types.OrderList {
+	items := make([]*types.OrderSummary, len(l))
+	for i := range l {
+		items[i] = l[i].ToTypes()
+	}
+
+	return &types.OrderList{Items: items}
+}
+
+func (o OrderSummary) ToTypes() *types.OrderSummary {
+	return &types.OrderSummary{
+		ID:        conv.Pointer(strfmt.UUID4(o.ID)),
+		Reference: conv.Pointer(o.Reference),
+		Status:    conv.Pointer(o.Status),
+		TotalKobo: conv.Pointer(o.TotalKobo),
+		Email:     conv.Pointer(strfmt.Email(o.Email)),
+		CreatedAt: conv.Pointer(strfmt.DateTime(o.CreatedAt)),
+	}
+}
+
+// RefundRequest asks for money back. Restock is carried explicitly because
+// whether goods return is a human judgement, not something inferable from a
+// refund.
+type RefundRequest struct {
+	PaymentID   string
+	AmountKobo  int64
+	Reason      string
+	Restock     bool
+	ActorUserID null.String
+	ActorEmail  string
+	SourceIP    string
+}
+
+type RefundResult struct {
+	PaymentID         string
+	AmountKobo        int64
+	TotalRefundedKobo int64
+	Status            string
+}
+
+func (r RefundResult) ToTypes() *types.RefundResponse {
+	return &types.RefundResponse{
+		PaymentID:         conv.Pointer(strfmt.UUID4(r.PaymentID)),
+		AmountKobo:        conv.Pointer(r.AmountKobo),
+		TotalRefundedKobo: conv.Pointer(r.TotalRefundedKobo),
+		Status:            conv.Pointer(r.Status),
+	}
+}
+
+// AuditEntry is one privileged action. Snapshots are whole objects rather than a
+// diff, because a diff is only interpretable against a schema that may since
+// have changed.
+type AuditEntry struct {
+	ActorUserID null.String
+	ActorEmail  string
+	Action      string
+	SubjectType string
+	SubjectID   string
+	Before      map[string]any
+	After       map[string]any
+	SourceIP    string
+}
+
+type WebhookEventSummary struct {
+	ID                string
+	Provider          string
+	EventType         string
+	ProviderReference null.String
+	ReceivedAt        time.Time
+	Attempts          int
+}
+
+type WebhookEventList []WebhookEventSummary
+
+func (l WebhookEventList) ToTypes() *types.WebhookEventList {
+	items := make([]*types.WebhookEventSummary, len(l))
+	for i := range l {
+		items[i] = &types.WebhookEventSummary{
+			ID:                conv.Pointer(strfmt.UUID4(l[i].ID)),
+			Provider:          conv.Pointer(l[i].Provider),
+			EventType:         conv.Pointer(l[i].EventType),
+			ProviderReference: l[i].ProviderReference.Ptr(),
+			ReceivedAt:        conv.Pointer(strfmt.DateTime(l[i].ReceivedAt)),
+			Attempts:          conv.Pointer(int64(l[i].Attempts)),
+		}
+	}
+
+	return &types.WebhookEventList{Items: items}
+}

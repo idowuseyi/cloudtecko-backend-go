@@ -125,6 +125,7 @@ var UserWhere = struct {
 var UserRels = struct {
 	AppUserProfile                       string
 	AccessTokens                         string
+	ActorUserAdminAuditLogs              string
 	ConfirmationTokens                   string
 	HandledByUserContactMessages         string
 	Donations                            string
@@ -140,6 +141,7 @@ var UserRels = struct {
 }{
 	AppUserProfile:                       "AppUserProfile",
 	AccessTokens:                         "AccessTokens",
+	ActorUserAdminAuditLogs:              "ActorUserAdminAuditLogs",
 	ConfirmationTokens:                   "ConfirmationTokens",
 	HandledByUserContactMessages:         "HandledByUserContactMessages",
 	Donations:                            "Donations",
@@ -158,6 +160,7 @@ var UserRels = struct {
 type userR struct {
 	AppUserProfile                       *AppUserProfile            `boil:"AppUserProfile" json:"AppUserProfile" toml:"AppUserProfile" yaml:"AppUserProfile"`
 	AccessTokens                         AccessTokenSlice           `boil:"AccessTokens" json:"AccessTokens" toml:"AccessTokens" yaml:"AccessTokens"`
+	ActorUserAdminAuditLogs              AdminAuditLogSlice         `boil:"ActorUserAdminAuditLogs" json:"ActorUserAdminAuditLogs" toml:"ActorUserAdminAuditLogs" yaml:"ActorUserAdminAuditLogs"`
 	ConfirmationTokens                   ConfirmationTokenSlice     `boil:"ConfirmationTokens" json:"ConfirmationTokens" toml:"ConfirmationTokens" yaml:"ConfirmationTokens"`
 	HandledByUserContactMessages         ContactMessageSlice        `boil:"HandledByUserContactMessages" json:"HandledByUserContactMessages" toml:"HandledByUserContactMessages" yaml:"HandledByUserContactMessages"`
 	Donations                            DonationSlice              `boil:"Donations" json:"Donations" toml:"Donations" yaml:"Donations"`
@@ -207,6 +210,22 @@ func (r *userR) GetAccessTokens() AccessTokenSlice {
 	}
 
 	return r.AccessTokens
+}
+
+func (o *User) GetActorUserAdminAuditLogs() AdminAuditLogSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetActorUserAdminAuditLogs()
+}
+
+func (r *userR) GetActorUserAdminAuditLogs() AdminAuditLogSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.ActorUserAdminAuditLogs
 }
 
 func (o *User) GetConfirmationTokens() ConfirmationTokenSlice {
@@ -526,6 +545,20 @@ func (o *User) AccessTokens(mods ...qm.QueryMod) accessTokenQuery {
 	)
 
 	return AccessTokens(queryMods...)
+}
+
+// ActorUserAdminAuditLogs retrieves all the admin_audit_log's AdminAuditLogs with an executor via actor_user_id column.
+func (o *User) ActorUserAdminAuditLogs(mods ...qm.QueryMod) adminAuditLogQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"admin_audit_log\".\"actor_user_id\"=?", o.ID),
+	)
+
+	return AdminAuditLogs(queryMods...)
 }
 
 // ConfirmationTokens retrieves all the confirmation_token's ConfirmationTokens with an executor.
@@ -903,6 +936,112 @@ func (userL) LoadAccessTokens(ctx context.Context, e boil.ContextExecutor, singu
 					foreign.R = &accessTokenR{}
 				}
 				foreign.R.User = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadActorUserAdminAuditLogs allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (userL) LoadActorUserAdminAuditLogs(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
+	var slice []*User
+	var object *User
+
+	if singular {
+		var ok bool
+		object, ok = maybeUser.(*User)
+		if !ok {
+			object = new(User)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUser))
+			}
+		}
+	} else {
+		s, ok := maybeUser.(*[]*User)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUser))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &userR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &userR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`admin_audit_log`),
+		qm.WhereIn(`admin_audit_log.actor_user_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load admin_audit_log")
+	}
+
+	var resultSlice []*AdminAuditLog
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice admin_audit_log")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on admin_audit_log")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for admin_audit_log")
+	}
+
+	if singular {
+		object.R.ActorUserAdminAuditLogs = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &adminAuditLogR{}
+			}
+			foreign.R.ActorUser = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if queries.Equal(local.ID, foreign.ActorUserID) {
+				local.R.ActorUserAdminAuditLogs = append(local.R.ActorUserAdminAuditLogs, foreign)
+				if foreign.R == nil {
+					foreign.R = &adminAuditLogR{}
+				}
+				foreign.R.ActorUser = local
 				break
 			}
 		}
@@ -2283,6 +2422,133 @@ func (o *User) AddAccessTokens(ctx context.Context, exec boil.ContextExecutor, i
 			rel.R.User = o
 		}
 	}
+	return nil
+}
+
+// AddActorUserAdminAuditLogs adds the given related objects to the existing relationships
+// of the user, optionally inserting them as new records.
+// Appends related to o.R.ActorUserAdminAuditLogs.
+// Sets related.R.ActorUser appropriately.
+func (o *User) AddActorUserAdminAuditLogs(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*AdminAuditLog) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			queries.Assign(&rel.ActorUserID, o.ID)
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"admin_audit_log\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"actor_user_id"}),
+				strmangle.WhereClause("\"", "\"", 2, adminAuditLogPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			queries.Assign(&rel.ActorUserID, o.ID)
+		}
+	}
+
+	if o.R == nil {
+		o.R = &userR{
+			ActorUserAdminAuditLogs: related,
+		}
+	} else {
+		o.R.ActorUserAdminAuditLogs = append(o.R.ActorUserAdminAuditLogs, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &adminAuditLogR{
+				ActorUser: o,
+			}
+		} else {
+			rel.R.ActorUser = o
+		}
+	}
+	return nil
+}
+
+// SetActorUserAdminAuditLogs removes all previously related items of the
+// user replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.ActorUser's ActorUserAdminAuditLogs accordingly.
+// Replaces o.R.ActorUserAdminAuditLogs with related.
+// Sets related.R.ActorUser's ActorUserAdminAuditLogs accordingly.
+func (o *User) SetActorUserAdminAuditLogs(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*AdminAuditLog) error {
+	query := "update \"admin_audit_log\" set \"actor_user_id\" = null where \"actor_user_id\" = $1"
+	values := []interface{}{o.ID}
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, query)
+		fmt.Fprintln(writer, values)
+	}
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+
+	if o.R != nil {
+		for _, rel := range o.R.ActorUserAdminAuditLogs {
+			queries.SetScanner(&rel.ActorUserID, nil)
+			if rel.R == nil {
+				continue
+			}
+
+			rel.R.ActorUser = nil
+		}
+		o.R.ActorUserAdminAuditLogs = nil
+	}
+
+	return o.AddActorUserAdminAuditLogs(ctx, exec, insert, related...)
+}
+
+// RemoveActorUserAdminAuditLogs relationships from objects passed in.
+// Removes related items from R.ActorUserAdminAuditLogs (uses pointer comparison, removal does not keep order)
+// Sets related.R.ActorUser.
+func (o *User) RemoveActorUserAdminAuditLogs(ctx context.Context, exec boil.ContextExecutor, related ...*AdminAuditLog) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	for _, rel := range related {
+		queries.SetScanner(&rel.ActorUserID, nil)
+		if rel.R != nil {
+			rel.R.ActorUser = nil
+		}
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("actor_user_id")); err != nil {
+			return err
+		}
+	}
+	if o.R == nil {
+		return nil
+	}
+
+	for _, rel := range related {
+		for i, ri := range o.R.ActorUserAdminAuditLogs {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.ActorUserAdminAuditLogs)
+			if ln > 1 && i < ln-1 {
+				o.R.ActorUserAdminAuditLogs[i] = o.R.ActorUserAdminAuditLogs[ln-1]
+			}
+			o.R.ActorUserAdminAuditLogs = o.R.ActorUserAdminAuditLogs[:ln-1]
+			break
+		}
+	}
+
 	return nil
 }
 

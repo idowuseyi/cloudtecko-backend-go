@@ -5,6 +5,7 @@ package models
 
 var TableNames = struct {
 	AccessTokens           string
+	AdminAuditLog          string
 	AppUserProfiles        string
 	Categories             string
 	ConfirmationTokens     string
@@ -33,6 +34,7 @@ var TableNames = struct {
 	Users                  string
 }{
 	AccessTokens:           "access_tokens",
+	AdminAuditLog:          "admin_audit_log",
 	AppUserProfiles:        "app_user_profiles",
 	Categories:             "categories",
 	ConfirmationTokens:     "confirmation_tokens",

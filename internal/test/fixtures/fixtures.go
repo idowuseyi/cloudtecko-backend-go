@@ -44,6 +44,11 @@ const (
 	// happy-path test alone would never notice.
 	UserAdminAccessToken1Plain = "3f1a7c9d-5b2e-4a86-9c31-7d4e2f8a6b05"
 
+	// A valid admin token whose owner authenticated a month ago. Destructive
+	// routes must refuse it: a stolen but still-valid token is not enough to
+	// move money.
+	UserAdminStaleAccessToken1Plain = "5b2e3f1a-7c9d-4a86-9c31-7d4e2f8a6b06"
+
 	// MembershipInvitationTokenPlain is the plaintext of an APPROVED application's
 	// invitation. Only its hash reaches the database, exactly as for every other
 	// credential-bearing token here.
@@ -89,6 +94,10 @@ type FixtureMap struct {
 	UserAdmin               *models.User
 	UserAdminAppUserProfile *models.AppUserProfile
 	UserAdminAccessToken1   *models.AccessToken
+
+	UserAdminStale               *models.User
+	UserAdminStaleAppUserProfile *models.AppUserProfile
+	UserAdminStaleAccessToken1   *models.AccessToken
 
 	CategoryEventWorkshop    *models.Category
 	CategoryEventConference  *models.Category
@@ -270,6 +279,31 @@ func contentFixtures(fix *FixtureMap, now time.Time) {
 		Username: null.StringFrom("admin@example.com"),
 		Password: null.StringFrom(HashedTestUserPassword),
 		Scopes:   []string{auth.ScopeApp.String(), auth.ScopeAdmin.String()},
+		// Recently authenticated, so AuthModeSecure routes (refunds) are
+		// reachable. UserAdminStale below deliberately is not.
+		LastAuthenticatedAt: null.TimeFrom(now),
+	}
+
+	// Holds the admin scope but authenticated long ago. Destructive operations
+	// must refuse this even though the scope check passes.
+	fix.UserAdminStale = &models.User{
+		ID:                  "a7b8c9d0-1e2f-4a3b-8c4d-5e6f7a8b9c01",
+		IsActive:            true,
+		Username:            null.StringFrom("stale-admin@example.com"),
+		Password:            null.StringFrom(HashedTestUserPassword),
+		Scopes:              []string{auth.ScopeApp.String(), auth.ScopeAdmin.String()},
+		LastAuthenticatedAt: null.TimeFrom(now.Add(-30 * 24 * time.Hour)),
+	}
+
+	fix.UserAdminStaleAppUserProfile = &models.AppUserProfile{
+		UserID:          fix.UserAdminStale.ID,
+		LegalAcceptedAt: null.TimeFrom(now.Add(time.Minute * -10)),
+	}
+
+	fix.UserAdminStaleAccessToken1 = &models.AccessToken{
+		TokenHash:  hashing.HashToken(UserAdminStaleAccessToken1Plain),
+		ValidUntil: now.Add(10 * 365 * 24 * time.Hour),
+		UserID:     fix.UserAdminStale.ID,
 	}
 
 	fix.UserAdminAppUserProfile = &models.AppUserProfile{
