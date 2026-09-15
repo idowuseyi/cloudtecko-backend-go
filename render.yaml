@@ -13,7 +13,11 @@ services:
     plan: starter
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    dockerCommand: /app/app server
+    # BARE "server", not "/app/app server". dockerCommand overrides the image's
+    # CMD and leaves its ENTRYPOINT (["/app/app"]) in place, so a full path here
+    # is run as /app/app /app/app server and the service dies at boot with
+    # `unknown command "/app/app"`. Verified against this image locally.
+    dockerCommand: server
 
     # /-/ready is the ONLY management route whose mgmt-secret check is skipped
     # (see internal/api/router/router.go), which is exactly why it exists.
@@ -24,6 +28,15 @@ services:
     # The image's default CMD is "server --migrate"; that is deliberately NOT
     # used, because with more than one instance every replica would race to
     # apply the same migrations on boot.
+    #
+    # UNVERIFIED: Render documents that dockerCommand overrides CMD (so the
+    # ENTRYPOINT still applies, hence the bare "server" above) but says nothing
+    # about whether preDeployCommand runs through the ENTRYPOINT too. The full
+    # path is correct if it does not; if it does, this needs to become
+    # "db migrate". Check the first deploy's pre-deploy log and fix it there.
+    #
+    # The failure mode is safe either way: a failed pre-deploy aborts the deploy,
+    # so the running service keeps serving and nothing ships half-migrated.
     preDeployCommand: /app/app db migrate
 
     envVars:
@@ -99,8 +112,42 @@ services:
         value: "false"
       - key: SERVER_PAYMENT_SECRET_KEY
         sync: false
+
+      # Encrypts subscription email tokens at rest (AES-256-GCM). The service
+      # ALSO refuses to start without this one while the mock is off.
+      #
+      # Paystack returns a subscription's email token exactly once and requires
+      # it back to cancel, so this is the only credential in the schema that is
+      # encrypted rather than hashed. Set it once and leave it: changing it makes
+      # every already-stored token undecryptable, and a donor whose token is lost
+      # can no longer stop giving through our interface.
+      - key: SERVER_PAYMENT_SECRET_ENCRYPTION_KEY
+        sync: false
+
       - key: SERVER_PAYMENT_CALLBACK_URL
         sync: false
+
+      # Email. SERVER_MAILER_TRANSPORTER defaults to "mock", which accepts every
+      # send and delivers nothing -- silently. Left unset in production it breaks
+      # membership invitations outright (the invite IS the signup), along with
+      # receipts, ticket confirmations and password resets, with no error
+      # anywhere to show for it.
+      - key: SERVER_MAILER_TRANSPORTER
+        value: smtp
+      - key: SERVER_MAILER_DEFAULT_SENDER
+        sync: false
+      - key: SERVER_SMTP_HOST
+        sync: false
+      - key: SERVER_SMTP_PORT
+        sync: false
+      - key: SERVER_SMTP_USERNAME
+        sync: false
+      - key: SERVER_SMTP_PASSWORD
+        sync: false
+      - key: SERVER_SMTP_AUTH_TYPE
+        value: plain
+      - key: SERVER_SMTP_ENCRYPTION
+        value: starttls
 
       - key: SERVER_LOGGER_LEVEL
         value: info
@@ -110,3 +157,39 @@ services:
       # Managed Postgres plans cap connections well below what NumCPU*2 assumes.
       - key: DB_MAX_OPEN_CONNS
         value: "10"
+
+  # Retention sweep. purge_after is NOT NULL on both PII tables, so nothing can
+  # be stored without an expiry -- but an expiry nothing acts on is not a
+  # retention policy. Contact messages and membership applications are HARD
+  # deleted: soft-deleted personal data is still personal data under the NDPA.
+  - type: cron
+    name: cloudtecko-retention-sweep
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    # 03:00 UTC daily — outside Nigerian business hours.
+    schedule: "0 3 * * *"
+    # Bare command, for the same ENTRYPOINT reason as the web service above.
+    dockerCommand: db purge-expired
+    # This job deletes rows and nothing else, but it still needs the PAYMENT
+    # secrets, which is worth understanding before assuming they are a mistake.
+    #
+    # Every subcommand goes through command.WithServer -> api.InitNewServer, so
+    # one wire graph is built whatever the verb is, and that graph includes the
+    # payment provider and the secret box -- both of which refuse to construct
+    # without a key. A retention sweeper holding payment credentials is poor
+    # least-privilege; the fix is a narrower graph for db subcommands, not env
+    # vars here, and that is tracked as a follow-up. Until then, omitting these
+    # does not degrade the job -- it crashes it at 03:00, silently, nightly.
+    envVars:
+      - key: PROJECT_ROOT_DIR
+        value: /app
+      - key: DATABASE_URL
+        sync: false
+      - key: SERVER_PAYMENT_SECRET_KEY
+        sync: false
+      - key: SERVER_PAYMENT_SECRET_ENCRYPTION_KEY
+        sync: false
+      - key: SERVER_LOGGER_LEVEL
+        value: info
