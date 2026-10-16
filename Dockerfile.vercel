@@ -12,7 +12,7 @@
 # start at once and would race. Run `app db migrate` as a one-off instead, or
 # let Render's preDeployCommand own it.
 
-FROM golang:1.27.1-trixie AS builder
+FROM golang:1.27.2-trixie AS builder
 
 WORKDIR /app
 
